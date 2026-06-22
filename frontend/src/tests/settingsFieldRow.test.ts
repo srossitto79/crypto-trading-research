@@ -107,15 +107,15 @@ describe('SettingsFieldRow', () => {
 		instance = mount(SettingsFieldRow, {
 			target,
 			props: {
-				id: 'exchange',
-				label: 'Exchange',
+				id: 'trading_mode',
+				label: 'Trading mode',
 				description: '.',
-				defaultValue: 'hyperliquid',
-				value: 'hyperliquid',
+				defaultValue: 'paper',
+				value: 'paper',
 				type: 'select',
 				options: [
-					{ value: 'hyperliquid', label: 'Hyperliquid' },
-					{ value: 'binance', label: 'Binance' },
+					{ value: 'paper', label: 'Paper' },
+					{ value: 'live', label: 'Live' },
 				],
 			},
 		});
@@ -124,7 +124,7 @@ describe('SettingsFieldRow', () => {
 		const select = target.querySelector('select') as HTMLSelectElement;
 		expect(select).toBeTruthy();
 		const opts = Array.from(select.querySelectorAll('option')).map((o) => o.textContent?.trim());
-		expect(opts).toEqual(['Hyperliquid', 'Binance']);
+		expect(opts).toEqual(['Paper', 'Live']);
 	});
 
 	it('renders a password input for secret type', async () => {

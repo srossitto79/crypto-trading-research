@@ -1823,9 +1823,6 @@ export interface ForvenSettings {
 	hyperliquid_api_address: string;
 	hyperliquid_has_key: boolean;
 	hyperliquid_testnet: boolean;
-	binance_has_key: boolean;
-	binance_has_secret: boolean;
-	binance_testnet: boolean;
 	// Enforced risk keys (exchange/risk.py reads these); the legacy twins below
 	// are kept in sync by the backend risk-section writer.
 	max_risk_per_trade_pct: number;

@@ -30,7 +30,6 @@
 	const TRADING_SUBS_WIZARD = [
 		'trading-exchange',
 		'trading-credentials-hl',
-		'trading-credentials-bn',
 	];
 
 	let providersActive = false;
@@ -73,8 +72,7 @@
 
 	$: step = STEPS[$wizardStep] ?? STEPS[0];
 	$: tradingSatisfied = Boolean(
-		(settings?.hyperliquid_has_key && settings?.exchange === 'hyperliquid') ||
-		(settings?.binance_has_key && settings?.binance_has_secret && settings?.exchange === 'binance')
+		settings?.hyperliquid_has_key && settings?.exchange === 'hyperliquid'
 	);
 	$: aiSatisfied = providersActive;
 	// Notifications is optional, but once the user has entered either a bot

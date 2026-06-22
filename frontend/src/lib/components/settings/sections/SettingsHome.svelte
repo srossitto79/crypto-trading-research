@@ -84,17 +84,6 @@
 					id: 'hyperliquid.actual_wallet_address',
 				});
 			}
-		} else if (exchange === 'binance') {
-			const apiKey = settings.api_key as string | undefined;
-			const apiSecret = settings.api_secret as string | undefined;
-			if (!apiKey && !apiSecret) {
-				issues.push({
-					key: 'bn-creds',
-					label: 'Binance is selected but no API credentials are configured.',
-					area: 'trading',
-					id: 'binance.api_key',
-				});
-			}
 		}
 
 		const anyNotifyOn = Boolean(

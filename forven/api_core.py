@@ -1176,9 +1176,6 @@ _DEFAULT_SETTINGS_PAYLOAD = {
     "hyperliquid_api_address": "",
     "hyperliquid_has_key": False,
     "hyperliquid_testnet": True,
-    "binance_has_key": False,
-    "binance_has_secret": False,
-    "binance_testnet": True,
     "max_position_size_pct": 10,
     "max_risk_per_trade_pct": 10,
     "recovery_emergency_stop_max_pct": 5,
@@ -1795,11 +1792,15 @@ def _load_settings_payload() -> dict:
     payload["hyperliquid_wallet"] = str(payload.get("hyperliquid_wallet") or "").strip()
     payload["hyperliquid_api_address"] = str(payload.get("hyperliquid_api_address") or "").strip()
 
+    # Hyperliquid is the only supported live-execution venue. Normalize any
+    # legacy/removed selection (e.g. a stored "binance") so the UI and runtime
+    # always see a valid executable exchange.
+    if str(payload.get("exchange") or "").strip().lower() != "hyperliquid":
+        payload["exchange"] = "hyperliquid"
+
     secrets = _load_settings_secrets()
     payload["agent_model_keys"] = _coerce_agent_model_keys(payload.get("agent_model_keys"))
     payload["hyperliquid_has_key"] = bool(str(secrets.get("hyperliquid_private_key", "")).strip())
-    payload["binance_has_key"] = bool(str(secrets.get("binance_api_key", "")).strip())
-    payload["binance_has_secret"] = bool(str(secrets.get("binance_api_secret", "")).strip())
     payload["discord_webhook_configured"] = bool(str(secrets.get("discord_webhook_url", "")).strip())
     # Check if main bot token is configured in config.json or DISCORD_TOKEN env var
     try:
@@ -1914,7 +1915,9 @@ def _apply_settings_section(section: str, payload: dict) -> dict:
     if section == "exchange":
         exchange = str(payload.get("exchange", "")).strip().lower()
         if exchange:
-            updates["exchange"] = exchange
+            # Hyperliquid is the only supported live-execution venue; coerce any
+            # other value (e.g. a legacy "binance" selection) to hyperliquid.
+            updates["exchange"] = exchange if exchange == "hyperliquid" else "hyperliquid"
 
     elif section == "hyperliquid":
         wallet_payload_key = None
@@ -1961,22 +1964,6 @@ def _apply_settings_section(section: str, payload: dict) -> dict:
                 payload.get(testnet_payload_key),
                 updates["hyperliquid_testnet"],
             )
-
-    elif section == "binance":
-        if "api_key" in payload:
-            api_key = str(payload.get("api_key") or "").strip()
-            if api_key:
-                secrets["binance_api_key"] = api_key
-            else:
-                secrets.pop("binance_api_key", None)
-        if "api_secret" in payload:
-            api_secret = str(payload.get("api_secret") or "").strip()
-            if api_secret:
-                secrets["binance_api_secret"] = api_secret
-            else:
-                secrets.pop("binance_api_secret", None)
-        if "use_testnet" in payload:
-            updates["binance_testnet"] = _coerce_bool(payload.get("use_testnet"), updates["binance_testnet"])
 
     elif section == "trading-mode":
         if "trading_mode" in payload:
@@ -2555,8 +2542,6 @@ def _apply_settings_section(section: str, payload: dict) -> dict:
         raise HTTPException(status_code=400, detail=f"Unsupported settings section: {section}")
 
     updates["hyperliquid_has_key"] = bool(str(secrets.get("hyperliquid_private_key", "")).strip())
-    updates["binance_has_key"] = bool(str(secrets.get("binance_api_key", "")).strip())
-    updates["binance_has_secret"] = bool(str(secrets.get("binance_api_secret", "")).strip())
     updates["discord_webhook_configured"] = bool(str(secrets.get("discord_webhook_url", "")).strip())
     try:
         import os as _os
@@ -5809,8 +5794,6 @@ _AUDIT_IGNORE_KEYS = frozenset({
     "audit_log",
     "updated_at",
     "hyperliquid_has_key",
-    "binance_has_key",
-    "binance_has_secret",
     "discord_bot_token_configured",
     "discord_bot_token_source",
     "discord_webhook_configured",

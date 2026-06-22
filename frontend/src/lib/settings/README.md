@@ -39,7 +39,7 @@ Append a new `SettingsEntry` object to `SETTINGS_MANIFEST`. Required fields:
 
 ## Backend wiring
 
-- `backendSection` must match a known section the backend's `put_settings_section` handler recognizes (currently: `risk`, `exchange`, `hyperliquid`, `binance`, `trading-mode`, `notifications`, `agents`, `system`, `lab-pipeline`, etc.).
+- `backendSection` must match a known section the backend's `put_settings_section` handler recognizes (currently: `risk`, `exchange`, `hyperliquid`, `trading-mode`, `notifications`, `agents`, `system`, `lab-pipeline`, etc.).
 - `backendPath` is the key inside the payload. Use a dot-path for nested keys (e.g., `cooldowns.daily_loss_minutes`).
 - Do not rename a `backendPath` that has live data — the backend is the source of truth for already-persisted values.
 
