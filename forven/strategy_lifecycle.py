@@ -1633,7 +1633,7 @@ def import_strategy_container(payload: object) -> dict:
         )
 
     # Code-class strategies bundle their source file. Re-register it through the
-    # intake security pipeline (banned-import gate + AST scan + lookahead probe)
+    # intake security pipeline (AST scan + banned-import gate + lookahead probe)
     # so the runtime class exists on this machine; param-family strategies skip
     # this and are recreated from params alone.
     source_code = payload.get("source_code") if isinstance(payload.get("source_code"), dict) else None
@@ -1710,7 +1710,8 @@ def _apply_import_attribution(new_id: str, source_id: str, source_ref: str | Non
 
 def _import_code_strategy(source_code: dict, source_id: str, warnings: list[str]) -> dict:
     """Write a bundled custom strategy file and register it through the intake
-    security pipeline. Never overwrites a differing local file."""
+    pipeline (AST scan + banned-import gate + lookahead probe + quick_screen
+    container). Never overwrites a differing local file."""
     import re as _re
     from pathlib import Path
 

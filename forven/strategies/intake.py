@@ -501,9 +501,15 @@ def register_custom_strategy_file(
         raise ValueError(f"Import failed for {file_name}: {exc}") from exc
 
     strategy_cls = getattr(module, "STRATEGY_CLASS", None)
-    if strategy_cls is None:
-        # Tolerate a module that omits the module-level STRATEGY_CLASS but defines
-        # exactly one BaseStrategy subclass (a common codegen contract slip).
+    # A STRATEGY_CLASS declared as the class *name* (a string) is a common codegen
+    # slip; resolve it to the actual attribute before falling back.
+    if isinstance(strategy_cls, str):
+        strategy_cls = getattr(module, strategy_cls, None)
+    if not isinstance(strategy_cls, type):
+        # Tolerate a module that omits (or mis-declares) the module-level
+        # STRATEGY_CLASS but defines exactly one BaseStrategy subclass — matches
+        # the tolerant discovery path so anything the app auto-registers can also
+        # be re-registered/imported.
         _subclasses = [
             obj
             for obj in vars(module).values()

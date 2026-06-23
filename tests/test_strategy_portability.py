@@ -32,7 +32,18 @@ def _isolate_custom_dir(monkeypatch, tmp_path):
     return temp_custom_dir
 
 
-def _write_custom_strategy(path, *, type_name: str, class_name: str = "PortabilityProbe") -> None:
+def _write_custom_strategy(
+    path,
+    *,
+    type_name: str,
+    class_name: str = "PortabilityProbe",
+    strategy_class_as_string: bool = False,
+) -> None:
+    # `strategy_class_as_string` reproduces the real-world codegen slip that broke
+    # the original import: STRATEGY_CLASS declared as the class *name*, not the class.
+    strategy_class_line = (
+        f"STRATEGY_CLASS = '{class_name}'" if strategy_class_as_string else f"STRATEGY_CLASS = {class_name}"
+    )
     path.write_text(
         "\n".join(
             [
@@ -60,7 +71,7 @@ def _write_custom_strategy(path, *, type_name: str, class_name: str = "Portabili
                 "        price = float(df['close'].iloc[-1]) if 'close' in df and len(df.index) else 0.0",
                 "        return Signal(price=price)",
                 "",
-                f"STRATEGY_CLASS = {class_name}",
+                strategy_class_line,
                 f"TYPE_NAME = '{type_name}'",
             ]
         ),
@@ -249,6 +260,47 @@ def test_code_class_round_trip_registers_on_fresh_machine(forven_db, monkeypatch
     assert row["type"] == type_name
     assert row["source"] == "import"
     assert row["stage"] == "quick_screen"
+
+
+def test_code_class_round_trip_handles_string_strategy_class(forven_db, monkeypatch, tmp_path):
+    # Reproduces the reported "Class validation failed: not a class" failure: a
+    # strategy whose STRATEGY_CLASS is the class *name* (a string). Both creating
+    # the source and importing it must now succeed.
+    temp_custom_dir = _isolate_custom_dir(monkeypatch, tmp_path)
+    type_name = "portability_probe_strslip"
+    strategy_file = temp_custom_dir / f"{type_name}.py"
+    _write_custom_strategy(
+        strategy_file,
+        type_name=type_name,
+        class_name="PortabilityProbeStr",
+        strategy_class_as_string=True,
+    )
+    sys.modules.pop(f"forven.strategies.custom.{type_name}", None)
+
+    reg = intake_mod.register_custom_strategy_file(file_path=str(strategy_file), source="ai_dropzone")
+    source_id = reg["strategy_id"]
+    env = lifecycle.build_container_export(source_id)
+    assert "source_code" in env
+
+    # Fresh machine: drop the file, the class, and the source container.
+    strategy_file.unlink()
+    with get_db() as conn:
+        conn.execute("DELETE FROM strategies WHERE id = ?", (source_id,))
+    registry.reset()
+    sys.modules.pop(f"forven.strategies.custom.{type_name}", None)
+    importlib.invalidate_caches()
+
+    result = lifecycle.import_strategy_container(env)
+
+    assert result["ok"] is True, result.get("error")
+    assert result["stage"] == "quick_screen"
+    assert strategy_file.exists()
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT type, source FROM strategies WHERE id = ?", (result["strategy_id"],)
+        ).fetchone()
+    assert row["type"] == type_name
+    assert row["source"] == "import"
 
 
 def test_code_class_import_rejects_unsafe_source(forven_db, monkeypatch, tmp_path):
