@@ -2,38 +2,36 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class BotConfigCreate(BaseModel):
     """Request body for creating a bot."""
 
     name: str = "Untitled Bot"
-    model: str = "gpt-4.1-mini"
+    # None → resolved to the operator's configured primary provider/model at
+    # create time, so installs without an OpenAI key work out of the box.
+    model: str | None = None
     soul: str | None = None
     context: str | None = None
     strategy: str | None = None
     guardrails: str | None = None
-    capital_allocation: float = 100_000
-    max_position_pct: float = 10.0
-    max_concurrent_positions: int = 5
-    max_drawdown_pct: float = 3.0
-    stop_loss_pct: float | None = None
-    take_profit_pct: float | None = None
-    taker_fee_bps: float = 0.0
-    slippage_bps: float = 0.0
+    capital_allocation: float = Field(default=100_000, gt=0)
+    max_position_pct: float = Field(default=10.0, gt=0, le=100)
+    max_concurrent_positions: int = Field(default=5, ge=1, le=100)
+    max_drawdown_pct: float = Field(default=3.0, gt=0, le=100)
+    stop_loss_pct: float | None = Field(default=None, gt=0, le=100)
+    take_profit_pct: float | None = Field(default=None, gt=0)
+    taker_fee_bps: float = Field(default=0.0, ge=0)
+    slippage_bps: float = Field(default=0.0, ge=0)
     funding_rate_bps_per_day: float = 0.0
-    cooldown_seconds: int = 60
+    cooldown_seconds: int = Field(default=60, ge=1)
     session_hours: dict | None = None
     reasoning_verbosity: str = "standard"
     asset_mode: str = "free_roam"
     locked_pairs: list[str] | None = None
-    tools: list[dict] | None = None
-    web_allowlist: list[str] | None = None
-    web_rate_limit: int = 10
-    data_sources: dict | None = None
-    max_llm_calls_per_day: int = 200
-    max_consecutive_errors: int = 5
+    max_llm_calls_per_day: int = Field(default=200, ge=1)
+    max_consecutive_errors: int = Field(default=5, ge=1)
     template_id: str | None = None
 
 
@@ -46,26 +44,22 @@ class BotConfigUpdate(BaseModel):
     context: str | None = None
     strategy: str | None = None
     guardrails: str | None = None
-    capital_allocation: float | None = None
-    max_position_pct: float | None = None
-    max_concurrent_positions: int | None = None
-    max_drawdown_pct: float | None = None
-    stop_loss_pct: float | None = None
-    take_profit_pct: float | None = None
-    taker_fee_bps: float | None = None
-    slippage_bps: float | None = None
+    capital_allocation: float | None = Field(default=None, gt=0)
+    max_position_pct: float | None = Field(default=None, gt=0, le=100)
+    max_concurrent_positions: int | None = Field(default=None, ge=1, le=100)
+    max_drawdown_pct: float | None = Field(default=None, gt=0, le=100)
+    stop_loss_pct: float | None = Field(default=None, gt=0, le=100)
+    take_profit_pct: float | None = Field(default=None, gt=0)
+    taker_fee_bps: float | None = Field(default=None, ge=0)
+    slippage_bps: float | None = Field(default=None, ge=0)
     funding_rate_bps_per_day: float | None = None
-    cooldown_seconds: int | None = None
+    cooldown_seconds: int | None = Field(default=None, ge=1)
     session_hours: dict | None = None
     reasoning_verbosity: str | None = None
     asset_mode: str | None = None
     locked_pairs: list[str] | None = None
-    tools: list[dict] | None = None
-    web_allowlist: list[str] | None = None
-    web_rate_limit: int | None = None
-    data_sources: dict | None = None
-    max_llm_calls_per_day: int | None = None
-    max_consecutive_errors: int | None = None
+    max_llm_calls_per_day: int | None = Field(default=None, ge=1)
+    max_consecutive_errors: int | None = Field(default=None, ge=1)
 
 
 class BotCloneRequest(BaseModel):

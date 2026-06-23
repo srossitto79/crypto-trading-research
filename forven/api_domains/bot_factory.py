@@ -42,6 +42,29 @@ def api_update_bot(bot_id: str, updates: dict) -> dict | None:
 
 
 def api_delete_bot(bot_id: str) -> dict:
+    # Stop the bot first so we don't delete config out from under a live
+    # subprocess that's still writing trades.
+    try:
+        from forven.bot_factory.manager import BotManager
+
+        BotManager.get_instance().stop_bot(bot_id)
+    except Exception:
+        pass
+    # Close any OPEN paper trades so they don't linger as phantom exposure once
+    # the config (and thus attribution) is gone.
+    try:
+        from forven.db import close_open_bot_trades
+
+        close_open_bot_trades(bot_id, reason="bot_deleted")
+    except Exception:
+        pass
+    # Drop the bot's isolated ChromaDB memory collection (unbounded leak otherwise).
+    try:
+        from forven.bot_factory.memory import BotMemory
+
+        BotMemory(bot_id).delete_collection()
+    except Exception:
+        pass
     delete_bot(bot_id)
     return {"status": "deleted", "bot_id": bot_id}
 
@@ -75,6 +98,13 @@ def api_get_decisions(bot_id: str, limit: int = 50) -> list[dict]:
 
 def api_get_trades(bot_id: str, limit: int = 50) -> list[dict]:
     return get_bot_trades(bot_id, limit=limit)
+
+
+def api_get_stats(bot_id: str) -> dict:
+    """Aggregate trade stats over ALL of a bot's trades (server-side, uncapped)."""
+    from forven.db import get_bot_trade_stats
+
+    return get_bot_trade_stats(bot_id)
 
 
 def api_get_positions(bot_id: str) -> dict:
@@ -179,22 +209,31 @@ def api_create_bot_from_strategy(strategy_id: str) -> dict:
         except Exception:
             params = {}
 
+    # strategies.symbol is a bare base ("BTC", "SOL"); the runner's market fetch
+    # needs a full pair ("BTC/USDT"), so normalize before locking (BFAPI-8).
+    raw_symbol = strategy.get("symbol")
+    pair = None
+    if raw_symbol:
+        pair = raw_symbol if "/" in raw_symbol else f"{raw_symbol}/USDT"
+
+    orig_tf = strategy.get("timeframe", "1h")
     config = {
         "name": f"Bot from {strategy.get('name', strategy_id)}",
-        "model": "gpt-4.1-mini",
+        # No hardcoded model — inherits the operator's configured default at create.
         "context": (
-            f"This bot is based on strategy {strategy_id} ({strategy.get('name', '')}).\n"
+            f"This bot is seeded from strategy {strategy_id} ({strategy.get('name', '')}).\n"
             f"Type: {strategy.get('type', 'unknown')}\n"
-            f"Symbol: {strategy.get('symbol', 'unknown')}\n"
-            f"Timeframe: {strategy.get('timeframe', '1h')}\n"
+            f"Symbol: {pair or 'unknown'}\n"
+            f"Original strategy timeframe: {orig_tf} — NOTE: this bot observes 1-hour candles.\n"
             f"Parameters: {params}"
         ),
         "strategy": (
-            f"Execute a {strategy.get('type', 'unknown')} strategy on {strategy.get('symbol', 'unknown')}. "
-            f"Use the parameters and rules from the strategy context to guide your trading decisions."
+            f"Trade a {strategy.get('type', 'unknown')} strategy on {pair or 'the locked pair'} "
+            f"using the 1-hour candles you are given. Use the parameters and rules above as guidance, "
+            f"adapting them to the 1-hour timeframe."
         ),
         "asset_mode": "locked",
-        "locked_pairs": [strategy.get("symbol")] if strategy.get("symbol") else None,
+        "locked_pairs": [pair] if pair else None,
     }
 
     return {"config": config, "strategy_id": strategy_id}

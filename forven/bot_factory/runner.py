@@ -18,11 +18,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import psutil
 
 from forven.db import (
+    accrue_bot_funding,
     close_bot_trade,
     get_bot,
     get_bot_equity_state,
     get_open_bot_positions,
     heartbeat_bot,
+    reconcile_bot_realized_pnl,
     set_bot_status,
     update_bot_equity_state,
 )
@@ -57,6 +59,9 @@ def _compute_unrealized_pnl(open_positions: list[dict] | None) -> float:
             total += (current - entry) * qty
         else:
             total += (entry - current) * qty
+        # The entry fee was paid at open but isn't in realized_pnl until close,
+        # so reflect it in mark-to-market equity now.
+        total -= float(p.get("entry_fee_usd") or 0)
     return total
 
 
@@ -313,6 +318,20 @@ class BotRunner:
         except Exception:
             return False
 
+    async def _sleep_until_utc_day_change(self) -> None:
+        """Sleep until just after the next UTC midnight, waking every 60s so a
+        shutdown signal is honored promptly (used to auto-resume a daily-capped bot)."""
+        from datetime import datetime, timezone, timedelta
+
+        now = datetime.now(timezone.utc)
+        target = (now + timedelta(days=1)).replace(hour=0, minute=0, second=5, microsecond=0)
+        remaining = max(60.0, (target - now).total_seconds())
+        slept = 0.0
+        while slept < remaining and not self._shutdown:
+            chunk = min(60.0, remaining - slept)
+            await asyncio.sleep(chunk)
+            slept += chunk
+
     def _in_session_hours(self) -> bool:
         """Check if current time is within the bot's configured session hours."""
         session_hours = (self._config or {}).get("session_hours")
@@ -339,10 +358,18 @@ class BotRunner:
             start_minutes = start_h * 60 + start_m
             end_minutes = end_h * 60 + end_m
             now_minutes = now.hour * 60 + now.minute
+            if end_minutes <= start_minutes:
+                # Overnight window (e.g. 22:00–04:00) — active across midnight.
+                return now_minutes >= start_minutes or now_minutes < end_minutes
             return start_minutes <= now_minutes < end_minutes
         except Exception as e:
-            logger.debug("Session hours check failed: %s", e)
-            return True  # Default to active if config is invalid
+            # Malformed config: fail CLOSED (idle) rather than silently trading
+            # 24/7 against the operator's intent.
+            logger.warning(
+                "Bot %s session-hours config invalid (%s) — treating as OUTSIDE session",
+                self.bot_id, e,
+            )
+            return False
 
     def _fetch_live_price(self, symbol: str) -> float | None:
         """Fetch the current live spot price for a symbol via CCXT."""
@@ -495,11 +522,12 @@ class BotRunner:
         position: dict,
         market_price: float,
         reason: str,
-    ) -> tuple[float, float, float] | None:
+    ) -> tuple[float, float, float, float | None] | None:
         """Close a position: apply slippage + fee, delegate to close_bot_trade.
 
-        Returns (fill_price, net_pnl_usd, total_fees_usd) on success. The
-        caller updates in-memory state and realized_pnl accordingly.
+        Returns (fill_price, net_pnl_usd, total_fees_usd, new_realized_pnl) on
+        success, where new_realized_pnl is the bot's post-close realized total
+        (close_bot_trade credits it atomically). The caller mirrors it.
         """
         slippage_bps = float(self._config.get("slippage_bps", 0) or 0)
         fee_bps = float(self._config.get("taker_fee_bps", 0) or 0)
@@ -537,12 +565,15 @@ class BotRunner:
 
         net_pnl = float(result.get("pnl_usd") or 0.0)
         total_fees = float(result.get("total_fees_usd") or 0.0)
+        # close_bot_trade already credited the bot's realized_pnl atomically;
+        # surface the new total so the caller mirrors it without re-accumulating.
+        new_realized = result.get("bot_realized_pnl")
         logger.info(
             "Bot %s closed %s (%s) x%s @ $%.4f — net P&L $%.2f, fees $%.2f, reason=%s",
             self.bot_id, position.get("ticker"), direction, qty, fill_price,
             net_pnl, total_fees, reason,
         )
-        return fill_price, net_pnl, total_fees
+        return fill_price, net_pnl, total_fees, new_realized
 
     async def _event_loop(self):
         """Main event loop — runs decision cycles on a timer.
@@ -593,7 +624,13 @@ class BotRunner:
             saved = get_bot_equity_state(self.bot_id) or {}
         except Exception:
             saved = {}
-        realized_pnl = float(saved.get("realized_pnl") or 0.0)
+        # Rebuild realized P&L from the closed-trade ledger (+ cumulative funding)
+        # so a crash between a close and its equity write can't leave realized
+        # stale and falsely trip (or mask) the max-drawdown gate.
+        try:
+            realized_pnl = reconcile_bot_realized_pnl(self.bot_id)
+        except Exception:
+            realized_pnl = float(saved.get("realized_pnl") or 0.0)
         peak_equity = float(saved.get("peak_equity") or starting_capital)
         if saved.get("peak_equity") is None:
             try:
@@ -613,9 +650,19 @@ class BotRunner:
                 break
 
             if not check_llm_daily_cap(self.bot_id):
-                logger.info("Bot %s daily LLM cap reached, pausing", self.bot_id)
-                set_bot_status(self.bot_id, "paused", error_message="Daily LLM cap reached")
-                break
+                # LIFE-2: daily cap is a RECOVERABLE pause. Sleep until the next
+                # UTC day (the counter resets read-side) and resume, instead of
+                # exiting the subprocess permanently and never coming back.
+                logger.info("Bot %s daily LLM cap reached — sleeping until UTC reset", self.bot_id)
+                set_bot_status(
+                    self.bot_id, "paused",
+                    error_message="Daily LLM cap reached (auto-resumes at UTC midnight)",
+                )
+                await self._sleep_until_utc_day_change()
+                if self._shutdown:
+                    break
+                set_bot_status(self.bot_id, "running")
+                continue
 
             # Session hours check
             if not self._in_session_hours():
@@ -653,6 +700,15 @@ class BotRunner:
             except Exception as e:
                 logger.warning("Bot %s market data fetch failed: %s", self.bot_id, e)
 
+            # No fresh market data → skip this tick entirely: don't run SL/TP on
+            # stale prices, evaluate drawdown on entry-priced positions, or pay
+            # for an LLM decision on missing data. Funding is elapsed-based, so
+            # the next good tick covers the skipped interval.
+            if not market_event or not market_event.get("pairs"):
+                logger.warning("Bot %s has no market data this tick — skipping", self.bot_id)
+                await asyncio.sleep(cooldown)
+                continue
+
             # Funding cost accrual (perp-style configs only). Deducted from
             # realized_pnl so it flows through the drawdown gate. Ticks where
             # the rate is 0 or no positions exist cost nothing.
@@ -661,11 +717,11 @@ class BotRunner:
                 open_positions, last_funding_ts, now_ts, funding_rate_bps_per_day,
             )
             if funding_delta:
-                realized_pnl -= funding_delta
-                try:
-                    update_bot_equity_state(self.bot_id, realized_pnl=realized_pnl)
-                except Exception:
-                    pass
+                new_realized = accrue_bot_funding(self.bot_id, funding_delta)
+                realized_pnl = (
+                    new_realized if new_realized is not None
+                    else realized_pnl - funding_delta
+                )
                 logger.debug(
                     "Bot %s funding accrual: $%.4f (realized_pnl now $%.2f)",
                     self.bot_id, funding_delta, realized_pnl,
@@ -689,12 +745,8 @@ class BotRunner:
                 )
                 if not closed:
                     continue
-                _, net_pnl, _ = closed
-                realized_pnl += net_pnl
-                try:
-                    update_bot_equity_state(self.bot_id, realized_pnl=realized_pnl)
-                except Exception:
-                    pass
+                _, net_pnl, _, new_realized = closed
+                realized_pnl = new_realized if new_realized is not None else realized_pnl + net_pnl
                 memory.store(
                     f"AUTO-CLOSE {pos.get('ticker')} x{pos.get('qty')} @ ${current:.2f} — "
                     f"{reason.replace('_', ' ')}. Net P&L ${net_pnl:+.2f}.",
@@ -789,8 +841,10 @@ class BotRunner:
                         "Bot %s trade: %s %s x%s (confidence: %s)",
                         self.bot_id, action, ticker, qty, confidence,
                     )
-                    if ticker and qty:
-                        # Fetch live spot price for accurate entry
+                    is_open = action in ("BUY", "SHORT")
+                    is_close = action in ("SELL", "COVER")
+                    if ticker and (qty or is_close):
+                        # Fetch live spot price for accurate entry/exit
                         price = self._fetch_live_price(ticker) or 0.0
                         if not price and market_event:
                             # Fallback to candle data if live fetch fails
@@ -799,7 +853,8 @@ class BotRunner:
                                 price = pair_data.get("current_price", 0) or 0
 
                         try:
-                            if action == "BUY":
+                            if is_open and qty and price:
+                                # BUY → long, SHORT → short (handled by _execute_open).
                                 new_pos = self._execute_open(
                                     ticker=ticker,
                                     action=action,
@@ -810,18 +865,28 @@ class BotRunner:
                                 if new_pos:
                                     open_positions.append(new_pos)
                                     memory.store(
-                                        f"BUY {ticker} x{qty} @ ${new_pos['entry_price']:.2f} — {result.reasoning}",
+                                        f"{action} {ticker} x{qty} @ ${new_pos['entry_price']:.2f} — {result.reasoning}",
                                         {
                                             "type": "trade_entry",
                                             "ticker": ticker,
+                                            "direction": new_pos["direction"],
                                             "entry_price": new_pos["entry_price"],
                                             "qty": qty,
                                         },
                                     )
-                            elif action == "SELL":
-                                # Prefer the exact lot picked by the engine so
-                                # multi-lot portfolios close the right row.
+                            elif is_open:
+                                logger.warning(
+                                    "Bot %s %s %s but no market price available — skipping",
+                                    self.bot_id, action, ticker,
+                                )
+                            elif is_close:
+                                # Close the matching open lot. Prefer the exact
+                                # trade_id pinned by the engine; else match the
+                                # ticker AND direction (SELL→long, COVER→short).
                                 target_id = result.trade_data.get("trade_id")
+                                want_dir = result.trade_data.get("direction") or (
+                                    "long" if action == "SELL" else "short"
+                                )
                                 closing = None
                                 closing_idx = -1
                                 for i, p in enumerate(open_positions):
@@ -831,40 +896,41 @@ class BotRunner:
                                         break
                                 if closing is None:
                                     for i, p in enumerate(open_positions):
-                                        if p.get("ticker") == ticker:
+                                        if (
+                                            p.get("ticker") == ticker
+                                            and (p.get("direction") or "long") == want_dir
+                                        ):
                                             closing = p
                                             closing_idx = i
                                             break
 
                                 if closing is None:
                                     logger.info(
-                                        "Bot %s SELL %s but no matching open position",
-                                        self.bot_id, ticker,
+                                        "Bot %s %s %s but no matching open %s position",
+                                        self.bot_id, action, ticker, want_dir,
                                     )
                                     memory.store(
-                                        f"SELL {ticker} — no open lot to close. Reasoning: {result.reasoning}",
+                                        f"{action} {ticker} — no open {want_dir} lot to close. "
+                                        f"Reasoning: {result.reasoning}",
                                         {"type": "trade_exit_noop", "ticker": ticker},
                                     )
                                 elif not price:
                                     logger.warning(
-                                        "Bot %s SELL %s but no market price available — skipping",
-                                        self.bot_id, ticker,
+                                        "Bot %s %s %s but no market price available — skipping",
+                                        self.bot_id, action, ticker,
                                     )
                                 else:
                                     closed = self._execute_close(
                                         position=closing,
                                         market_price=price,
-                                        reason="llm_sell",
+                                        reason=f"llm_{action.lower()}",
                                     )
                                     if closed:
-                                        fill_price, net_pnl, total_fees = closed
-                                        realized_pnl += net_pnl
-                                        try:
-                                            update_bot_equity_state(
-                                                self.bot_id, realized_pnl=realized_pnl,
-                                            )
-                                        except Exception:
-                                            pass
+                                        fill_price, net_pnl, total_fees, new_realized = closed
+                                        realized_pnl = (
+                                            new_realized if new_realized is not None
+                                            else realized_pnl + net_pnl
+                                        )
                                         entry_price = closing.get("entry_price") or 0
                                         pos_qty = closing.get("qty", qty) or qty
                                         pnl_pct = (
@@ -873,12 +939,14 @@ class BotRunner:
                                         )
                                         outcome = "win" if net_pnl > 0 else "loss" if net_pnl < 0 else "flat"
                                         memory.store(
-                                            f"SOLD {ticker} x{pos_qty} @ ${fill_price:.2f} after entry @ "
-                                            f"${entry_price:.2f} — net P&L ${net_pnl:+.2f} ({pnl_pct:+.2f}%, "
-                                            f"fees ${total_fees:.2f}). Reasoning: {result.reasoning}",
+                                            f"CLOSED {closing.get('direction')} {ticker} x{pos_qty} @ "
+                                            f"${fill_price:.2f} after entry @ ${entry_price:.2f} — net P&L "
+                                            f"${net_pnl:+.2f} ({pnl_pct:+.2f}%, fees ${total_fees:.2f}). "
+                                            f"Reasoning: {result.reasoning}",
                                             {
                                                 "type": "trade_outcome",
                                                 "ticker": ticker,
+                                                "direction": closing.get("direction"),
                                                 "entry_price": entry_price,
                                                 "exit_price": fill_price,
                                                 "qty": pos_qty,

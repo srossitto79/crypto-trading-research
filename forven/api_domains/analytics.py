@@ -637,7 +637,9 @@ def get_strategy_performance() -> list[dict[str, object]]:
                    MAX(pnl_pct) as best_trade,
                    MIN(pnl_pct) as worst_trade,
                    COUNT(CASE WHEN status = 'OPEN' THEN 1 END) as open_count
-            FROM trades GROUP BY strategy
+            FROM trades
+            WHERE COALESCE(source, '') NOT LIKE 'bot:%'
+            GROUP BY strategy
             """
         ).fetchall()
         return [dict(row) for row in rows]

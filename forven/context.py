@@ -605,6 +605,9 @@ def _get_chroma_recall(query: str, n_results: int = 10) -> str:
 def _format_recent_trades(limit: int = 20) -> str:
     """Format recent trades for context."""
     trades = get_recent_trades(limit)
+    # Bot Factory paper trades (source='bot:{id}') are a separate product, not
+    # part of the live/strategy book the Brain reasons over — keep them out.
+    trades = [t for t in trades if not str(t.get("source") or "").startswith("bot:")]
     if not trades:
         return ""
 
@@ -645,7 +648,7 @@ def _format_portfolio_status() -> str:
         fng = status["fng"]
         lines.append(f"- Fear & Greed: {fng.get('score', '?')} ({fng.get('label', '?')})")
 
-    open_trades = get_open_trades()
+    open_trades = get_open_trades(exclude_bots=True)
     if open_trades:
         lines.append(f"- Open positions: {len(open_trades)}")
         for t in open_trades:

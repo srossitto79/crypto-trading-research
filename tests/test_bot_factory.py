@@ -416,8 +416,10 @@ class TestEngine:
         config = {"max_concurrent_positions": 2, "max_position_pct": 10, "capital_allocation": 100000}
         positions = [{"ticker": "BTC"}, {"ticker": "ETH"}]
 
-        trade = {"action": "BUY", "ticker": "SOL", "qty": 10}
-        result = enforce_risk_limits(trade, config, positions)
+        # SOL is priceable, but both concurrent slots are taken → blocked on concurrency.
+        trade = {"action": "BUY", "ticker": "SOL", "qty": 1}
+        market_event = {"pairs": {"SOL": {"current_price": 100}}}
+        result = enforce_risk_limits(trade, config, positions, market_event)
         assert result is None
 
     def test_enforce_risk_limits_allows_within_limits(self):
@@ -426,8 +428,10 @@ class TestEngine:
         config = {"max_concurrent_positions": 5, "max_position_pct": 10, "capital_allocation": 100000}
         positions = [{"ticker": "BTC"}]
 
+        # ETH priced in the snapshot; 5 @ $1k = $5k, under the $10k per-position cap.
         trade = {"action": "BUY", "ticker": "ETH", "qty": 5}
-        result = enforce_risk_limits(trade, config, positions)
+        market_event = {"pairs": {"ETH": {"current_price": 1000}}}
+        result = enforce_risk_limits(trade, config, positions, market_event)
         assert result is not None
         assert result["action"] == "BUY"
 
@@ -460,6 +464,49 @@ class TestEngine:
 
         result = enforce_risk_limits(trade, config, [], market_event)
         assert result is not None
+
+    def test_quantize_qty_is_fractional(self):
+        """Sizing is fractional with no int() truncation / forced 1-unit floor,
+        so high-priced assets (BTC) are tradeable."""
+        from forven.bot_factory.engine import _quantize_qty
+
+        assert _quantize_qty(10_000 / 60_000) == pytest.approx(0.166667, abs=1e-6)
+        assert _quantize_qty(0) == 0.0
+        assert _quantize_qty(-5) == 0.0
+
+    def test_enforce_blocks_unpriceable_open(self):
+        """RISK-4: an open on a ticker absent from the snapshot is blocked, even
+        with an LLM-prefilled qty (no size-check bypass)."""
+        from forven.bot_factory.engine import enforce_risk_limits
+
+        config = {"max_concurrent_positions": 5, "max_position_pct": 10, "capital_allocation": 100000}
+        market_event = {"pairs": {"BTC": {"current_price": 50000}}}
+        trade = {"action": "BUY", "ticker": "SOL", "qty": 1}
+        assert enforce_risk_limits(trade, config, [], market_event) is None
+
+    def test_enforce_short_respects_size_cap(self):
+        """SHORT opens are size-gated exactly like BUY opens."""
+        from forven.bot_factory.engine import enforce_risk_limits
+
+        config = {"max_concurrent_positions": 5, "max_position_pct": 10, "capital_allocation": 100000}
+        market_event = {"pairs": {"BTC": {"current_price": 50000}}}
+        # 1 BTC short @ $50k = 50% > 10% cap → blocked
+        assert enforce_risk_limits({"action": "SHORT", "ticker": "BTC", "qty": 1}, config, [], market_event) is None
+        # 0.1 BTC short = $5k < $10k → allowed
+        ok = enforce_risk_limits({"action": "SHORT", "ticker": "BTC", "qty": 0.1}, config, [], market_event)
+        assert ok is not None and ok["action"] == "SHORT"
+
+    def test_enforce_allows_leverage_with_warning(self):
+        """Aggregate over-equity exposure is a SOFT warning, not a block —
+        paper leverage is allowed by design."""
+        from forven.bot_factory.engine import enforce_risk_limits
+
+        config = {"max_concurrent_positions": 5, "max_position_pct": 100, "capital_allocation": 10000}
+        market_event = {"pairs": {"BTC": {"current_price": 1000}}}
+        positions = [{"ticker": "ETH", "qty": 9, "entry_price": 1000, "direction": "long"}]  # $9k deployed
+        # New $5k BTC → deployed+new = $14k > $10k equity, but still allowed.
+        trade = {"action": "BUY", "ticker": "BTC", "qty": 5}
+        assert enforce_risk_limits(trade, config, positions, market_event) is not None
 
     def test_memory_query_builder_reflects_market_state(self):
         """Query must vary with market direction so recall returns different memories."""
@@ -598,7 +645,9 @@ class TestModels:
 
         config = BotConfigCreate()
         assert config.name == "Untitled Bot"
-        assert config.model == "gpt-4.1-mini"
+        # model defaults to None → resolved to the operator's configured primary
+        # provider/model at create time (works without an OpenAI key).
+        assert config.model is None
         assert config.capital_allocation == 100_000
         assert config.max_consecutive_errors == 5
 
@@ -848,27 +897,84 @@ class TestBotPaperTrading:
         assert positions[0]["stop_loss_price"] == 48_000.0
         assert positions[0]["take_profit_price"] == 55_000.0
 
-    def test_multi_lot_close_by_trade_id(self, forven_db):
-        """Closing one lot does not affect other OPEN lots of same ticker."""
+    def test_close_by_trade_id_leaves_other_direction(self, forven_db):
+        """A bot holds at most one lot per (ticker, direction) — the intentional
+        unique-open index. Closing the long by trade_id leaves a same-ticker
+        short untouched (and exercises the long/short separation)."""
         from forven.db import (
             close_bot_trade, execute_bot_trade, get_open_bot_positions,
         )
 
         bot_id = self._mk_bot()
-        tid_a = execute_bot_trade(
+        tid_long = execute_bot_trade(
             bot_id=bot_id, ticker="BTC/USDT", direction="long",
             qty=1, price=50_000.0,
         )
-        tid_b = execute_bot_trade(
-            bot_id=bot_id, ticker="BTC/USDT", direction="long",
+        tid_short = execute_bot_trade(
+            bot_id=bot_id, ticker="BTC/USDT", direction="short",
             qty=2, price=51_000.0,
         )
-        close_bot_trade(tid_a, exit_price=52_000.0, reason="test")
+        close_bot_trade(tid_long, exit_price=52_000.0, reason="test")
 
         remaining = get_open_bot_positions(bot_id)
         assert len(remaining) == 1
-        assert remaining[0]["trade_id"] == tid_b
+        assert remaining[0]["trade_id"] == tid_short
+        assert remaining[0]["direction"] == "short"
         assert remaining[0]["qty"] == 2
+
+    def test_close_credits_realized_pnl(self, forven_db):
+        """close_bot_trade atomically credits the bot's realized_pnl."""
+        from forven.db import close_bot_trade, execute_bot_trade, get_bot_equity_state
+
+        bot_id = self._mk_bot()
+        tid = execute_bot_trade(
+            bot_id=bot_id, ticker="BTC/USDT", direction="long", qty=1, price=50_000.0,
+        )
+        result = close_bot_trade(tid, exit_price=51_000.0, reason="test")
+        assert result["bot_realized_pnl"] == pytest.approx(1000.0, abs=0.01)
+        assert get_bot_equity_state(bot_id)["realized_pnl"] == pytest.approx(1000.0, abs=0.01)
+
+    def test_reconcile_realized_from_ledger(self, forven_db):
+        """A drifted cached realized_pnl self-heals from the closed-trade ledger."""
+        from forven.db import (
+            close_bot_trade, execute_bot_trade, get_bot_equity_state,
+            reconcile_bot_realized_pnl, update_bot_equity_state,
+        )
+
+        bot_id = self._mk_bot()
+        tid = execute_bot_trade(
+            bot_id=bot_id, ticker="BTC/USDT", direction="long", qty=1, price=50_000.0,
+        )
+        close_bot_trade(tid, exit_price=51_000.0, reason="test")
+        # Simulate a crash-window drift: cached realized goes stale.
+        update_bot_equity_state(bot_id, realized_pnl=0.0)
+        assert reconcile_bot_realized_pnl(bot_id) == pytest.approx(1000.0, abs=0.01)
+        assert get_bot_equity_state(bot_id)["realized_pnl"] == pytest.approx(1000.0, abs=0.01)
+
+    def test_accrue_funding_reduces_realized_and_reconciles(self, forven_db):
+        """Funding is a cost (reduces realized), tracked so reconcile rebuilds
+        realized = ledger - funding_accrued."""
+        from forven.db import (
+            accrue_bot_funding, get_bot_equity_state, reconcile_bot_realized_pnl,
+        )
+
+        bot_id = self._mk_bot()
+        assert accrue_bot_funding(bot_id, 5.0) == pytest.approx(-5.0, abs=1e-3)
+        assert get_bot_equity_state(bot_id)["realized_pnl"] == pytest.approx(-5.0, abs=1e-3)
+        # ledger(0 closed trades) - funding_accrued(5) = -5
+        assert reconcile_bot_realized_pnl(bot_id) == pytest.approx(-5.0, abs=1e-3)
+
+    def test_capital_change_rebases_watermark(self, forven_db):
+        """Lowering capital_allocation clears the peak-equity watermark so the
+        max-drawdown gate doesn't falsely trip against the old peak."""
+        from forven.db import (
+            create_bot, get_bot_equity_state, update_bot, update_bot_equity_state,
+        )
+
+        bot_id = create_bot({"name": "B", "model": "gpt-4.1-mini", "capital_allocation": 100_000})
+        update_bot_equity_state(bot_id, peak_equity=150_000.0)
+        update_bot(bot_id, {"capital_allocation": 50_000})
+        assert get_bot_equity_state(bot_id)["peak_equity"] is None
 
     def test_equity_state_persists(self, forven_db):
         """realized_pnl and peak_equity survive independent reads, as they
@@ -1105,3 +1211,142 @@ class TestBotPaperTrading:
         assert pos["ticker"] == "BTC/USDT"
         assert pos["stop_loss_price"] == 48_000.0
         assert pos["take_profit_price"] == 55_000.0
+
+
+# ── Phase 2: Lifecycle & autonomy reliability ───────────────────────
+
+
+class TestBotLifecyclePhase2:
+    """Provider-key isolation, ChromaDB guard forwarding, daily-cap auto-resume,
+    stale-running restart, and delete cleanup."""
+
+    def test_build_isolated_env_forwards_resolved_provider_key(self, monkeypatch):
+        """A zai bot whose key lives only in the env gets ZAI_API_KEY forwarded —
+        and unrelated secrets do NOT leak into the subprocess."""
+        from forven.bot_factory.manager import _build_isolated_env
+
+        monkeypatch.setenv("ZAI_API_KEY", "zai-secret")
+        monkeypatch.setenv("DISCORD_TOKEN", "should-not-leak")
+        env = _build_isolated_env({"id": "b1", "model": "zai:glm-4.6"})
+        assert env.get("ZAI_API_KEY") == "zai-secret"
+        assert "DISCORD_TOKEN" not in env
+
+    def test_build_isolated_env_forwards_chroma_guard(self, monkeypatch):
+        """ISO-4: the in-process ChromaDB segfault guard is forwarded to the subprocess."""
+        from forven.bot_factory.manager import _build_isolated_env
+
+        monkeypatch.setenv("FORVEN_DISABLE_CHROMA_IN_PROCESS", "1")
+        env = _build_isolated_env({"id": "b1", "model": "gpt-4.1-mini"})
+        assert env.get("FORVEN_DISABLE_CHROMA_IN_PROCESS") == "1"
+
+    def test_daily_cap_resets_on_new_day(self, forven_db):
+        """PERSIST-7: a stale reset date is treated as a fresh day so a
+        daily-cap-paused bot can resume without a real LLM call."""
+        from forven.bot_factory.circuit_breaker import check_llm_daily_cap
+        from forven.db import create_bot, get_db, set_bot_status
+
+        bot_id = create_bot({"name": "C", "model": "gpt-4.1-mini", "max_llm_calls_per_day": 5})
+        set_bot_status(bot_id, "running")
+        with get_db() as conn:
+            conn.execute(
+                "UPDATE bot_status SET llm_calls_today=999, llm_calls_reset_date='2000-01-01' WHERE bot_id=?",
+                (bot_id,),
+            )
+        assert check_llm_daily_cap(bot_id) is True
+
+    def test_start_bot_clears_stale_running(self, forven_db, monkeypatch):
+        """LIFE-7: a 'running' label with a dead PID doesn't block restart."""
+        from forven.bot_factory import manager as mgr
+        from forven.db import create_bot, set_bot_status
+
+        bot_id = create_bot({"name": "S", "model": "gpt-4.1-mini"})
+        set_bot_status(bot_id, "running", pid=999_999)
+        monkeypatch.setattr(mgr, "_is_pid_alive", lambda pid: False)
+
+        class FakeProc:
+            pid = 4242
+
+            def poll(self):
+                return None
+
+        monkeypatch.setattr(mgr.subprocess, "Popen", lambda *a, **k: FakeProc())
+        m = mgr.BotManager()
+        result = m.start_bot(bot_id)
+        assert result["status"] == "started"
+        assert result["pid"] == 4242
+
+    def test_delete_closes_open_trades(self, forven_db):
+        """PERSIST-1/2: deleting a bot closes its OPEN paper trades (no phantom
+        exposure) and removes the config."""
+        from forven.api_domains.bot_factory import api_delete_bot
+        from forven.db import create_bot, execute_bot_trade, get_bot, get_open_bot_positions
+
+        bot_id = create_bot({"name": "D", "model": "gpt-4.1-mini"})
+        execute_bot_trade(bot_id=bot_id, ticker="BTC/USDT", direction="long", qty=1, price=50_000.0)
+        assert len(get_open_bot_positions(bot_id)) == 1
+
+        api_delete_bot(bot_id)
+        assert get_bot(bot_id) is None
+        assert len(get_open_bot_positions(bot_id)) == 0
+
+    def test_get_bot_trade_stats(self, forven_db):
+        """BFAPI-7: aggregate stats cover ALL trades, not a capped recent slice."""
+        from forven.db import (
+            close_bot_trade, create_bot, execute_bot_trade, get_bot_trade_stats,
+        )
+
+        bot_id = create_bot({"name": "Stats", "model": "gpt-4.1-mini"})
+        t1 = execute_bot_trade(bot_id=bot_id, ticker="BTC/USDT", direction="long", qty=1, price=100.0)
+        close_bot_trade(t1, exit_price=110.0, reason="t")  # +10 winner
+        t2 = execute_bot_trade(bot_id=bot_id, ticker="ETH/USDT", direction="long", qty=1, price=100.0)
+        close_bot_trade(t2, exit_price=90.0, reason="t")  # -10 loser
+        execute_bot_trade(bot_id=bot_id, ticker="SOL/USDT", direction="long", qty=1, price=100.0)  # open
+
+        stats = get_bot_trade_stats(bot_id)
+        assert stats["total"] == 3
+        assert stats["closed_count"] == 2
+        assert stats["open_count"] == 1
+        assert stats["wins"] == 1
+        assert stats["losses"] == 1
+        assert stats["win_rate"] == pytest.approx(0.5)
+        assert stats["total_pnl_usd"] == pytest.approx(0.0, abs=0.01)
+
+    def test_version_snapshot_excludes_volatile(self, forven_db):
+        """PERSIST-5: config-history snapshots omit status/updated_at churn."""
+        from forven.db import create_bot, get_bot_config_versions, update_bot
+
+        bot_id = create_bot({"name": "V", "model": "gpt-4.1-mini"})
+        update_bot(bot_id, {"name": "V2"})
+        versions = get_bot_config_versions(bot_id)
+        assert versions
+        snap = versions[0]["config_snapshot"]
+        assert "status" not in snap
+        assert "updated_at" not in snap
+        assert snap.get("name") == "V"  # snapshot is the PRE-update config
+
+    def test_bot_memory_disabled_is_noop(self, monkeypatch):
+        """TEST-5/ISO-4: with the ChromaDB guard set, bot memory store/recall
+        no-op safely instead of risking a native segfault."""
+        from forven.bot_factory.memory import BotMemory
+
+        monkeypatch.setenv("FORVEN_DISABLE_CHROMA_IN_PROCESS", "1")
+        mem = BotMemory("bot-x")
+        mem.store("hello world", {"type": "test"})  # must not raise
+        assert mem.recall("hello") == []
+        assert mem.list_recent() == []
+
+    def test_garbage_llm_response_passes_not_errors(self, forven_db):
+        """TEST-4: a non-JSON LLM response becomes a HOLD/pass, never an error,
+        so a flaky model can't trip the circuit breaker."""
+        import asyncio
+
+        from forven.bot_factory.engine import run_decision_cycle
+        from forven.db import create_bot, get_bot, get_bot_status, set_bot_status
+
+        bot_id = create_bot({"name": "G", "model": "gpt-4.1-mini"})
+        set_bot_status(bot_id, "running")
+        cfg = get_bot(bot_id)
+        with patch("forven.ai.call_ai", new=AsyncMock(return_value="total nonsense, not json at all")):
+            result = asyncio.run(run_decision_cycle(cfg, market_event={"pairs": {}}))
+        assert result.action_type == "pass"
+        assert (get_bot_status(bot_id) or {}).get("consecutive_errors", 0) == 0

@@ -94,6 +94,11 @@ def get_bot_trades(bot_id: str, limit: int = 50):
     return bf_domain.api_get_trades(bot_id, limit=limit)
 
 
+@router.get("/api/bot-factory/bots/{bot_id}/stats")
+def get_bot_stats(bot_id: str):
+    return bf_domain.api_get_stats(bot_id)
+
+
 @router.get("/api/bot-factory/bots/{bot_id}/positions")
 def get_bot_positions(bot_id: str):
     return bf_domain.api_get_positions(bot_id)

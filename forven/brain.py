@@ -3460,7 +3460,9 @@ def assign_risk_audit():
     """
     log.info("Starting risk audit cycle")
 
-    open_trades = get_open_trades()
+    # Exclude Bot Factory paper trades — the live risk audit must not count them
+    # as portfolio exposure.
+    open_trades = get_open_trades(exclude_bots=True)
     status = kv_get("status") or {}
     
     settings = kv_get("forven:settings", {})

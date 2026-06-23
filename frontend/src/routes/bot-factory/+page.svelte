@@ -20,7 +20,22 @@
 	let actionMsg: string | null = null;
 	let confirmDelete: string | null = null;
 	let confirmStop: string | null = null;
+	let confirmKillAll = false;
 	let pollInterval: ReturnType<typeof setInterval> | null = null;
+
+	// In-flight action guards: track which bots have a request in flight (by id)
+	// and a global flag for Kill-All, so buttons can be disabled to prevent
+	// double-click races.
+	let busyBots = new Set<string>();
+	let killAllBusy = false;
+
+	function setBotBusy(id: string, busy: boolean) {
+		// Reassign so Svelte tracks the change.
+		const next = new Set(busyBots);
+		if (busy) next.add(id);
+		else next.delete(id);
+		busyBots = next;
+	}
 
 	$: hasRunningBots = bots.some((b) => (b.runtime_status || b.status) === 'running');
 
@@ -36,54 +51,75 @@
 	}
 
 	async function handleStart(id: string) {
+		if (busyBots.has(id)) return;
+		setBotBusy(id, true);
 		try {
 			await startBot(id);
 			actionMsg = 'Bot started';
 			await load();
 		} catch (e: any) {
 			actionMsg = `Error: ${e.message}`;
+		} finally {
+			setBotBusy(id, false);
 		}
 	}
 
 	async function handleStop(id: string) {
+		if (busyBots.has(id)) return;
 		confirmStop = null;
+		setBotBusy(id, true);
 		try {
 			await stopBot(id);
 			actionMsg = 'Bot stopped';
 			await load();
 		} catch (e: any) {
 			actionMsg = `Error: ${e.message}`;
+		} finally {
+			setBotBusy(id, false);
 		}
 	}
 
 	async function handleDelete(id: string) {
+		if (busyBots.has(id)) return;
 		confirmDelete = null;
+		setBotBusy(id, true);
 		try {
 			await deleteBot(id);
 			actionMsg = 'Bot deleted';
 			await load();
 		} catch (e: any) {
 			actionMsg = `Error: ${e.message}`;
+		} finally {
+			setBotBusy(id, false);
 		}
 	}
 
 	async function handleClone(id: string, name: string) {
+		if (busyBots.has(id)) return;
+		setBotBusy(id, true);
 		try {
 			const cloned = await cloneBot(id, `${name} (copy)`);
 			actionMsg = 'Bot cloned';
 			await load();
 		} catch (e: any) {
 			actionMsg = `Error: ${e.message}`;
+		} finally {
+			setBotBusy(id, false);
 		}
 	}
 
 	async function handleKillAll() {
+		if (killAllBusy) return;
+		confirmKillAll = false;
+		killAllBusy = true;
 		try {
 			const result = await killAllBots();
 			actionMsg = `Stopped ${result.stopped} bot(s)`;
 			await load();
 		} catch (e: any) {
 			actionMsg = `Error: ${e.message}`;
+		} finally {
+			killAllBusy = false;
 		}
 	}
 
@@ -146,12 +182,31 @@
 		</div>
 		<div class="flex gap-2">
 			{#if hasRunningBots}
-				<button
-					on:click={handleKillAll}
-					class="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-300 transition hover:bg-rose-500/20"
-				>
-					Kill All Bots
-				</button>
+				{#if confirmKillAll}
+					<button
+						on:click={handleKillAll}
+						disabled={killAllBusy}
+						aria-busy={killAllBusy}
+						class="rounded-lg border border-rose-500/40 bg-rose-500/20 px-4 py-2 text-sm font-medium text-rose-200 transition hover:bg-rose-500/30 disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						{killAllBusy ? 'Stopping…' : 'Confirm kill all'}
+					</button>
+					<button
+						on:click={() => (confirmKillAll = false)}
+						disabled={killAllBusy}
+						class="rounded-lg border border-[#333] bg-[#222] px-4 py-2 text-sm font-medium text-gray-400 transition hover:bg-[#2a2a2a] disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						Cancel
+					</button>
+				{:else}
+					<button
+						on:click={() => (confirmKillAll = true)}
+						disabled={killAllBusy}
+						class="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-300 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						Kill All Bots
+					</button>
+				{/if}
 			{/if}
 			<button
 				on:click={() => goto('/bot-factory/editor')}
@@ -208,6 +263,7 @@
 		<!-- Bot grid -->
 		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
 			{#each bots as bot}
+				{@const isBusy = busyBots.has(bot.id)}
 				<div class="rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] p-5">
 					<!-- Header -->
 					<div class="mb-3 flex items-start justify-between">
@@ -253,24 +309,24 @@
 					<div class="flex gap-2 text-xs">
 						{#if (bot.runtime_status || bot.status) === 'running'}
 							{#if confirmStop === bot.id}
-								<button on:click={() => handleStop(bot.id)} class="rounded bg-rose-600/20 px-2 py-1 text-rose-300">Confirm stop</button>
-								<button on:click={() => (confirmStop = null)} class="rounded bg-[#222] px-2 py-1 text-gray-400">Cancel</button>
+								<button on:click={() => handleStop(bot.id)} disabled={isBusy} aria-busy={isBusy} class="rounded bg-rose-600/20 px-2 py-1 text-rose-300 disabled:cursor-not-allowed disabled:opacity-50">{isBusy ? 'Stopping…' : 'Confirm stop'}</button>
+								<button on:click={() => (confirmStop = null)} disabled={isBusy} class="rounded bg-[#222] px-2 py-1 text-gray-400 disabled:cursor-not-allowed disabled:opacity-50">Cancel</button>
 							{:else}
-								<button on:click={() => (confirmStop = bot.id)} class="rounded bg-rose-600/10 px-2 py-1 text-rose-400 hover:bg-rose-600/20">Stop</button>
+								<button on:click={() => (confirmStop = bot.id)} disabled={isBusy} class="rounded bg-rose-600/10 px-2 py-1 text-rose-400 hover:bg-rose-600/20 disabled:cursor-not-allowed disabled:opacity-50">Stop</button>
 							{/if}
 						{:else}
-							<button on:click={() => handleStart(bot.id)} class="rounded bg-emerald-600/10 px-2 py-1 text-emerald-400 hover:bg-emerald-600/20">Start</button>
+							<button on:click={() => handleStart(bot.id)} disabled={isBusy} aria-busy={isBusy} class="rounded bg-emerald-600/10 px-2 py-1 text-emerald-400 hover:bg-emerald-600/20 disabled:cursor-not-allowed disabled:opacity-50">{isBusy ? 'Starting…' : 'Start'}</button>
 						{/if}
 						<button on:click={() => goto(`/bot-factory/editor?id=${bot.id}`)} class="rounded bg-[#222] px-2 py-1 text-gray-300 hover:bg-[#2a2a2a]">Edit</button>
-						<button on:click={() => handleClone(bot.id, bot.name)} class="rounded bg-[#222] px-2 py-1 text-gray-300 hover:bg-[#2a2a2a]">Clone</button>
+						<button on:click={() => handleClone(bot.id, bot.name)} disabled={isBusy} aria-busy={isBusy} class="rounded bg-[#222] px-2 py-1 text-gray-300 hover:bg-[#2a2a2a] disabled:cursor-not-allowed disabled:opacity-50">{isBusy ? 'Cloning…' : 'Clone'}</button>
 						{#if confirmDelete === bot.id}
-							<button on:click={() => handleDelete(bot.id)} class="rounded bg-rose-600/20 px-2 py-1 text-rose-300">Confirm</button>
-							<button on:click={() => (confirmDelete = null)} class="rounded bg-[#222] px-2 py-1 text-gray-400">Cancel</button>
+							<button on:click={() => handleDelete(bot.id)} disabled={isBusy} aria-busy={isBusy} class="rounded bg-rose-600/20 px-2 py-1 text-rose-300 disabled:cursor-not-allowed disabled:opacity-50">{isBusy ? 'Deleting…' : 'Confirm'}</button>
+							<button on:click={() => (confirmDelete = null)} disabled={isBusy} class="rounded bg-[#222] px-2 py-1 text-gray-400 disabled:cursor-not-allowed disabled:opacity-50">Cancel</button>
 						{:else}
 							<button
 								on:click={() => (confirmDelete = bot.id)}
-								class="rounded bg-[#222] px-2 py-1 text-gray-500 hover:text-rose-400"
-								disabled={(bot.runtime_status || bot.status) === 'running'}
+								class="rounded bg-[#222] px-2 py-1 text-gray-500 hover:text-rose-400 disabled:cursor-not-allowed disabled:opacity-50"
+								disabled={(bot.runtime_status || bot.status) === 'running' || isBusy}
 							>Delete</button>
 						{/if}
 					</div>

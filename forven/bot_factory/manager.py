@@ -52,8 +52,9 @@ def _is_pid_alive(pid: int) -> bool:
 def _build_isolated_env(bot_config: dict) -> dict[str, str]:
     """Build a minimal environment for the bot subprocess.
 
-    Only passes FORVEN_HOME, BOT_ID, and the specific LLM API key
-    the bot needs. Does NOT inherit the parent's full environment.
+    Passes FORVEN_HOME, BOT_ID, minimal system vars, the ChromaDB in-process
+    guard, and only the credential(s) for the bot's RESOLVED LLM provider. Does
+    NOT inherit the parent's full environment (no Discord/exchange secrets, etc.).
     """
     env = {
         "FORVEN_HOME": str(FORVEN_HOME),
@@ -71,25 +72,52 @@ def _build_isolated_env(bot_config: dict) -> dict[str, str]:
         "LOCALAPPDATA": os.environ.get("LOCALAPPDATA", ""),
     }
 
-    # Pass only the LLM API key the bot's model requires
-    model = (bot_config.get("model") or "").lower()
-    if "gpt" in model or "openai" in model or "o3" in model or "o4" in model:
-        key = os.environ.get("OPENAI_API_KEY")
-        if key:
-            env["OPENAI_API_KEY"] = key
-    elif "gemini" in model or "google" in model:
-        key = os.environ.get("GOOGLE_API_KEY")
-        if key:
-            env["GOOGLE_API_KEY"] = key
-    elif "minimax" in model:
-        key = os.environ.get("MINIMAX_API_KEY")
-        if key:
-            env["MINIMAX_API_KEY"] = key
-    else:
-        # Unknown model — pass OpenAI key as default
-        key = os.environ.get("OPENAI_API_KEY")
-        if key:
-            env["OPENAI_API_KEY"] = key
+    # ISO-4: the subprocess does NOT inherit the parent's os.environ, so it
+    # would miss the in-process ChromaDB segfault guard. Forward it (and related
+    # flags) so bot memory honors the same guard on affected hosts.
+    for guard_var in (
+        "FORVEN_DISABLE_CHROMA_IN_PROCESS",
+        "FORVEN_DISABLE_CHROMA",
+        "ANONYMIZED_TELEMETRY",
+    ):
+        val = os.environ.get(guard_var)
+        if val:
+            env[guard_var] = val
+
+    # Forward only the credential(s) for the bot's RESOLVED provider, derived
+    # via the canonical resolver (not a model-name substring heuristic), so a
+    # zai / openrouter / anthropic / deepseek bot whose key lives only in the
+    # environment can actually authenticate.
+    try:
+        from forven.ai import normalize_provider_and_model
+
+        provider, _ = normalize_provider_and_model("auto", bot_config.get("model") or "")
+    except Exception:
+        provider = "openai"
+
+    try:
+        from forven.auth.store import _ENV_ACCESS_TOKEN_KEYS, _ENV_BASE_URL_KEYS
+
+        token_keys = _ENV_ACCESS_TOKEN_KEYS.get(provider, ("OPENAI_API_KEY",))
+        base_url_keys = _ENV_BASE_URL_KEYS.get(provider, ())
+    except Exception:
+        token_keys = ("OPENAI_API_KEY",)
+        base_url_keys = ()
+
+    forwarded = False
+    for var in (*token_keys, *base_url_keys):
+        val = os.environ.get(var)
+        if val:
+            env[var] = val
+            forwarded = True
+
+    # Safety net: keep the prior "unknown → OpenAI" behavior so a provider whose
+    # credential lives on-disk (FORVEN_HOME, already forwarded) still has a key
+    # path, and a misresolved provider isn't left with nothing.
+    if not forwarded:
+        openai_key = os.environ.get("OPENAI_API_KEY")
+        if openai_key:
+            env["OPENAI_API_KEY"] = openai_key
 
     return env
 
@@ -99,6 +127,26 @@ def _bot_log_path(bot_id: str) -> Path:
     log_dir = FORVEN_HOME / "logs" / "bots"
     log_dir.mkdir(parents=True, exist_ok=True)
     return log_dir / f"bot-{bot_id}.log"
+
+
+# Max size of a per-bot log before it's rotated (one .1 backup kept) so long
+# soaks don't grow the append-only log unbounded.
+_MAX_BOT_LOG_BYTES = 10 * 1024 * 1024
+
+
+def _rotate_log_if_large(log_path: Path) -> None:
+    """Rotate a bot log that has grown past the size cap, keeping one backup."""
+    try:
+        if log_path.exists() and log_path.stat().st_size > _MAX_BOT_LOG_BYTES:
+            backup = log_path.with_suffix(log_path.suffix + ".1")
+            try:
+                if backup.exists():
+                    backup.unlink()
+            except Exception:
+                pass
+            log_path.replace(backup)
+    except Exception:
+        pass
 
 
 class BotManager:
@@ -125,10 +173,21 @@ class BotManager:
 
         status = bot.get("runtime_status") or bot.get("status", "stopped")
         if status == "running":
-            raise ValueError(f"Bot {bot_id} is already running")
+            # LIFE-7: a hard crash can leave a stale 'running' label. If the
+            # recorded PID is not actually alive, treat it as stopped and respawn
+            # rather than blocking the operator from restarting from the UI.
+            existing_pid = bot.get("pid")
+            if existing_pid and _is_pid_alive(existing_pid):
+                raise ValueError(f"Bot {bot_id} is already running")
+            logger.warning(
+                "Bot %s marked running but PID %s is dead — clearing stale status and respawning",
+                bot_id, existing_pid,
+            )
+            set_bot_status(bot_id, "stopped")
 
         env = _build_isolated_env(bot)
         log_path = _bot_log_path(bot_id)
+        _rotate_log_if_large(log_path)
 
         # H-R1: open the log file, hand it to Popen, then close OUR copy so the
         # FD doesn't leak if we repeatedly start/restart bots. The child keeps
@@ -204,8 +263,19 @@ class BotManager:
                     # Verify this is actually a Python/bot process, not something else
                     try:
                         cmdline = p.cmdline()
-                        if not any("bot_factory" in arg or "forven" in arg for arg in cmdline):
-                            logger.warning("PID %d doesn't look like a bot process, skipping kill", pid)
+                        # LIFE-4: require THIS bot's runner argv ("--bot-id <id>")
+                        # so a recycled PID that's merely some other forven process
+                        # is never killed.
+                        looks_like_this_bot = (
+                            any("bot_factory" in arg for arg in cmdline)
+                            and "--bot-id" in cmdline
+                            and bot_id in cmdline
+                        )
+                        if not looks_like_this_bot:
+                            logger.warning(
+                                "PID %d doesn't look like bot %s's process (cmdline mismatch), skipping kill",
+                                pid, bot_id,
+                            )
                         else:
                             p.kill()  # Direct kill — most reliable on Windows
                             try:
@@ -249,8 +319,10 @@ class BotManager:
         """Background loop that checks heartbeats and marks stale bots as error."""
         from datetime import datetime, timezone
 
+        cycle = 0
         while True:
             try:
+                cycle += 1
                 running = get_running_bots()
                 now = datetime.now(timezone.utc)
 
@@ -280,6 +352,15 @@ class BotManager:
                                 logger.warning(
                                     "Bot %s heartbeat stale (%.0fs old)", bot_id, age
                                 )
+                                # LIFE-3: the process may be alive but wedged —
+                                # kill it and drop our handle so recovery respawns
+                                # a clean process instead of an untracked zombie.
+                                if pid and pid != os.getpid() and _is_pid_alive(pid):
+                                    try:
+                                        psutil.Process(pid).kill()
+                                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                                        pass
+                                self._processes.pop(bot_id, None)
                                 set_bot_status(
                                     bot_id, "error",
                                     error_message=f"Heartbeat stale ({int(age)}s)",
@@ -292,10 +373,40 @@ class BotManager:
                         except (ValueError, TypeError):
                             pass
 
+                # PERSIST-2: periodically close orphaned bot trades (deleted or
+                # never-recovered bots) so phantom OPEN paper rows don't linger
+                # between restarts. Every ~10 min (20 × 30s).
+                if cycle % 20 == 0:
+                    self._reconcile_orphans()
+
             except Exception as e:
                 logger.error("Bot monitor error: %s", e)
 
             await asyncio.sleep(_MONITOR_INTERVAL)
+
+    def _reconcile_orphans(self) -> None:
+        """Close OPEN paper trades whose owning bot is neither tracked here nor
+        alive on its recorded PID. Shared by the startup recovery and the
+        periodic monitor sweep."""
+        from forven.db import get_db, reconcile_orphaned_bot_trades
+
+        try:
+            with get_db() as conn:
+                alive_rows = conn.execute(
+                    "SELECT bot_id, pid FROM bot_status WHERE status = 'running' AND pid IS NOT NULL"
+                ).fetchall()
+            still_alive = {
+                r["bot_id"] for r in alive_rows if r["pid"] and _is_pid_alive(r["pid"])
+            }
+            active_ids = set(self._processes.keys()) | still_alive
+            orphans = reconcile_orphaned_bot_trades(active_bot_ids=active_ids)
+            if orphans:
+                logger.info(
+                    "Periodic orphan reconcile: closed %d bot trade(s) for inactive bots",
+                    len(orphans),
+                )
+        except Exception as e:
+            logger.error("Periodic orphan reconcile failed: %s", e)
 
     def recover_bots(self) -> dict:
         """On startup, recover bots that should be running.
@@ -360,7 +471,12 @@ class BotManager:
                 r["bot_id"] for r in alive_rows
                 if r["pid"] and _is_pid_alive(r["pid"])
             }
-            active_ids = set(self._processes.keys()) | still_alive
+            # LIFE-5: also spare bots we ATTEMPTED to recover this startup (even
+            # if respawn failed transiently) so a flaky start doesn't force-close
+            # their positions. The periodic monitor reconcile catches any that
+            # stay dead.
+            attempted_ids = {c["bot_id"] for c in candidates}
+            active_ids = set(self._processes.keys()) | still_alive | attempted_ids
             orphans = reconcile_orphaned_bot_trades(active_bot_ids=active_ids)
             if orphans:
                 logger.info(
@@ -390,11 +506,21 @@ class BotManager:
             if pid and _is_pid_alive(pid):
                 try:
                     p = psutil.Process(pid)
-                    p.terminate()
+                    # LIFE-8: give the bot a chance to drain gracefully. The
+                    # runner handles SIGBREAK (Windows) / SIGTERM (POSIX) by
+                    # setting its _shutdown flag; fall back to a hard kill.
                     try:
-                        p.wait(timeout=5.0)
-                    except psutil.TimeoutExpired:
-                        p.kill()
+                        if os.name == "nt":
+                            import signal as _signal
+                            os.kill(pid, _signal.CTRL_BREAK_EVENT)
+                        else:
+                            p.terminate()
+                        p.wait(timeout=3.0)
+                    except (psutil.TimeoutExpired, ProcessLookupError, OSError):
+                        try:
+                            p.kill()
+                        except (psutil.NoSuchProcess, psutil.AccessDenied):
+                            pass
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     pass
             self._processes.pop(bot_id, None)

@@ -21,6 +21,20 @@ logger = logging.getLogger(__name__)
 # Minimum seconds between LLM calls (rate limit)
 MIN_LLM_INTERVAL_SECONDS = 10
 
+# Trade action vocabulary. BUY/SHORT open a long/short; SELL/COVER close the
+# matching long/short. A bot holds at most one long and one short per ticker.
+_OPEN_ACTIONS = {"BUY", "SHORT"}
+_CLOSE_ACTIONS = {"SELL", "COVER"}
+
+
+def _quantize_qty(raw_qty: float) -> float:
+    """Size a position fractionally (crypto is divisible) with float noise
+    trimmed. Returns 0.0 when the computed size is non-positive (can't afford
+    even a sliver) so the caller skips the trade rather than forcing 1 unit."""
+    if not raw_qty or raw_qty <= 0:
+        return 0.0
+    return round(float(raw_qty), 6)
+
 
 @dataclass
 class DecisionResult:
@@ -56,16 +70,24 @@ def assemble_prompt(
     if bot_config.get("guardrails"):
         system_parts.append(f"\n## Rules You MUST Follow\n{bot_config['guardrails']}")
 
+    verbosity = bot_config.get("reasoning_verbosity", "standard")
+    reasoning_hint = {
+        "minimal": "one short sentence",
+        "verbose": "a detailed explanation covering setup, risk, and what would invalidate the trade",
+    }.get(verbosity, "2-3 sentence explanation")
     system_parts.append(
         "\n## Response Format\n"
         "Respond with a JSON object:\n"
-        '{"action": "BUY"|"SELL"|"HOLD"|"OBSERVE", '
+        '{"action": "BUY"|"SELL"|"SHORT"|"COVER"|"HOLD"|"OBSERVE", '
         '"ticker": "SYMBOL" or null, '
         '"confidence": 0.0-1.0, '
-        '"reasoning": "2-3 sentence explanation"}\n'
-        "The system will auto-calculate position size from your capital and risk limits — you do NOT need to specify qty.\n"
-        "Use SELL to close an existing position (specify the ticker you want to exit).\n"
-        "Use OBSERVE to note a market observation without trading. Use HOLD when no action needed."
+        f'"reasoning": "{reasoning_hint}"}}\n'
+        "The system auto-sizes positions from your equity and risk limits — you do NOT specify qty.\n"
+        "BUY opens (or holds) a LONG; SELL closes your LONG in that ticker.\n"
+        "SHORT opens a SHORT (profits when price falls); COVER closes your SHORT in that ticker.\n"
+        "You hold at most one long and one short per ticker, and SELL/COVER close the whole position.\n"
+        "Only trade the tickers shown in the market data below.\n"
+        "Use OBSERVE to note a market observation without trading. Use HOLD when no action is needed."
     )
 
     messages.append({"role": "system", "content": "\n\n".join(system_parts)})
@@ -215,42 +237,75 @@ def enforce_risk_limits(
     bot_config: dict,
     current_positions: list[dict] | None = None,
     market_event: dict | None = None,
+    *,
+    realized_pnl: float = 0.0,
 ) -> dict | None:
-    """Validate a proposed trade against hard risk limits.
+    """Validate a proposed trade against risk limits.
 
-    Returns the trade dict if valid, or None if blocked.
+    Returns the trade dict if allowed, or None if blocked. Hard blocks:
+    unpriceable opens, max concurrent positions, non-positive size, and a
+    per-position size above max_position_pct of equity. The AGGREGATE exposure
+    check is a SOFT warning only — paper leverage (max_position_pct ×
+    max_concurrent > 100%) is allowed by design.
     """
     if not trade or trade.get("action") in ("HOLD", "OBSERVE", None):
         return trade
 
+    action = (trade.get("action") or "").upper()
     positions = current_positions or []
 
-    # Max concurrent positions
+    if action not in _OPEN_ACTIONS:
+        # Closes (SELL/COVER) are not size-gated.
+        return trade
+
+    ticker = trade.get("ticker")
+    # Only open positions we can actually price from the live snapshot. This
+    # keeps max_position_pct enforceable and stops off-universe picks (e.g. a
+    # free-roam BUY on a ticker outside the 2-pair snapshot) from either
+    # silently no-opping or bypassing the size check via a separate price fetch.
+    price = _get_current_price(ticker, market_event) if ticker else None
+    if not price or price <= 0:
+        logger.warning(
+            "Trade blocked: %s %s is not priceable from the market snapshot",
+            action, ticker,
+        )
+        return None
+
+    # Max concurrent positions (applies to every open, long or short).
     max_concurrent = bot_config.get("max_concurrent_positions", 5)
-    if trade.get("action") == "BUY" and len(positions) >= max_concurrent:
+    if len(positions) >= max_concurrent:
         logger.warning(
             "Trade blocked: max concurrent positions (%d) reached", max_concurrent
         )
         return None
 
-    # Max position size — enforced only when we can price it. The upstream
-    # auto-sizer already clamps qty it computes itself, but an LLM can
-    # hand back a pre-filled qty that skips that path, so re-check here.
-    if trade.get("action") == "BUY":
-        capital = bot_config.get("capital_allocation", 100000)
-        max_pct = bot_config.get("max_position_pct", 10) / 100.0
-        qty = trade.get("qty", 0) or 0
-        ticker = trade.get("ticker")
-        price = _get_current_price(ticker, market_event) if ticker else None
-        if qty > 0 and price and price > 0 and capital > 0:
-            position_value = qty * price
-            max_value = capital * max_pct
-            if position_value > max_value:
-                logger.warning(
-                    "Trade blocked: position value $%.2f exceeds max $%.2f (%.1f%% of $%.2f)",
-                    position_value, max_value, max_pct * 100, capital,
-                )
-                return None
+    qty = trade.get("qty", 0) or 0
+    if qty <= 0:
+        logger.info("Trade blocked: non-positive size for %s %s", action, ticker)
+        return None
+
+    equity = float(bot_config.get("capital_allocation", 100000) or 0) + float(realized_pnl or 0)
+    max_pct = float(bot_config.get("max_position_pct", 10)) / 100.0
+    position_value = qty * price
+    max_value = equity * max_pct if equity > 0 else 0.0
+    # 0.1% tolerance so an exactly-auto-sized position isn't blocked by rounding.
+    if max_value > 0 and position_value > max_value * 1.001:
+        logger.warning(
+            "Trade blocked: position value $%.2f exceeds max $%.2f (%.1f%% of equity $%.2f)",
+            position_value, max_value, max_pct * 100, equity,
+        )
+        return None
+
+    # Soft cash gate: warn (but allow) when total deployed notional would exceed
+    # equity. Leverage is a deliberate paper feature, not an error.
+    deployed = sum(
+        (p.get("qty") or 0) * (p.get("entry_price") or 0) for p in positions
+    )
+    if equity > 0 and (deployed + position_value) > equity:
+        logger.warning(
+            "Bot %s deploying above equity: $%.2f open + $%.2f new > $%.2f equity (leverage by config)",
+            bot_config.get("id", "?"), deployed, position_value, equity,
+        )
 
     return trade
 
@@ -293,63 +348,74 @@ async def run_decision_cycle(
         realized_pnl=realized_pnl,
     )
 
-    # Determine provider from model
-    model = bot_config.get("model", "gpt-4.1-mini")
+    # Determine provider from model; fall back to the operator's configured
+    # primary so a bot whose model was cleared still routes to a working provider.
+    model = bot_config.get("model")
+    if not model:
+        try:
+            from forven.model_routing import get_primary_provider_model
+
+            _, model = get_primary_provider_model()
+        except Exception:
+            model = "gpt-4.1-mini"
+
+    verbosity = bot_config.get("reasoning_verbosity", "standard")
+    max_tokens = {"minimal": 512, "standard": 1024, "verbose": 2048}.get(verbosity, 1024)
 
     try:
         from forven.ai import call_ai, normalize_provider_and_model
 
         provider, resolved_model = normalize_provider_and_model("auto", model)
 
-        # Call LLM — no fallback, strict model control
-        record_llm_call(bot_id)
+        # Call LLM — no fallback, strict model control. Record the call only AFTER
+        # a successful return so a provider outage doesn't also burn the daily LLM
+        # budget (failures are already counted toward the circuit breaker below).
         response_text = await call_ai(
             provider=provider,
             model=resolved_model,
             messages=messages,
-            max_tokens=1024,
+            max_tokens=max_tokens,
             temperature=0.7,
             fallback=False,
         )
+        record_llm_call(bot_id)
 
         # Parse response
         parsed = _parse_llm_response(response_text)
         action = (parsed.get("action") or "HOLD").upper()
         reasoning = parsed.get("reasoning", "")
-        verbosity = bot_config.get("reasoning_verbosity", "standard")
 
         # Map to result
-        if action in ("BUY", "SELL"):
+        if action in _OPEN_ACTIONS or action in _CLOSE_ACTIONS:
             ticker = parsed.get("ticker")
+            # BUY/SELL operate on the LONG book, SHORT/COVER on the SHORT book.
+            target_direction = "long" if action in ("BUY", "SELL") else "short"
 
-            if action == "BUY":
-                # Auto-calculate qty from capital and current price
+            if action in _OPEN_ACTIONS:
+                # Auto-size qty from current equity (capital + realized P&L) and
+                # price — fractional, matching the "% of equity" the prompt shows.
                 qty = parsed.get("qty") or 0
                 if (not qty or qty <= 0) and ticker and market_event:
                     price = _get_current_price(ticker, market_event)
                     if price and price > 0:
-                        capital = bot_config.get("capital_allocation", 100000)
-                        max_pct = bot_config.get("max_position_pct", 10) / 100.0
-                        max_spend = capital * max_pct
-                        qty = int(max_spend / price)
-                        if qty <= 0:
-                            qty = 1  # Minimum 1 unit
+                        equity = float(bot_config.get("capital_allocation", 100000) or 0) + float(realized_pnl or 0)
+                        max_pct = float(bot_config.get("max_position_pct", 10)) / 100.0
+                        qty = _quantize_qty((equity * max_pct) / price)
                 parsed["qty"] = qty
-
-            elif action == "SELL" and ticker and positions:
-                # Find the specific lot to close (oldest-first: FIFO).
-                # We pin the trade_id so the runner closes the exact row
-                # we're pricing here — closing "all longs in this ticker"
-                # silently loses P&L across multiple lots.
+            elif ticker and positions:
+                # Pin the exact open lot to close — the position whose direction
+                # matches the action (SELL→long, COVER→short) on this ticker.
                 for p in positions:
-                    if p.get("ticker") == ticker:
+                    if p.get("ticker") == ticker and (p.get("direction") or "long") == target_direction:
                         parsed["qty"] = p.get("qty", 0)
                         parsed["trade_id"] = p.get("trade_id")
                         parsed["entry_price"] = p.get("entry_price")
-                        parsed["direction"] = p.get("direction", "long")
+                        parsed["direction"] = target_direction
                         break
 
-            trade = enforce_risk_limits(parsed, bot_config, positions, market_event)
+            trade = enforce_risk_limits(
+                parsed, bot_config, positions, market_event, realized_pnl=realized_pnl
+            )
             if trade is None:
                 result = DecisionResult(
                     action_type="pass",
@@ -362,10 +428,10 @@ async def run_decision_cycle(
                     "qty": parsed.get("qty", 0),
                     "confidence": parsed.get("confidence"),
                 }
-                if action == "SELL":
+                if action in _CLOSE_ACTIONS:
                     trade_data["trade_id"] = parsed.get("trade_id")
                     trade_data["entry_price"] = parsed.get("entry_price")
-                    trade_data["direction"] = parsed.get("direction", "long")
+                    trade_data["direction"] = parsed.get("direction", target_direction)
                 result = DecisionResult(
                     action_type="trade",
                     reasoning=reasoning,

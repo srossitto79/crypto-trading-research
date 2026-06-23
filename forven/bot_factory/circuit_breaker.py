@@ -51,6 +51,14 @@ def check_llm_daily_cap(bot_id: str) -> bool:
     if not status:
         return False
     max_calls = bot.get("max_llm_calls_per_day", 200)
+    # The counter only resets lazily on the next increment; if the stored reset
+    # date isn't today, today's effective count is 0. This lets a daily-cap-paused
+    # bot resume after UTC midnight without a real LLM call to trigger the reset.
+    from datetime import datetime, timezone
+
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    if status.get("llm_calls_reset_date") != today:
+        return True
     current_calls = status.get("llm_calls_today", 0) or 0
     if current_calls >= max_calls:
         logger.warning(

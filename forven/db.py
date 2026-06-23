@@ -1415,6 +1415,7 @@ CREATE TABLE IF NOT EXISTS bot_status (
     llm_calls_reset_date TEXT,
     consecutive_errors INTEGER DEFAULT 0,
     realized_pnl REAL DEFAULT 0,
+    funding_accrued REAL DEFAULT 0,
     peak_equity REAL,
     equity_state_started_at TEXT
 );
@@ -3339,8 +3340,24 @@ def _run_post_index_migrations(conn: sqlite3.Connection):
     _ensure_column(conn, "bot_configs", "slippage_bps", "REAL DEFAULT 0")
     _ensure_column(conn, "bot_configs", "funding_rate_bps_per_day", "REAL DEFAULT 0")
     _ensure_column(conn, "bot_status", "realized_pnl", "REAL DEFAULT 0")
+    _ensure_column(conn, "bot_status", "funding_accrued", "REAL DEFAULT 0")
     _ensure_column(conn, "bot_status", "peak_equity", "REAL")
     _ensure_column(conn, "bot_status", "equity_state_started_at", "TEXT")
+
+    # Bot Factory indexes. idx_trades_source speeds the source='bot:%' reads at
+    # bot startup / UI refresh / reconcile. The unique version index is guarded
+    # because legacy rows could (in theory) already violate (bot_id, version).
+    try:
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_trades_source ON trades (source)")
+    except Exception:
+        pass
+    try:
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_bot_config_versions_unique "
+            "ON bot_config_versions (bot_id, version)"
+        )
+    except Exception:
+        pass
 
 
 def _ensure_column(conn: sqlite3.Connection, table: str, column: str, col_type: str):
@@ -3906,8 +3923,14 @@ def count_trades(status: str | None = None) -> int:
         return int(row["n"] if row else 0)
 
 
-def get_open_trades() -> list[dict]:
-    """Get all open trades."""
+def get_open_trades(exclude_bots: bool = False) -> list[dict]:
+    """Get all open trades.
+
+    When ``exclude_bots`` is True, Bot Factory paper trades (source='bot:{id}')
+    are omitted so live/strategy risk-reasoning contexts never count them as
+    real exposure. Defaults False to preserve every existing caller.
+    """
+    bot_filter = " AND COALESCE(source, '') NOT LIKE 'bot:%'" if exclude_bots else ""
     with get_db() as conn:
         rows = conn.execute(
             # `strategy` is the human-facing label the live/open-trades UI renders
@@ -3918,7 +3941,7 @@ def get_open_trades() -> list[dict]:
             "entry_price, signal_entry_price, fill_entry_price, exit_price, signal_exit_price, "
             "fill_exit_price, status, execution_type, pnl, pnl_pct, pnl_usd, net_pnl_pct, fees_pct, "
             "signal_data, opened_at, closed_at, timeframe, source, leverage, created_at "
-            "FROM trades WHERE status = 'OPEN' ORDER BY opened_at DESC"
+            f"FROM trades WHERE status = 'OPEN'{bot_filter} ORDER BY opened_at DESC"
         ).fetchall()
         return [dict(r) for r in rows]
 
@@ -6917,6 +6940,21 @@ def _today_utc() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
+def _default_bot_model() -> str:
+    """Resolve the default model for a new bot from the operator's configured
+    provider priority, so an install without an OpenAI key gets a model that
+    actually works out of the box instead of the hardcoded gpt-4.1-mini."""
+    try:
+        from forven.model_routing import get_primary_provider_model
+
+        _, model_id = get_primary_provider_model()
+        if model_id:
+            return model_id
+    except Exception:
+        pass
+    return "gpt-4.1-mini"
+
+
 def create_bot(config: dict) -> str:
     """Create a new bot and return its ID."""
     bot_id = str(uuid4())
@@ -6937,7 +6975,7 @@ def create_bot(config: dict) -> str:
             (
                 bot_id,
                 config.get("name", "Untitled Bot"),
-                config.get("model", "gpt-4.1-mini"),
+                config.get("model") or _default_bot_model(),
                 config.get("soul"),
                 config.get("context"),
                 config.get("strategy"),
@@ -7038,9 +7076,15 @@ def update_bot(bot_id: str, updates: dict) -> None:
             "SELECT COALESCE(MAX(version), 0) FROM bot_config_versions WHERE bot_id = ?",
             (bot_id,),
         ).fetchone()[0]
+        # Strip volatile fields so config-history diffs reflect real config
+        # changes, not status/timestamp churn.
+        snapshot = {
+            k: v for k, v in dict(existing).items()
+            if k not in ("status", "updated_at")
+        }
         conn.execute(
             "INSERT INTO bot_config_versions (bot_id, version, config_snapshot) VALUES (?, ?, ?)",
-            (bot_id, version_count + 1, json.dumps(dict(existing))),
+            (bot_id, version_count + 1, json.dumps(snapshot)),
         )
 
         # Build SET clause from updates
@@ -7066,6 +7110,17 @@ def update_bot(bot_id: str, updates: dict) -> None:
             f"UPDATE bot_configs SET {', '.join(set_parts)} WHERE id = ?",
             values,
         )
+
+        new_capital = updates.get("capital_allocation")
+        capital_changed = (
+            new_capital is not None
+            and float(new_capital or 0) != float(existing["capital_allocation"] or 0)
+        )
+
+    # Re-baseline the drawdown watermark outside the write txn: a lowered
+    # starting capital must not falsely trip max-drawdown against the old peak.
+    if capital_changed:
+        rebase_bot_equity_watermark(bot_id)
 
 
 def delete_bot(bot_id: str) -> None:
@@ -7365,7 +7420,6 @@ def execute_bot_trade(
     can deduct them at close.
     """
     with get_db() as conn:
-        trade_id = next_container_id(conn, "E")
         bot = conn.execute(
             "SELECT name, capital_allocation, max_position_pct FROM bot_configs WHERE id = ?",
             (bot_id,),
@@ -7390,31 +7444,47 @@ def execute_bot_trade(
         if take_profit_price is not None:
             signal_data["take_profit_price"] = float(take_profit_price)
         sig_price = signal_price if signal_price is not None else price
-        conn.execute(
-            """INSERT INTO trades
-            (id, strategy, strategy_name, strategy_id, asset, symbol, direction,
-             entry_price, signal_entry_price, fill_entry_price, entry_slippage_bps,
-             size, status, execution_type, source, signal_data, opened_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'OPEN', 'paper', ?, ?, ?)""",
-            (
-                trade_id,
-                f"bot:{bot_id}",
-                bot_name,
-                f"bot:{bot_id}",
-                ticker,
-                ticker,
-                direction.lower(),
-                price or 0,
-                sig_price or 0,
-                price or 0,
-                float(entry_slippage_bps) if entry_slippage_bps is not None else None,
-                qty,
-                f"bot:{bot_id}",
-                json.dumps(signal_data),
-                _now_utc(),
-            ),
+        # ISO-7: the shared "E" counter can fall behind the real trade ids (rows
+        # inserted out-of-band), handing back an already-used id. A PK collision
+        # is not a real duplicate, so retry with a fresh id; only a genuine
+        # duplicate OPEN (idx_trades_unique_open) propagates to the caller.
+        last_exc: sqlite3.IntegrityError | None = None
+        for _attempt in range(64):
+            trade_id = next_container_id(conn, "E")
+            try:
+                conn.execute(
+                    """INSERT INTO trades
+                    (id, strategy, strategy_name, strategy_id, asset, symbol, direction,
+                     entry_price, signal_entry_price, fill_entry_price, entry_slippage_bps,
+                     size, status, execution_type, source, signal_data, opened_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'OPEN', 'paper', ?, ?, ?)""",
+                    (
+                        trade_id,
+                        f"bot:{bot_id}",
+                        bot_name,
+                        f"bot:{bot_id}",
+                        ticker,
+                        ticker,
+                        direction.lower(),
+                        price or 0,
+                        sig_price or 0,
+                        price or 0,
+                        float(entry_slippage_bps) if entry_slippage_bps is not None else None,
+                        qty,
+                        f"bot:{bot_id}",
+                        json.dumps(signal_data),
+                        _now_utc(),
+                    ),
+                )
+                return trade_id
+            except sqlite3.IntegrityError as exc:
+                if "idx_trades_unique_open" in str(exc):
+                    raise
+                last_exc = exc
+                continue
+        raise RuntimeError(
+            f"could not allocate a free trade id for bot {bot_id} {ticker} after 64 attempts: {last_exc}"
         )
-    return trade_id
 
 
 def close_bot_trade(
@@ -7465,50 +7535,148 @@ def close_bot_trade(
     exit_fee = float(exit_fee_usd or 0)
     total_fees = entry_fee + exit_fee
 
-    if total_fees <= 0:
-        return result
+    net_pnl = float(pnl_usd)
+    if total_fees > 0:
+        adjusted = float(pnl_usd) - total_fees
+        entry = result.get("entry_price") or 0
+        size = 0.0
+        try:
+            with get_db() as conn:
+                row = conn.execute(
+                    "SELECT size FROM trades WHERE id = ?", (trade_id,)
+                ).fetchone()
+            if row:
+                size = abs(float(row["size"] or 0))
+        except Exception:
+            pass
 
-    adjusted = float(pnl_usd) - total_fees
-    entry = result.get("entry_price") or 0
-    size = 0.0
-    try:
-        row = None
+        adjusted_pct = None
+        if entry and size:
+            # P&L % is expressed against notional at entry so fees are visible.
+            adjusted_pct = (adjusted / (entry * size)) * 100 if entry * size else None
+
+        signal_data["gross_pnl_usd"] = float(pnl_usd)
+        signal_data["total_fees_usd"] = total_fees
+
         with get_db() as conn:
-            row = conn.execute(
-                "SELECT size FROM trades WHERE id = ?", (trade_id,)
-            ).fetchone()
-        if row:
-            size = abs(float(row["size"] or 0))
-    except Exception:
-        pass
+            conn.execute(
+                """UPDATE trades
+                       SET pnl = ?, pnl_usd = ?, pnl_pct = ?, signal_data = ?
+                     WHERE id = ?""",
+                (
+                    round(adjusted, 4),
+                    round(adjusted, 4),
+                    round(adjusted_pct, 6) if adjusted_pct is not None else result.get("pnl_pct"),
+                    json.dumps(signal_data),
+                    trade_id,
+                ),
+            )
 
-    adjusted_pct = None
-    if entry and size:
-        # P&L % is expressed against notional at entry so fees are visible.
-        adjusted_pct = (adjusted / (entry * size)) * 100 if entry * size else None
+        result["pnl_usd"] = adjusted
+        result["gross_pnl_usd"] = float(pnl_usd)
+        result["total_fees_usd"] = total_fees
+        result["signal_data"] = signal_data
+        net_pnl = adjusted
 
-    signal_data["gross_pnl_usd"] = float(pnl_usd)
-    signal_data["total_fees_usd"] = total_fees
+    # Atomically credit the owning bot's realized_pnl from this close so a crash
+    # between the trade-close and the runner's in-memory accumulation can't drop
+    # the P&L. Startup also rebuilds realized from the ledger (reconcile_bot_realized_pnl),
+    # so this and orphan-reconcile closes stay consistent with the trade list.
+    bot_realized = _bump_bot_realized_pnl_for_trade(trade_id, net_pnl)
+    if bot_realized is not None:
+        result["bot_realized_pnl"] = bot_realized
+    return result
 
+
+def _bump_bot_realized_pnl_for_trade(trade_id: str, net_pnl: float) -> float | None:
+    """Credit a bot's realized_pnl by a just-closed trade's net P&L, deriving the
+    bot_id from the trade's source ('bot:{id}'). Returns the new realized_pnl, or
+    None when the trade is not a Bot Factory trade (no bot to credit)."""
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT source FROM trades WHERE id = ?", (trade_id,)
+        ).fetchone()
+        src = str((row["source"] if row else "") or "")
+        if not src.startswith("bot:"):
+            return None
+        bot_id = src.split(":", 1)[1]
+        cur = conn.execute(
+            "SELECT realized_pnl FROM bot_status WHERE bot_id = ?", (bot_id,)
+        ).fetchone()
+        if not cur:
+            return None
+        new_val = float(cur["realized_pnl"] or 0.0) + float(net_pnl or 0.0)
+        conn.execute(
+            "UPDATE bot_status SET realized_pnl = ? WHERE bot_id = ?",
+            (new_val, bot_id),
+        )
+        return new_val
+
+
+def accrue_bot_funding(bot_id: str, funding_delta: float) -> float | None:
+    """Book a funding accrual to a bot's realized_pnl atomically.
+
+    `funding_delta` is a COST (positive reduces realized_pnl, matching the
+    runner's perp convention). The cumulative cost is tracked separately in
+    `funding_accrued` so startup reconcile can rebuild
+    realized_pnl = closed-trade-ledger - funding_accrued. Returns the new
+    realized_pnl, or None if the bot has no status row.
+    """
+    if not funding_delta:
+        state = get_bot_equity_state(bot_id)
+        return float(state["realized_pnl"]) if state and state.get("realized_pnl") is not None else None
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT realized_pnl, funding_accrued FROM bot_status WHERE bot_id = ?",
+            (bot_id,),
+        ).fetchone()
+        if not row:
+            return None
+        new_realized = float(row["realized_pnl"] or 0.0) - float(funding_delta)
+        new_funding = float(row["funding_accrued"] or 0.0) + float(funding_delta)
+        conn.execute(
+            "UPDATE bot_status SET realized_pnl = ?, funding_accrued = ? WHERE bot_id = ?",
+            (new_realized, new_funding, bot_id),
+        )
+        return new_realized
+
+
+def reconcile_bot_realized_pnl(bot_id: str) -> float:
+    """Rebuild a bot's realized_pnl from the closed-trade ledger plus cumulative
+    funding, write it back, and return it. Called on bot startup so the equity
+    that drives the max-drawdown gate can never silently drift from the trade
+    list (crash windows, orphan-reconcile closes, etc. all self-heal)."""
+    source = f"bot:{bot_id}"
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT COALESCE(SUM(pnl_usd), 0) AS s FROM trades "
+            "WHERE source = ? AND status = 'CLOSED'",
+            (source,),
+        ).fetchone()
+        ledger = float(row["s"] or 0.0) if row else 0.0
+        frow = conn.execute(
+            "SELECT funding_accrued FROM bot_status WHERE bot_id = ?", (bot_id,)
+        ).fetchone()
+        funding = float((frow["funding_accrued"] if frow else 0) or 0.0)
+        realized = ledger - funding
+        conn.execute(
+            "UPDATE bot_status SET realized_pnl = ? WHERE bot_id = ?",
+            (realized, bot_id),
+        )
+        return realized
+
+
+def rebase_bot_equity_watermark(bot_id: str) -> None:
+    """Clear the peak-equity watermark (re-baselines on next startup) without
+    touching realized_pnl. Called when capital_allocation changes so a lowered
+    starting capital doesn't falsely trip the max-drawdown gate against a stale
+    higher watermark."""
     with get_db() as conn:
         conn.execute(
-            """UPDATE trades
-                   SET pnl = ?, pnl_usd = ?, pnl_pct = ?, signal_data = ?
-                 WHERE id = ?""",
-            (
-                round(adjusted, 4),
-                round(adjusted, 4),
-                round(adjusted_pct, 6) if adjusted_pct is not None else result.get("pnl_pct"),
-                json.dumps(signal_data),
-                trade_id,
-            ),
+            "UPDATE bot_status SET peak_equity = NULL, equity_state_started_at = ? "
+            "WHERE bot_id = ?",
+            (_now_utc(), bot_id),
         )
-
-    result["pnl_usd"] = adjusted
-    result["gross_pnl_usd"] = float(pnl_usd)
-    result["total_fees_usd"] = total_fees
-    result["signal_data"] = signal_data
-    return result
 
 
 def get_open_bot_positions(bot_id: str) -> list[dict]:
@@ -7542,7 +7710,11 @@ def get_open_bot_positions(bot_id: str) -> list[dict]:
                 "direction": d.get("direction") or "long",
                 "qty": d.get("size") or 0,
                 "entry_price": entry,
-                "current_price": entry,  # runner refreshes on next tick
+                # No live mark is persisted in the DB (the runner marks to market
+                # in-process), so expose None rather than echoing entry as a
+                # fake-flat "current" price. The runner handles None safely and
+                # refreshes on its next tick; the UI shows "—" until a live mark.
+                "current_price": None,
                 "stop_loss_price": sig.get("stop_loss_price"),
                 "take_profit_price": sig.get("take_profit_price"),
                 "entry_fee_usd": float(sig.get("entry_fee_usd") or 0),
@@ -7673,6 +7845,69 @@ def reconcile_orphaned_bot_trades(
             rep["action"] = "close_failed"
             rep["error"] = str(e)
     return reports
+
+
+def close_open_bot_trades(bot_id: str, reason: str = "bot_deleted") -> list[str]:
+    """Close every OPEN paper trade for a single bot at its entry price (≈0 gross
+    P&L, minus fees). Used on delete so the bot's positions don't linger as
+    phantom exposure once its config — and attribution — is gone."""
+    source = f"bot:{bot_id}"
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, fill_entry_price, entry_price, signal_entry_price "
+            "FROM trades WHERE source = ? AND status = 'OPEN'",
+            (source,),
+        ).fetchall()
+        targets = [
+            (
+                r["id"],
+                (r["fill_entry_price"] or r["entry_price"] or r["signal_entry_price"] or 0),
+            )
+            for r in rows
+        ]
+    closed: list[str] = []
+    for tid, entry in targets:
+        try:
+            close_bot_trade(tid, exit_price=float(entry or 0), reason=reason)
+            closed.append(tid)
+        except Exception as e:
+            log.warning("Failed to close bot trade %s on delete: %s", tid, e)
+    return closed
+
+
+def get_bot_trade_stats(bot_id: str) -> dict:
+    """Aggregate stats over ALL of a bot's trades (not just the last N), so the
+    UI can show honest totals/win-rate instead of a capped recent slice."""
+    source = f"bot:{bot_id}"
+    with get_db() as conn:
+        row = conn.execute(
+            """SELECT
+                 COUNT(*) AS total,
+                 SUM(CASE WHEN status = 'OPEN' THEN 1 ELSE 0 END) AS open_count,
+                 SUM(CASE WHEN status = 'CLOSED' THEN 1 ELSE 0 END) AS closed_count,
+                 SUM(CASE WHEN status = 'CLOSED' AND COALESCE(pnl_usd, 0) > 0 THEN 1 ELSE 0 END) AS wins,
+                 SUM(CASE WHEN status = 'CLOSED' AND COALESCE(pnl_usd, 0) < 0 THEN 1 ELSE 0 END) AS losses,
+                 SUM(CASE WHEN status = 'CLOSED' THEN COALESCE(pnl_usd, 0) ELSE 0 END) AS total_pnl_usd,
+                 MAX(CASE WHEN status = 'CLOSED' THEN pnl_usd END) AS best_pnl_usd,
+                 MIN(CASE WHEN status = 'CLOSED' THEN pnl_usd END) AS worst_pnl_usd
+               FROM trades WHERE source = ?""",
+            (source,),
+        ).fetchone()
+    d = dict(row) if row else {}
+    closed = int(d.get("closed_count") or 0)
+    wins = int(d.get("wins") or 0)
+    return {
+        "bot_id": bot_id,
+        "total": int(d.get("total") or 0),
+        "open_count": int(d.get("open_count") or 0),
+        "closed_count": closed,
+        "wins": wins,
+        "losses": int(d.get("losses") or 0),
+        "win_rate": (wins / closed) if closed else 0.0,
+        "total_pnl_usd": float(d.get("total_pnl_usd") or 0.0),
+        "best_pnl_usd": float(d.get("best_pnl_usd") or 0.0),
+        "worst_pnl_usd": float(d.get("worst_pnl_usd") or 0.0),
+    }
 
 
 def get_bot_trades(bot_id: str, limit: int = 50) -> list[dict]:

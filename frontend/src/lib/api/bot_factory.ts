@@ -2,6 +2,13 @@ import { fetchApi } from './core';
 
 // ── Types ──────────────────────────────────────────────────────────
 
+export interface BotSessionHours {
+	timezone: string;
+	days: string[];
+	start: string;
+	end: string;
+}
+
 export interface BotConfig {
 	id: string;
 	name: string;
@@ -14,15 +21,15 @@ export interface BotConfig {
 	max_position_pct: number;
 	max_concurrent_positions: number;
 	max_drawdown_pct: number;
+	stop_loss_pct: number | null;
+	take_profit_pct: number | null;
+	taker_fee_bps: number;
+	slippage_bps: number;
 	cooldown_seconds: number;
-	session_hours: Record<string, unknown> | null;
+	session_hours: BotSessionHours | null;
 	reasoning_verbosity: string;
 	asset_mode: string;
 	locked_pairs: string[] | null;
-	tools: Record<string, unknown>[] | null;
-	web_allowlist: string[] | null;
-	web_rate_limit: number;
-	data_sources: Record<string, unknown> | null;
 	max_llm_calls_per_day: number;
 	max_consecutive_errors: number;
 	template_id: string | null;
@@ -146,6 +153,23 @@ export async function getBotTrades(id: string, limit = 50): Promise<BotTrade[]> 
 	return fetchApi(`/bot-factory/bots/${id}/trades?limit=${limit}`);
 }
 
+export interface BotStats {
+	bot_id: string;
+	total: number;
+	open_count: number;
+	closed_count: number;
+	wins: number;
+	losses: number;
+	win_rate: number; // 0..1 float
+	total_pnl_usd: number;
+	best_pnl_usd: number;
+	worst_pnl_usd: number;
+}
+
+export async function getBotStats(id: string): Promise<BotStats> {
+	return fetchApi(`/bot-factory/bots/${id}/stats`);
+}
+
 export async function getBotDecisions(id: string, limit = 50): Promise<BotDecision[]> {
 	return fetchApi(`/bot-factory/bots/${id}/decisions?limit=${limit}`);
 }
@@ -204,6 +228,17 @@ export async function getBotPositions(id: string): Promise<BotPositionsSnapshot>
 
 export async function diffBotVersions(id: string, v1: number, v2: number): Promise<BotVersionDiff> {
 	return fetchApi(`/bot-factory/bots/${id}/versions/${v1}/diff/${v2}`);
+}
+
+// ── Strategy Bridge ────────────────────────────────────────────────
+
+export interface BotStrategyBridge {
+	config: Partial<BotConfig>;
+	strategy_id: string;
+}
+
+export async function createBotFromStrategy(strategyId: string): Promise<BotStrategyBridge> {
+	return fetchApi(`/bot-factory/from-strategy/${strategyId}`);
 }
 
 // ── Templates ──────────────────────────────────────────────────────

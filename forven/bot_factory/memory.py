@@ -22,6 +22,14 @@ class BotMemory:
         if self._collection is not None:
             return self._collection
 
+        import os
+
+        if os.environ.get("FORVEN_DISABLE_CHROMA_IN_PROCESS") or os.environ.get("FORVEN_DISABLE_CHROMA"):
+            # ISO-4: in-process ChromaDB can segfault on some hosts (ONNX/Arc-GPU).
+            # When the guard is set, bot memory is disabled (recall/store no-op)
+            # rather than risking an uncatchable native crash of the subprocess.
+            return None
+
         try:
             import chromadb
             from forven.config import FORVEN_HOME
