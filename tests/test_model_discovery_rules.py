@@ -49,6 +49,12 @@ def test_gemini_belong_rule_keeps_chat_drops_other_modalities() -> None:
     assert not ac._discovery_model_should_belong("gemini", "text-embedding-004")
 
 
+def test_deepseek_belong_rule() -> None:
+    assert ac._discovery_model_should_belong("deepseek", "deepseek-chat")
+    assert ac._discovery_model_should_belong("deepseek", "deepseek-reasoner")
+    assert not ac._discovery_model_should_belong("deepseek", "gpt-4o")
+
+
 def test_unwired_provider_still_returns_false() -> None:
     # Providers without a belong-rule fall back to the static catalog.
     assert not ac._discovery_model_should_belong("openrouter", "anthropic/claude-sonnet-4")

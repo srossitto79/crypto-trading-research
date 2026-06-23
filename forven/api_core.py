@@ -292,6 +292,11 @@ _MODEL_DISCOVERY_ALT_ENDPOINTS = {
     # Anthropic paginates /v1/models (default 20); ask for the full list so new
     # releases (e.g. newer Opus/Sonnet) surface without a catalog edit.
     "anthropic": ["https://api.anthropic.com/v1/models?limit=1000"],
+    # DeepSeek is OpenAI-compatible; try the /v1 path first, then the bare path.
+    "deepseek": [
+        "https://api.deepseek.com/v1/models",
+        "https://api.deepseek.com/models",
+    ],
 }
 _MODEL_DISCOVERY_HEADERS = {
     "openai": {
@@ -313,6 +318,9 @@ _MODEL_DISCOVERY_HEADERS = {
     "anthropic": {
         "x-api-key": "{token}",
         "anthropic-version": "2023-06-01",
+    },
+    "deepseek": {
+        "Authorization": "Bearer {token}",
     },
 }
 _MODEL_PROVIDER_DISPLAY_NAMES = {
@@ -468,6 +476,11 @@ def _looks_like_anthropic_discovery_model(model: str) -> bool:
     return lowered.startswith("claude-") or "claude" in lowered
 
 
+def _looks_like_deepseek_discovery_model(model: str) -> bool:
+    lowered = model.lower().strip()
+    return lowered.startswith("deepseek")
+
+
 def _looks_like_groq_discovery_model(model: str) -> bool:
     raw = str(model or "").strip()
     if not raw:
@@ -512,6 +525,8 @@ def _discovery_model_should_belong(provider: str, model_id: str) -> bool:
         return _looks_like_zai_discovery_model(model_id)
     if provider == "anthropic":
         return _looks_like_anthropic_discovery_model(model_id)
+    if provider == "deepseek":
+        return _looks_like_deepseek_discovery_model(model_id)
     if provider == "groq":
         return _looks_like_groq_discovery_model(model_id)
     if provider == "gemini":
