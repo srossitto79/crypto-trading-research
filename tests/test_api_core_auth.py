@@ -86,6 +86,56 @@ def _make_fake_client(status: int, json_body: dict | None = None):
     return _FakeClient
 
 
+def test_upsert_rejects_invalid_key_at_save(monkeypatch):
+    import pytest
+    from fastapi import HTTPException
+
+    saved_profiles: dict[str, dict] = {}
+    monkeypatch.setattr(api_core, "get_profile", lambda provider: saved_profiles.get(provider))
+    monkeypatch.setattr(
+        api_core, "upsert_profile", lambda p, prof: saved_profiles.__setitem__(p, dict(prof))
+    )
+    monkeypatch.setattr(api_core.httpx, "Client", _make_fake_client(401))
+
+    with pytest.raises(HTTPException) as excinfo:
+        api_core.upsert_auth_provider(
+            "groq", api_core.AuthProviderProfileBody(api_key="garbage")
+        )
+    assert excinfo.value.status_code == 400
+    assert "groq" not in saved_profiles  # nothing persisted on rejection
+
+
+def test_upsert_accepts_valid_key_at_save(monkeypatch):
+    saved_profiles: dict[str, dict] = {}
+    monkeypatch.setattr(api_core, "get_profile", lambda provider: saved_profiles.get(provider))
+    monkeypatch.setattr(
+        api_core, "upsert_profile", lambda p, prof: saved_profiles.__setitem__(p, dict(prof))
+    )
+    monkeypatch.setattr(api_core.httpx, "Client", _make_fake_client(200, {"data": [{"id": "gemini-2.5-flash"}]}))
+
+    result = api_core.upsert_auth_provider(
+        "gemini", api_core.AuthProviderProfileBody(api_key="AIza-real")
+    )
+    assert result == {"ok": True, "provider": "gemini"}
+    assert saved_profiles["gemini"]["access"] == "AIza-real"
+
+
+def test_upsert_tolerates_unreachable_at_save(monkeypatch):
+    """A network/transient failure must NOT block a legitimate save."""
+    saved_profiles: dict[str, dict] = {}
+    monkeypatch.setattr(api_core, "get_profile", lambda provider: saved_profiles.get(provider))
+    monkeypatch.setattr(
+        api_core, "upsert_profile", lambda p, prof: saved_profiles.__setitem__(p, dict(prof))
+    )
+    monkeypatch.setattr(api_core.httpx, "Client", _make_fake_client(503))  # transient
+
+    result = api_core.upsert_auth_provider(
+        "groq", api_core.AuthProviderProfileBody(api_key="gsk-maybe-fine")
+    )
+    assert result == {"ok": True, "provider": "groq"}
+    assert saved_profiles["groq"]["access"] == "gsk-maybe-fine"
+
+
 def test_test_provider_accepts_valid_key(monkeypatch):
     monkeypatch.setattr(api_core, "get_profile", lambda provider: {"api_key": "gsk-real"})
     monkeypatch.setattr(api_core, "get_token", lambda provider: "gsk-real")

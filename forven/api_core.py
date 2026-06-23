@@ -6982,6 +6982,14 @@ def upsert_auth_provider(provider: str, body: AuthProviderProfileBody):
     if not profile:
         raise HTTPException(status_code=400, detail=f"invalid credentials payload for {normalized_provider}")
 
+    # Reject a definitively-invalid key at entry time. Only when a new token is
+    # being set (not a base_url-only update) and never for lmstudio (local, no
+    # key to verify). _verify_provider_key raises HTTPException(400) on a hard
+    # rejection (400/401/403); transient/unverifiable outcomes are tolerated so
+    # a network blip can't block a legitimate save.
+    if access_token and normalized_provider != "lmstudio":
+        _verify_provider_key(normalized_provider, access_token)
+
     upsert_profile(normalized_provider, profile)
     return {"ok": True, "provider": normalized_provider}
 
@@ -6992,6 +7000,59 @@ def delete_auth_provider(provider: str):
     if not removed:
         return {"ok": False, "provider": normalized_provider, "removed": False}
     return {"ok": True, "provider": normalized_provider, "removed": True}
+
+
+def _verify_provider_key(provider: str, token: str) -> tuple[str, str]:
+    """Probe *provider* to check *token* is actually valid.
+
+    Returns ``(state, message)`` where state is:
+      - ``"ok"``           — provider accepted the key (HTTP 200/429)
+      - ``"no_endpoint"``  — no way to verify this provider remotely
+      - ``"unreachable"``  — had an endpoint but it didn't answer (404/5xx/network)
+
+    Raises ``HTTPException(400)`` when the provider *definitively* rejects the
+    key (HTTP 400/401/403) — that is a real "bad key" signal, distinct from a
+    transient failure callers may choose to tolerate.
+    """
+    endpoints = (
+        _AUTH_TEST_ENDPOINT_OVERRIDES.get(provider)
+        or _MODEL_DISCOVERY_ALT_ENDPOINTS.get(provider, [])
+    )
+    headers_template = (
+        _AUTH_TEST_HEADER_OVERRIDES.get(provider)
+        or _MODEL_DISCOVERY_HEADERS.get(provider, {})
+    )
+    if not (endpoints and headers_template):
+        return "no_endpoint", "not verifiable for this provider"
+
+    header = {key: value.format(token=token) for key, value in headers_template.items()}
+    last_error: str | None = None
+    for endpoint in endpoints:
+        try:
+            with httpx.Client(timeout=15) as client:
+                response = client.get(endpoint, headers=header)
+        except Exception as exc:
+            last_error = str(exc)
+            continue
+        code = response.status_code
+        if code == 200:
+            try:
+                models = _extract_discovery_models(response.json(), provider)
+                note = f" ({len(models)} models available)" if models else ""
+            except Exception:
+                note = ""
+            return "ok", f"Connected{note}"
+        if code == 429:
+            return "ok", "Key valid (rate-limited at test time)"
+        if code in (400, 401, 403):
+            raise HTTPException(
+                status_code=400,
+                detail=f"{provider}: invalid API key (HTTP {code})",
+            )
+        last_error = f"HTTP {code}"
+        continue
+
+    return "unreachable", last_error or "no endpoint responded"
 
 
 def test_auth_provider(provider: str):
@@ -7031,67 +7092,20 @@ def test_auth_provider(provider: str):
         raise HTTPException(status_code=400, detail=f"{normalized_provider} token missing after load")
 
     # Verify the key against the provider — a present-but-invalid key must fail.
-    endpoints = (
-        _AUTH_TEST_ENDPOINT_OVERRIDES.get(normalized_provider)
-        or _MODEL_DISCOVERY_ALT_ENDPOINTS.get(normalized_provider, [])
-    )
-    headers_template = (
-        _AUTH_TEST_HEADER_OVERRIDES.get(normalized_provider)
-        or _MODEL_DISCOVERY_HEADERS.get(normalized_provider, {})
-    )
-    if not (endpoints and headers_template):
-        # No way to verify this provider remotely — surface that honestly rather
-        # than implying the key was checked.
-        return {
-            "ok": True,
-            "provider": normalized_provider,
-            "status": _build_auth_provider_payload(normalized_provider)["status"],
-            "message": "Token saved (not verified against provider)",
-        }
-
-    header = {key: value.format(token=token) for key, value in headers_template.items()}
-    last_error: str | None = None
-    for endpoint in endpoints:
-        try:
-            with httpx.Client(timeout=15) as client:
-                response = client.get(endpoint, headers=header)
-        except Exception as exc:
-            last_error = str(exc)
-            continue
-        code = response.status_code
-        if code == 200:
-            try:
-                models = _extract_discovery_models(response.json(), normalized_provider)
-                count_note = f" ({len(models)} models available)" if models else ""
-            except Exception:
-                count_note = ""
-            return {
-                "ok": True,
-                "provider": normalized_provider,
-                "status": _build_auth_provider_payload(normalized_provider)["status"],
-                "message": f"Connected{count_note}",
-            }
-        if code == 429:
-            # Authenticated but rate-limited — the key itself is valid.
-            return {
-                "ok": True,
-                "provider": normalized_provider,
-                "status": _build_auth_provider_payload(normalized_provider)["status"],
-                "message": "Key valid (rate-limited at test time)",
-            }
-        if code in (400, 401, 403):
-            raise HTTPException(
-                status_code=400,
-                detail=f"{normalized_provider}: invalid API key (HTTP {code})",
-            )
-        # 404 (wrong path — try the next endpoint) / 5xx / other transient.
-        last_error = f"HTTP {code}"
-        continue
-
-    raise HTTPException(
-        status_code=400,
-        detail=f"{normalized_provider}: could not verify key ({last_error or 'no endpoint responded'})",
-    )
+    # _verify_provider_key raises on a definitive rejection (400/401/403).
+    state, message = _verify_provider_key(normalized_provider, token)
+    if state == "unreachable":
+        # Test is strict: an endpoint exists but we couldn't confirm the key.
+        raise HTTPException(
+            status_code=400,
+            detail=f"{normalized_provider}: could not verify key ({message})",
+        )
+    return {
+        "ok": True,
+        "provider": normalized_provider,
+        "status": _build_auth_provider_payload(normalized_provider)["status"],
+        "message": message if state == "ok" else "Token saved (not verified against provider)",
+    }
 
 
 def get_auth_providers():
