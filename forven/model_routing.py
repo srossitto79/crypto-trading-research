@@ -19,6 +19,8 @@ _SUPPORTED_PROVIDERS: tuple[str, ...] = (
     "openrouter",
     "anthropic",
     "deepseek",
+    "groq",
+    "gemini",
 )
 _MODEL_ROUTING_STORAGE_KEY = "forven:model-routing"
 _LEGACY_MODEL_ALIASES: dict[str, dict[str, str]] = {}
@@ -31,6 +33,11 @@ _ZAI_PRIMARY_PROVIDER_PRIORITY = [
     "openrouter",
     "anthropic",
     "deepseek",
+    # Free-tier providers default to the bottom of the priority order: their
+    # rate limits are aggressive, so they shouldn't outrank paid providers on
+    # the hot path unless the operator reorders them.
+    "groq",
+    "gemini",
 ]
 
 # Auxiliary task kinds — small/cheap helper models that run *outside* the
@@ -92,6 +99,8 @@ _DEFAULT_MODEL_ROUTING = {
         "openrouter": "openai/gpt-4o-mini",
         "anthropic": "claude-sonnet-4-6",
         "deepseek": "deepseek-chat",
+        "groq": "llama-3.3-70b-versatile",
+        "gemini": "gemini-2.5-flash",
     },
     "fallback_chains": {
         "openai": [
@@ -122,6 +131,14 @@ _DEFAULT_MODEL_ROUTING = {
         ],
         "deepseek": [
             {"provider": "deepseek", "model_id": "deepseek-chat"},
+            {"provider": "openai", "model_id": "gpt-5.2"},
+        ],
+        "groq": [
+            {"provider": "groq", "model_id": "llama-3.3-70b-versatile"},
+            {"provider": "openai", "model_id": "gpt-5.2"},
+        ],
+        "gemini": [
+            {"provider": "gemini", "model_id": "gemini-2.5-flash"},
             {"provider": "openai", "model_id": "gpt-5.2"},
         ],
     },

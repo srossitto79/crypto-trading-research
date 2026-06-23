@@ -252,7 +252,7 @@ def _parse_int_query(value: str | None, default: int = 0) -> int:
         return default
 
 
-_SUPPORTED_AUTH_PROVIDERS: list[str] = ["openai", "minimax", "lmstudio", "zai", "openrouter", "anthropic", "deepseek"]
+_SUPPORTED_AUTH_PROVIDERS: list[str] = ["openai", "minimax", "lmstudio", "zai", "openrouter", "anthropic", "deepseek", "groq", "gemini"]
 _AUTH_PROVIDER_ENV_VARS = {
     "openai": "OPENAI_API_KEY",
     "minimax": "MINIMAX_API_KEY",
@@ -261,6 +261,8 @@ _AUTH_PROVIDER_ENV_VARS = {
     "openrouter": "OPENROUTER_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "deepseek": "DEEPSEEK_API_KEY",
+    "groq": "GROQ_API_KEY",
+    "gemini": "GEMINI_API_KEY",
 }
 _AUTH_OAUTH_SESSIONS: dict[str, dict[str, dict[str, object]]] = {}
 _AUTH_OAUTH_CALLBACKS: dict[str, dict[str, str]] = {}
@@ -285,6 +287,8 @@ _MODEL_DISCOVERY_ALT_ENDPOINTS = {
         "https://api.z.ai/api/paas/v4/models",
         "https://open.bigmodel.cn/api/paas/v4/models",
     ],
+    "groq": ["https://api.groq.com/openai/v1/models"],
+    "gemini": ["https://generativelanguage.googleapis.com/v1beta/openai/models"],
 }
 _MODEL_DISCOVERY_HEADERS = {
     "openai": {
@@ -297,6 +301,12 @@ _MODEL_DISCOVERY_HEADERS = {
     "zai": {
         "Authorization": "Bearer {token}",
     },
+    "groq": {
+        "Authorization": "Bearer {token}",
+    },
+    "gemini": {
+        "Authorization": "Bearer {token}",
+    },
 }
 _MODEL_PROVIDER_DISPLAY_NAMES = {
     "openai": "OpenAI",
@@ -306,6 +316,8 @@ _MODEL_PROVIDER_DISPLAY_NAMES = {
     "openrouter": "OpenRouter",
     "anthropic": "Anthropic",
     "deepseek": "DeepSeek",
+    "groq": "Groq",
+    "gemini": "Google Gemini",
 }
 _LOCAL_PROVIDER_DEFAULT_BASE_URLS = {
     "lmstudio": "http://127.0.0.1:1234",
@@ -362,6 +374,17 @@ _AGENT_MODEL_CATALOG = [
     {"provider": "anthropic", "model_id": "claude-3-5-haiku-20241022", "label": "Anthropic Claude 3.5 Haiku"},
     {"provider": "deepseek", "model_id": "deepseek-chat", "label": "DeepSeek Chat"},
     {"provider": "deepseek", "model_id": "deepseek-reasoner", "label": "DeepSeek Reasoner"},
+    {"provider": "groq", "model_id": "llama-3.3-70b-versatile", "label": "Groq Llama 3.3 70B Versatile"},
+    {"provider": "groq", "model_id": "llama-3.1-8b-instant", "label": "Groq Llama 3.1 8B Instant"},
+    {"provider": "groq", "model_id": "openai/gpt-oss-120b", "label": "Groq GPT-OSS 120B"},
+    {"provider": "groq", "model_id": "openai/gpt-oss-20b", "label": "Groq GPT-OSS 20B"},
+    {"provider": "groq", "model_id": "moonshotai/kimi-k2-instruct", "label": "Groq Kimi K2 Instruct"},
+    {"provider": "groq", "model_id": "qwen/qwen3-32b", "label": "Groq Qwen3 32B"},
+    {"provider": "gemini", "model_id": "gemini-2.5-pro", "label": "Google Gemini 2.5 Pro"},
+    {"provider": "gemini", "model_id": "gemini-2.5-flash", "label": "Google Gemini 2.5 Flash"},
+    {"provider": "gemini", "model_id": "gemini-2.5-flash-lite", "label": "Google Gemini 2.5 Flash Lite"},
+    {"provider": "gemini", "model_id": "gemini-2.0-flash", "label": "Google Gemini 2.0 Flash"},
+    {"provider": "gemini", "model_id": "gemini-1.5-flash", "label": "Google Gemini 1.5 Flash"},
 ]
 
 

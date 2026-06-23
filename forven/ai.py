@@ -135,6 +135,8 @@ ENDPOINTS = {
     "minimax": "https://api.minimax.io/anthropic/v1/messages",
     "zai": "https://api.z.ai/api/paas/v4/chat/completions",
     "openrouter": "https://openrouter.ai/api/v1/chat/completions",
+    "groq": "https://api.groq.com/openai/v1/chat/completions",
+    "gemini": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
 }
 
 _PROVIDER_ALIAS = {
@@ -149,7 +151,7 @@ _PROVIDER_ALIAS = {
 }
 
 _KNOWN_PROVIDER_PREFIXES: frozenset[str] = frozenset({
-    "openai", "minimax", "lmstudio", "zai", "openrouter",
+    "openai", "minimax", "lmstudio", "zai", "openrouter", "groq", "gemini",
     "codex", "openai-codex", "local", "lm-studio", "z.ai", "z-ai",
     "open-router", "open_router",
 })
@@ -811,6 +813,21 @@ async def _call_single(
             response_schema_name=response_schema_name,
             endpoint=ENDPOINTS["openrouter"],
             provider_label="openrouter",
+        )
+    elif provider in ("groq", "gemini"):
+        # Groq and Gemini both expose OpenAI-compatible Chat Completions
+        # endpoints, so route through the shared OpenAI caller.
+        return await _call_openai(
+            token,
+            model,
+            messages,
+            max_tokens,
+            temperature,
+            system,
+            response_schema=response_schema,
+            response_schema_name=response_schema_name,
+            endpoint=ENDPOINTS[provider],
+            provider_label=provider,
         )
     else:
         raise ValueError(f"Unknown provider: {provider}")
