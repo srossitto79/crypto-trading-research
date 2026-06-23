@@ -100,7 +100,10 @@ _DEFAULT_MODEL_ROUTING = {
         "anthropic": "claude-sonnet-4-6",
         "deepseek": "deepseek-chat",
         "groq": "llama-3.3-70b-versatile",
-        "gemini": "gemini-2.5-flash",
+        # Cheapest Gemini model that still runs the agent tool-loop reliably
+        # (~$0.10/$0.40 per 1M tokens, free tier available). Step up to
+        # gemini-2.5-flash if strategy quality looks weak.
+        "gemini": "gemini-2.5-flash-lite",
     },
     "fallback_chains": {
         "openai": [
@@ -138,11 +141,11 @@ _DEFAULT_MODEL_ROUTING = {
             # Groq's free tier has a tight per-minute token budget; fall back to
             # Gemini (free, large context) before any paid provider so a request
             # too large for Groq still completes for free.
-            {"provider": "gemini", "model_id": "gemini-2.5-flash"},
+            {"provider": "gemini", "model_id": "gemini-2.5-flash-lite"},
             {"provider": "openai", "model_id": "gpt-5.2"},
         ],
         "gemini": [
-            {"provider": "gemini", "model_id": "gemini-2.5-flash"},
+            {"provider": "gemini", "model_id": "gemini-2.5-flash-lite"},
             {"provider": "openai", "model_id": "gpt-5.2"},
         ],
     },
