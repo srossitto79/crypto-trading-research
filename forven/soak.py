@@ -840,14 +840,23 @@ def _check_operator_actions() -> dict[str, Any]:
 
 
 def _probe_hyperliquid_connection(testnet: bool) -> dict[str, Any]:
-    from forven.exchange.hyperliquid import get_account_value, get_positions
+    """Probe Hyperliquid connection via the new ExchangeInterface."""
+    import asyncio
+    from forven.exchange.hyperliquid_adapter import HyperliquidExchange
 
-    account = get_account_value(testnet=testnet, require_connection=True)
-    positions = get_positions(testnet=testnet)
-    return {
-        "account": account,
-        "positions": positions,
-    }
+    async def _probe():
+        exchange = HyperliquidExchange(testnet=testnet)
+        account = await exchange.get_account_value()
+        positions = await exchange.get_positions()
+        return {
+            "account": account,
+            "positions": positions,
+        }
+
+    try:
+        return asyncio.run(_probe())
+    except Exception as e:
+        return {"error": str(e)}
 
 
 def _check_hyperliquid(require_exchange_connection: bool) -> dict[str, Any]:

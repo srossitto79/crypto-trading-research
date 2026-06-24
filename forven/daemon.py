@@ -36,13 +36,9 @@ from forven.config import FORVEN_HOME, ensure_dirs, get_execution_mode
 from forven.db import get_db, get_open_trades, init_db, kv_get, kv_set_best_effort, log_activity
 from forven.exchange.hyperliquid import (
     HyperLiquidFeed,
-    _get_creds,
-    get_account_value,
-    get_all_mids,
-    get_open_orders,
-    get_positions,
     resolve_configured_testnet,
 )
+from forven.exchange.sync_wrapper import get_sync_exchange
 from forven.exchange.risk import (
     close_all_positions,
     get_risk_status,
@@ -1181,7 +1177,6 @@ def _check_liquidation_distances() -> None:
     try:
         from forven.db import kv_get
         from forven.exchange import books
-        from forven.exchange.hyperliquid import get_all_mids, get_positions
         from forven.notifications import emit_notification
 
         s = kv_get("forven:settings", {}) or {}
@@ -1200,6 +1195,7 @@ def _check_liquidation_distances() -> None:
             pass
 
         testnet = _get_testnet()
+        exchange = get_sync_exchange(testnet=testnet)
         seen: set[str] = set()
         for addr, label in accounts:
             key = str(addr or "").strip().lower()
@@ -1207,8 +1203,9 @@ def _check_liquidation_distances() -> None:
                 continue
             seen.add(key)
             try:
-                data = get_positions(testnet=testnet, **({"account_address": addr} if addr else {}))
-                mids = get_all_mids(testnet=testnet)
+                positions = exchange.get_positions()
+                mids = exchange.get_all_mids()
+                data = {"positions": [{"position": p.__dict__} for p in positions]} if positions else {"positions": []}
             except Exception:
                 continue
             for p in (data.get("positions", []) if isinstance(data, dict) else []):

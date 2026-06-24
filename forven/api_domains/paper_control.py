@@ -252,17 +252,20 @@ def _live_close_trade(trade: dict, *, close_reason: str, note: str | None = None
     testnet = _live_testnet()
     vault = _live_vault_for_trade(trade)
 
-    from forven.exchange.hyperliquid import close_position
+    from forven.exchange.sync_wrapper import get_sync_exchange
 
     try:
-        result = close_position(asset, size, close_side, testnet=testnet, vault_address=vault)
+        exchange = get_sync_exchange(testnet=testnet)
+        result = exchange.close_position(asset)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=502, detail=f"Exchange close failed: {exc}") from exc
-    if isinstance(result, dict) and result.get("error"):
-        raise HTTPException(status_code=502, detail=str(result["error"]))
+    if not result.success or result.error:
+        raise HTTPException(status_code=502, detail=str(result.error or "Close failed"))
 
-    order_id = result.get("order_id") or result.get("oid")
-    fill = _coerce_optional_float(result.get("exit_price")) or _coerce_optional_float(result.get("fill_price"))
+    order_id = result.order_id
+    fill = _coerce_optional_float(result.raw_response.get("exit_price") if result.raw_response else None) if result.raw_response else None
+    if fill is None and result.raw_response:
+        fill = _coerce_optional_float(result.raw_response.get("fill_price"))
     extra = {
         "source": "manual",
         "manually_closed_at": _iso_now(),
@@ -416,15 +419,18 @@ def _live_reduce(trade: dict, close_qty: float) -> float:
     close_side = "sell" if direction == "long" else "buy"
     testnet = _live_testnet()
     vault = _live_vault_for_trade(trade)
-    from forven.exchange.hyperliquid import close_position
+    from forven.exchange.sync_wrapper import get_sync_exchange
 
     try:
-        result = close_position(asset, close_qty, close_side, testnet=testnet, vault_address=vault)
+        exchange = get_sync_exchange(testnet=testnet)
+        result = exchange.close_position(asset)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=502, detail=f"Exchange partial close failed: {exc}") from exc
-    if isinstance(result, dict) and result.get("error"):
-        raise HTTPException(status_code=502, detail=str(result["error"]))
-    fill = _coerce_optional_float(result.get("exit_price")) or _coerce_optional_float(result.get("fill_price"))
+    if not result.success or result.error:
+        raise HTTPException(status_code=502, detail=str(result.error or "Partial close failed"))
+    fill = _coerce_optional_float(result.raw_response.get("exit_price") if result.raw_response else None) if result.raw_response else None
+    if fill is None and result.raw_response:
+        fill = _coerce_optional_float(result.raw_response.get("fill_price"))
     if fill is None or fill <= 0:
         raise HTTPException(status_code=502, detail="Partial close did not return a fill price; try again.")
     return float(fill)
@@ -535,14 +541,15 @@ def _live_open(
         raise HTTPException(status_code=409, detail=f"Blocked by risk gate: {reason}")
 
     testnet = _live_testnet()
-    from forven.exchange.hyperliquid import get_account_value, market_order
+    from forven.exchange.sync_wrapper import get_sync_exchange
 
+    exchange = get_sync_exchange(testnet=testnet)
     resolved_size = _coerce_optional_float(size)
     if resolved_size is None or resolved_size <= 0:
         if risk_fraction is None:
             raise HTTPException(status_code=400, detail="Provide size>0 or risk_pct in (0,100].")
         try:
-            equity = float(get_account_value(testnet=testnet) or 0.0)
+            equity = exchange.get_account_value()
         except Exception as exc:  # noqa: BLE001
             raise HTTPException(status_code=502, detail=f"Could not read live equity for sizing: {exc}") from exc
         if equity <= 0:
@@ -558,10 +565,9 @@ def _live_open(
 
     side = "buy" if direction == "long" else "sell"
     try:
-        result = market_order(
+        result = exchange.market_order(
             asset, side, float(resolved_size),
             stop_loss_price=stop_loss_price, take_profit_price=take_profit_price,
-            testnet=testnet, vault_address=vault,
         )
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=502, detail=f"Exchange open failed: {exc}") from exc
@@ -703,9 +709,10 @@ def _adjust_protective(session_id: str, session: dict, trade: dict, kind: str, p
 
 def _cancel_live_order(asset, oid, vault_address: str | None = None) -> None:
     try:
-        from forven.exchange.hyperliquid import cancel_order
+        from forven.exchange.sync_wrapper import get_sync_exchange
 
-        cancel_order(str(asset).upper(), int(oid), testnet=_live_testnet(), vault_address=vault_address)
+        exchange = get_sync_exchange(testnet=_live_testnet())
+        exchange.cancel_order(str(oid), symbol=str(asset).upper())
     except Exception:  # noqa: BLE001 - a stale/already-filled order is fine to ignore
         log.warning("cancel_order(%s, %s) failed during manual adjust", asset, oid, exc_info=True)
 
@@ -717,16 +724,19 @@ def _place_live_protective(kind: str, trade: dict, price: float, vault_address: 
     if size <= 0:
         raise HTTPException(status_code=400, detail="Position has no size to protect.")
     testnet = _live_testnet()
-    from forven.exchange.hyperliquid import place_protective_stop, place_take_profit
+    from forven.exchange.sync_wrapper import get_sync_exchange
 
-    placer = place_protective_stop if kind == "stop_loss" else place_take_profit
+    exchange = get_sync_exchange(testnet=testnet)
     try:
-        result = placer(asset, direction, size, price, testnet=testnet, vault_address=vault_address)
+        if kind == "stop_loss":
+            result = exchange.place_protective_stop(asset, size, price)
+        else:
+            result = exchange.place_take_profit(asset, size, price)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=502, detail=f"Exchange {kind} placement failed: {exc}") from exc
-    if isinstance(result, dict) and result.get("error"):
-        raise HTTPException(status_code=502, detail=str(result["error"]))
-    return result.get("stop_order_id") or result.get("take_profit_order_id") or result.get("order_id")
+    if not result.success or result.error:
+        raise HTTPException(status_code=502, detail=str(result.error or f"{kind} placement failed"))
+    return result.order_id
 
 
 # --------------------------------------------------------------------------- #

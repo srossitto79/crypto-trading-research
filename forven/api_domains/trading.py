@@ -4,7 +4,6 @@ from datetime import datetime, timedelta, timezone
 
 from forven.config import get_execution_mode
 from forven.db import _now, count_trades, get_all_trades, get_db, get_open_trades, get_recent_trades, kv_get, log_activity
-from forven.exchange import hyperliquid as hl
 from forven.exchange.risk import release, sync_from_trades
 from forven.trade_state import (
     close_trade_record,
@@ -103,15 +102,6 @@ def _resolve_exchange_testnet() -> bool:
     default_testnet = mode not in {"live", "mainnet"}
 
     try:
-        creds = hl._get_creds()
-    except Exception:
-        creds = None
-    if isinstance(creds, dict):
-        raw = creds.get("USE_TESTNET")
-        if raw is not None and str(raw).strip():
-            return _truthy(raw)
-
-    try:
         settings = kv_get("forven:settings", {}) or {}
     except Exception:
         settings = {}
@@ -122,10 +112,22 @@ def _resolve_exchange_testnet() -> bool:
 
 
 def _extract_exchange_open_positions(testnet: bool = True, account_address: str | None = None) -> list[dict]:
-    from forven.exchange.hyperliquid import get_positions
+    from forven.exchange.sync_wrapper import get_sync_exchange
 
-    payload = get_positions(testnet=testnet, account_address=account_address)
-    positions = payload.get("positions", []) if isinstance(payload, dict) else []
+    exchange = get_sync_exchange(testnet=testnet)
+    position_objs = exchange.get_positions()
+    # Convert Position dataclass objects to dict format
+    positions = []
+    for pos in position_objs:
+        positions.append({
+            "position": {
+                "coin": pos.symbol,
+                "szi": pos.size if pos.side == "long" else -pos.size,
+                "entryPx": pos.entry_price,
+                "leverage": {"value": pos.leverage},
+                "unrealizedPnl": pos.unrealized_pnl,
+            }
+        })
     normalized_positions: list[dict] = []
     for raw_position in positions:
         position = raw_position.get("position", raw_position) if isinstance(raw_position, dict) else {}
@@ -883,25 +885,28 @@ def _calculate_closed_trade_pnl(
 
 
 def _cancel_reduce_only_orders_for_asset(asset: str, *, testnet: bool) -> list[dict]:
-    from forven.exchange.hyperliquid import cancel_order, get_open_orders
+    from forven.exchange.sync_wrapper import get_sync_exchange
 
+    exchange = get_sync_exchange(testnet=testnet)
     results: list[dict] = []
-    for order in get_open_orders(testnet=testnet):
-        if not isinstance(order, dict):
+    for order in exchange.get_open_orders():
+        if not isinstance(order, dict) and not hasattr(order, 'symbol'):
             continue
-        order_asset = _normalize_asset_key(order.get("coin") or order.get("asset"))
+        order_asset = order.get("coin") if isinstance(order, dict) else order.symbol
+        order_asset = _normalize_asset_key(order_asset or "")
         if order_asset != asset:
             continue
-        if not _coerce_bool(order.get("reduceOnly")):
+        order_reduce_only = order.get("reduceOnly") if isinstance(order, dict) else getattr(order, 'order_type', None) == "reduce_only"
+        if not _coerce_bool(order_reduce_only):
             continue
 
-        raw_oid = order.get("oid") or order.get("orderId") or order.get("order_id")
+        raw_oid = order.get("oid") if isinstance(order, dict) else order.order_id
         try:
             oid = int(raw_oid)
         except Exception:
             continue
 
-        result = cancel_order(asset, oid, testnet=testnet)
+        result = exchange.cancel_order(str(oid), symbol=asset)
         results.append(
             {
                 "asset": asset,
@@ -941,18 +946,20 @@ def _force_close_exchange_backed_trade(trade_id: str, body) -> dict[str, object]
 
     close_side = "sell" if direction == "long" else "buy"
     try:
-        from forven.exchange.hyperliquid import close_position
+        from forven.exchange.sync_wrapper import get_sync_exchange
 
-        close_result = close_position(asset, float(size), close_side, testnet=testnet)
-        if isinstance(close_result, dict) and close_result.get("error"):
-            return {"ok": False, "error": str(close_result["error"])}
+        exchange = get_sync_exchange(testnet=testnet)
+        result = exchange.close_position(asset)
+        if not result.success or result.error:
+            return {"ok": False, "error": str(result.error or "Failed to close position")}
+        close_result = result.raw_response or {}
     except Exception as exc:
         return {"ok": False, "error": str(exc)}
 
     exit_price = _coerce_optional_float(close_result.get("close_price"))
     if exit_price is None:
         exit_price = _coerce_optional_float(close_result.get("mid"))
-    close_order_id = close_result.get("order_id") or close_result.get("orderId") or close_result.get("oid")
+    close_order_id = close_result.get("order_id") or result.order_id
     close_note = str(body.reason or "").strip() or None
 
     cancelled_reduce_only_orders: list[dict] = []
@@ -1032,15 +1039,17 @@ def force_close_trade(trade_id: str, body):
     testnet = _resolve_exchange_testnet()
 
     try:
-        from forven.exchange.hyperliquid import close_position
+        from forven.exchange.sync_wrapper import get_sync_exchange
 
-        close_result = close_position(asset, size, close_side, testnet=testnet)
-        if isinstance(close_result, dict) and close_result.get("error"):
-            return {"ok": False, "error": str(close_result["error"])}
+        exchange = get_sync_exchange(testnet=testnet)
+        result = exchange.close_position(asset)
+        if not result.success or result.error:
+            return {"ok": False, "error": str(result.error or "Failed to close position")}
+        close_result = result.raw_response or {}
     except Exception as exc:
         return {"ok": False, "error": str(exc)}
 
-    close_order_id = close_result.get("order_id") or close_result.get("orderId") or close_result.get("oid")
+    close_order_id = close_result.get("order_id") or result.order_id
     close_note = str(body.reason or "").strip() or None
     actual_exit_price = _coerce_optional_float(close_result.get("exit_price"))
     if actual_exit_price is None:

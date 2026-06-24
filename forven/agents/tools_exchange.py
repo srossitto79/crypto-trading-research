@@ -298,12 +298,12 @@ def _tool_request_fix(params: dict) -> str:
     },
     permissions={"execution-trader"},
 )
-def _tool_place_order(params: dict) -> str:
+async def _tool_place_order(params: dict) -> str:
     """Place an order on HyperLiquid testnet.
 
     Both paper and live modes execute on testnet. Paper mode IS testnet trading.
     """
-    from forven.exchange.hyperliquid import market_order, limit_order
+    from forven.exchange.hyperliquid import get_exchange
     from forven.agents.trade_safeguards import TradeSafeguards, MarketRegime
 
     asset = params["asset"]
@@ -408,48 +408,54 @@ def _tool_place_order(params: dict) -> str:
 
     result = None
     try:
+        exchange = get_exchange()
         if order_type == "limit":
             price = params.get("price")
             if not price:
                 return "Error: limit orders require a 'price' parameter"
-            result = limit_order(
-                asset=asset,
+            result = await exchange.limit_order(
+                symbol=asset,
                 side=side,
                 size=size,
                 price=price,
                 stop_loss_price=stop_loss,
-                idempotency_key=idempotency_key,
-                testnet=True,
             )
         else:
-            result = market_order(
-                asset=asset,
+            result = await exchange.market_order(
+                symbol=asset,
                 side=side,
                 size=size,
                 stop_loss_price=stop_loss,
-                idempotency_key=idempotency_key,
-                testnet=True,
             )
     except Exception as exc:
         message = str(exc)
         _route_execution_failure("place_order", message, trade_id=trade_id, strategy_id=strategy_id)
         return json.dumps({"error": message}, default=str)
 
-    if isinstance(result, dict) and result.get("error"):
+    # Convert OrderResult to dict
+    result_dict = {
+        "success": result.success,
+        "order_id": result.order_id,
+        "error": result.error,
+    }
+    if result.raw_response:
+        result_dict.update(result.raw_response)
+
+    if result.error:
         _route_execution_failure(
             "place_order",
-            str(result.get("error")),
+            str(result.error),
             trade_id=trade_id,
             strategy_id=strategy_id,
         )
         # Exchange rejected the order: no fill happened. Do NOT write a
         # zero-price fill onto the trade record or broadcast "TRADE OPENED".
-        return json.dumps(result, default=str)
+        return json.dumps(result_dict, default=str)
 
     # Update trade record with exchange order ID if trade_id provided
-    if trade_id and isinstance(result, dict):
+    if trade_id:
         try:
-            fill_price = result.get("entry_price") or result.get("mid", 0)
+            fill_price = result_dict.get("entry_price") or result_dict.get("mid", 0)
             slippage = None
             with get_db() as conn:
                 trade = conn.execute(
@@ -483,7 +489,7 @@ def _tool_place_order(params: dict) -> str:
         except Exception:
             pass
 
-    return json.dumps(result, default=str)
+    return json.dumps(result_dict, default=str)
 
 
 @_register_live_execution_tool(
@@ -504,12 +510,12 @@ def _tool_place_order(params: dict) -> str:
     },
     permissions={"execution-trader"},
 )
-def _tool_close_position(params: dict) -> str:
+async def _tool_close_position(params: dict) -> str:
     """Close a position on HyperLiquid testnet.
 
     Both paper and live modes execute on testnet. Paper mode IS testnet trading.
     """
-    from forven.exchange.hyperliquid import close_position
+    from forven.exchange.hyperliquid import get_exchange
     from forven.trade_state import mark_trade_pending_close_reconcile
 
     asset = params["asset"]
@@ -523,25 +529,35 @@ def _tool_close_position(params: dict) -> str:
     log_activity("trade", "execution-trader", f"CLOSE: {side} {asset} size={size}")
 
     try:
-        result = close_position(asset, size, side, testnet=True)
+        exchange = get_exchange()
+        result = await exchange.close_position(asset)
     except Exception as exc:
         message = str(exc)
         _route_execution_failure("close_position", message, trade_id=trade_id, strategy_id=strategy_id)
         return json.dumps({"error": message}, default=str)
 
-    if isinstance(result, dict) and result.get("error"):
+    # Convert OrderResult to dict
+    result_dict = {
+        "success": result.success,
+        "order_id": result.order_id,
+        "error": result.error,
+    }
+    if result.raw_response:
+        result_dict.update(result.raw_response)
+
+    if result.error:
         _route_execution_failure(
             "close_position",
-            str(result.get("error")),
+            str(result.error),
             trade_id=trade_id,
             strategy_id=strategy_id,
         )
 
     # Update trade record with exit fill if trade_id provided
-    if trade_id and isinstance(result, dict):
+    if trade_id:
         try:
-            fill_exit_price = result.get("exit_price") or result.get("fill_price")
-            exchange_order_id = result.get("order_id") or result.get("orderId") or result.get("oid")
+            fill_exit_price = result_dict.get("exit_price") or result_dict.get("fill_price")
+            exchange_order_id = result_dict.get("order_id") or result_dict.get("orderId") or result_dict.get("oid")
             if fill_exit_price is not None:
                 close_price = fill_exit_price
                 slippage = None
@@ -566,9 +582,9 @@ def _tool_close_position(params: dict) -> str:
                     "exit_exchange_order_id": str(exchange_order_id) if exchange_order_id is not None else None,
                 }
                 if result.get("close_price") is not None:
-                    pending_signal_data["pending_close_requested_execution_price"] = result.get("close_price")
-                if result.get("mid") is not None:
-                    pending_signal_data["pending_close_mid_price"] = result.get("mid")
+                    pending_signal_data["pending_close_requested_execution_price"] = result_dict.get("close_price")
+                if result_dict.get("mid") is not None:
+                    pending_signal_data["pending_close_mid_price"] = result_dict.get("mid")
                 mark_trade_pending_close_reconcile(
                     str(trade_id),
                     close_reason=str(params.get("close_reason") or "execution_close_requested"),
@@ -578,20 +594,20 @@ def _tool_close_position(params: dict) -> str:
         except Exception as e:
             log.warning("Could not update trade %s with close fill: %s", trade_id, e)
 
-    if trade_id and isinstance(result, dict):
+    if trade_id:
         try:
             from forven.reporter import broadcast_agent_task
             import asyncio
             loop = asyncio.get_event_loop()
             if loop.is_running():
                 loop.create_task(broadcast_agent_task(
-                    "execution-trader", "🔴 TRADE CLOSED", 
+                    "execution-trader", "🔴 TRADE CLOSED",
                     f"Asset: {asset} | Side: {side} | Size: {size}"
                 ))
         except Exception:
             pass
 
-    return json.dumps(result, default=str)
+    return json.dumps(result_dict, default=str)
 
 
 @register_tool(
@@ -600,23 +616,23 @@ def _tool_close_position(params: dict) -> str:
     input_schema={"type": "object", "properties": {}},
     permissions={"execution-trader"},
 )
-def _tool_get_exchange_positions() -> str:
+async def _tool_get_exchange_positions() -> str:
     """Get open positions from HyperLiquid testnet."""
-    from forven.exchange.hyperliquid import get_positions
-    result = get_positions(testnet=True)
+    from forven.exchange.hyperliquid import get_exchange
 
-    positions = result.get("positions", [])
+    exchange = get_exchange()
+    positions = await exchange.get_positions()
+
     if not positions:
         return "No open positions on HyperLiquid testnet."
 
     parts = ["Open positions:"]
     for pos in positions:
-        p = pos.get("position", pos)
-        coin = p.get("coin", "")
-        szi = float(p.get("szi", 0))
-        entry_px = p.get("entryPx", "?")
-        unrealized_pnl = p.get("unrealizedPnl", "?")
-        leverage = p.get("leverage", {}).get("value", "?")
+        coin = pos.symbol
+        szi = pos.size if pos.side == "long" else -pos.size
+        entry_px = pos.entry_price
+        unrealized_pnl = pos.unrealized_pnl
+        leverage = pos.leverage
         if szi != 0:
             direction = "LONG" if szi > 0 else "SHORT"
             parts.append(
@@ -632,15 +648,17 @@ def _tool_get_exchange_positions() -> str:
     input_schema={"type": "object", "properties": {}},
     permissions={"execution-trader"},
 )
-def _tool_get_account_info() -> str:
+async def _tool_get_account_info() -> str:
     """Get account info from HyperLiquid testnet."""
-    from forven.exchange.hyperliquid import get_account_value
-    result = get_account_value(testnet=True)
+    from forven.exchange.hyperliquid import get_exchange
+
+    exchange = get_exchange()
+    account_value = await exchange.get_account_value()
     return json.dumps({
-        "account_value": f"${result['accountValue']:,.2f}",
-        "margin_used": f"${result['totalMarginUsed']:,.2f}",
-        "notional_position": f"${result['totalNtlPos']:,.2f}",
-        "available_usd": f"${result['totalRawUsd']:,.2f}",
+        "account_value": f"${account_value:,.2f}",
+        "margin_used": "unknown",
+        "notional_position": "unknown",
+        "available_usd": f"${account_value:,.2f}",
     }, indent=2)
 
 

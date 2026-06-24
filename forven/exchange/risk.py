@@ -1002,25 +1002,50 @@ def _normalize_exchange_positions(hl_positions: list[dict] | None) -> list[dict[
 def _snapshot_exchange_state(
     testnet: bool, *, open_orders: list[dict] | None = None, account_address: str | None = None
 ) -> dict[str, object]:
-    from forven.exchange.hyperliquid import get_all_mids, get_open_orders, get_positions
+    from forven.exchange.sync_wrapper import get_sync_exchange
 
-    # Pass account_address only when scoping to a sub-account, so the master
-    # (legacy) path calls these with their exact prior signature.
-    pos_kwargs = {"account_address": account_address} if account_address else {}
-    hl_data = get_positions(testnet=testnet, **pos_kwargs)
-    hl_positions = hl_data.get("positions", []) if isinstance(hl_data, dict) else []
+    exchange = get_sync_exchange(testnet=testnet)
+
+    # Fetch positions (SDK format converted from dataclass)
     resolved_open_orders = open_orders
+    try:
+        position_objs = exchange.get_positions()
+        hl_positions = []
+        for pos in position_objs:
+            hl_positions.append({
+                "position": {
+                    "coin": pos.symbol,
+                    "szi": pos.size if pos.side == "long" else -pos.size,
+                    "entryPx": pos.entry_price,
+                    "leverage": {"value": pos.leverage},
+                }
+            })
+    except Exception:
+        hl_positions = []
+
+    # Fetch open orders if not provided
     if resolved_open_orders is None:
         try:
-            resolved_open_orders = get_open_orders(testnet=testnet, **pos_kwargs)
+            order_objs = exchange.get_open_orders()
+            resolved_open_orders = [
+                {
+                    "coin": o.symbol,
+                    "orderId": o.order_id,
+                    "side": o.side,
+                    "sz": o.size,
+                    "reduceOnly": o.order_type == "reduce_only",
+                }
+                for o in order_objs
+            ]
         except Exception:
             resolved_open_orders = []
     if not isinstance(resolved_open_orders, list):
         resolved_open_orders = []
 
+    # Fetch price map
     price_map: dict[str, float] = {}
     try:
-        mids = get_all_mids(testnet=testnet)
+        mids = exchange.get_all_mids()
         if isinstance(mids, dict):
             price_map = {str(k).upper(): float(v) for k, v in mids.items() if float(v) > 0}
     except Exception:
@@ -1059,8 +1084,9 @@ def _cancel_reduce_only_orders_for_asset(
     vault_address: str | None = None,
     only_oids: set[str] | None = None,
 ) -> tuple[list[dict], list[dict]]:
-    from forven.exchange.hyperliquid import cancel_order
+    from forven.exchange.sync_wrapper import get_sync_exchange
 
+    exchange = get_sync_exchange(testnet=testnet)
     normalized_asset = str(asset or "").strip().upper()
     if not normalized_asset:
         return [], list(open_orders or [])
@@ -1093,10 +1119,7 @@ def _cancel_reduce_only_orders_for_asset(
             remaining.append(order)
             continue
         try:
-            cancel_kwargs = {"testnet": testnet}
-            if vault_address:
-                cancel_kwargs["vault_address"] = vault_address
-            result = cancel_order(normalized_asset, int(normalized_oid), **cancel_kwargs)
+            result = exchange.cancel_order(str(int(normalized_oid)), symbol=normalized_asset)
         except Exception as exc:
             remaining.append(order)
             cancelled.append(
@@ -1111,7 +1134,7 @@ def _cancel_reduce_only_orders_for_asset(
             {
                 "asset": normalized_asset,
                 "oid": int(normalized_oid),
-                "result": result,
+                "result": {"success": result},
             }
         )
     return cancelled, remaining
@@ -2847,7 +2870,9 @@ def close_all_positions() -> list[dict]:
     Closes all open positions via HyperLiquid market orders.
     Returns list of closure results.
     """
-    from forven.exchange.hyperliquid import close_position, get_positions
+    from forven.exchange.sync_wrapper import get_sync_exchange
+
+    exchange = get_sync_exchange()
 
     def _normalize_strategy_id(value):
         if not value:
@@ -2902,8 +2927,8 @@ def close_all_positions() -> list[dict]:
         positions_with_account: list[tuple[dict, str | None]] = []
         for close_acct in close_accounts:
             try:
-                acct_kwargs = {"account_address": close_acct} if close_acct else {}
-                snap = get_positions(**acct_kwargs)
+                positions = exchange.get_positions()
+                snap = {"positions": [{"position": p.__dict__} for p in positions]} if positions else {"positions": []}
             except Exception as exc:
                 log.error("Kill-switch could not fetch positions for account %s: %s", close_acct or "master", exc)
                 continue
@@ -2938,10 +2963,8 @@ def close_all_positions() -> list[dict]:
                     min(attempt - 1, len(_KILL_SWITCH_CLOSE_SLIPPAGE_BPS) - 1)
                 ]
                 try:
-                    close_kwargs = {"vault_address": close_acct} if close_acct else {}
-                    close_response = close_position(
-                        coin, remaining_size, side, slippage_bps=slip_bps, **close_kwargs
-                    )
+                    result = exchange.close_position(coin)
+                    close_response = result.raw_response or {}
                 except Exception as exc:
                     close_error = str(exc) or exc.__class__.__name__
                 else:

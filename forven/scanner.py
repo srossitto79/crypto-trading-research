@@ -3091,10 +3091,11 @@ def _execute_direct(
     close_reason: str | None = None,
 ) -> dict:
     """Execute directly on exchange and update DB with the fill."""
-    from forven.exchange.hyperliquid import close_position, market_order
+    from forven.exchange.sync_wrapper import get_sync_exchange
     from forven.sim.clock import is_sim_active
 
     testnet = _resolve_hyperliquid_testnet()
+    exchange = get_sync_exchange(testnet=testnet)
     # Route to the trade's direction sub-account (Approach C). The book was
     # stored at OPEN time and persists for the CLOSE, so a position always
     # closes on the SAME account that holds it. NULL book (paper/legacy) and an
@@ -3175,30 +3176,28 @@ def _execute_direct(
         # instead of the venue default (often 20-40x). Fail closed if it can't be
         # set — opening at an unknown leverage silently invalidates the stop math.
         if not is_sim_active():
-            from forven.exchange.hyperliquid import set_leverage
-            lev_res = set_leverage(asset, leverage, testnet=testnet, vault_address=vault_address)
-            if isinstance(lev_res, dict) and lev_res.get("error"):
+            lev_ok = exchange.set_leverage(asset, int(leverage))
+            if not lev_ok:
                 raise RuntimeError(
-                    f"refusing to open {trade_id}: could not set exchange leverage for {asset}: {lev_res.get('error')}"
+                    f"refusing to open {trade_id}: could not set exchange leverage for {asset}"
                 )
-        market_order_kwargs = {
-            "asset": asset,
-            "side": direction,
-            "size": size,
-            "stop_loss_price": stop_loss,
-            "idempotency_key": f"{trade_id}:open",
-            "testnet": testnet,
-        }
-        if vault_address:
-            market_order_kwargs["vault_address"] = vault_address
-        if take_profit is not None:
-            market_order_kwargs["take_profit_price"] = take_profit
-        result = market_order(**market_order_kwargs)
+        result = exchange.market_order(
+            symbol=asset,
+            side=direction,
+            size=size,
+            stop_loss_price=stop_loss,
+            take_profit_price=take_profit,
+        )
         fill = None
-        if isinstance(result, dict):
-            if result.get("error"):
-                raise RuntimeError(result.get("error"))
-            fill, exchange_order_id, order_meta = _extract_order_meta(result)
+        if not result.success or result.error:
+            raise RuntimeError(result.error or "Market order failed")
+
+        # Convert OrderResult to dict-like format for compatibility
+        result_dict = result.raw_response or {}
+        if isinstance(result_dict, dict):
+            if result_dict.get("error"):
+                raise RuntimeError(result_dict.get("error"))
+            fill, exchange_order_id, order_meta = _extract_order_meta(result_dict)
             if stop_loss is not None:
                 order_meta["exchange_stop_price"] = float(stop_loss)
             order_meta["exchange_stop_requested"] = stop_loss is not None
@@ -3260,8 +3259,12 @@ def _execute_direct(
                     break
         except Exception:
             funding_since_open_usd = None
-        result = close_position(asset, size, close_side, **close_kwargs)
-        if isinstance(result, dict) and funding_since_open_usd is not None:
+        close_result = exchange.close_position(asset)
+        result = close_result.raw_response or {}
+        if close_result.error:
+            raise RuntimeError(close_result.error or "Close position failed")
+
+        if funding_since_open_usd is not None:
             result["funding_since_open_usd"] = funding_since_open_usd
             # Persist on the trade so EVERY close path folds funding into net,
             # not just the queued-intent caller: the default fast path discards
@@ -3273,8 +3276,6 @@ def _execute_direct(
                 pass
         fill = None
         if isinstance(result, dict):
-            if result.get("error"):
-                raise RuntimeError(result.get("error"))
             fill, exchange_order_id, order_meta = _extract_order_meta(result)
             actual_exit_fill = result.get("exit_price") or result.get("fill_price")
             if actual_exit_fill is None:
