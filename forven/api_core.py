@@ -1606,7 +1606,10 @@ _DEFAULT_SETTINGS_PAYLOAD = {
     "backtest_slippage_bps": 2.0,
     "backtest_timeframe": "1h",
     "backtest_symbol": "BTC/USDT",
-    "backtest_duration_days": 365,
+    # Default backtest/WFA window. Raised 365->730 so slower timeframes (4h) reach a
+    # meaningful trade sample and the WFA OOS folds span >1 market regime, not just
+    # the most recent ~12 months. Tunable from Settings (Lab > Gauntlet duration).
+    "backtest_duration_days": 730,
     # When enabled, backtests deduct cumulative perp funding from each trade's
     # PnL and refuse to promote strategies whose funding data was incomplete.
     "backtest_include_funding": True,
@@ -6184,12 +6187,19 @@ def _append_settings_audit(log: list[dict], entries: list[dict], cap: int = 50) 
 
 
 _PIPELINE_THRESHOLD_SETTING_KEYS = {
+    # Active stance preset (relaxed | default | strict | custom). A plain string,
+    # not a section dict — routes to the pipeline KV so policy._apply_pipeline_preset
+    # can resolve the bundle on load.
+    "pipeline_preset",
     "testing_mode",
     "quick_screen",
     "gauntlet",
     "walk_forward",
     "robustness_thresholds",
     "paper_trading",
+    # Absolute anti-bypass floors (incl. the real-money live_* rails). Must route to
+    # the pipeline KV that the promotion gates read, not the flat settings blob.
+    "safety_floors",
     "live_graduated",
     "paper_gate",
     "deploy_gate",
@@ -6229,6 +6239,18 @@ def get_settings():
         for key in _PIPELINE_THRESHOLD_SETTING_KEYS:
             if key in policy_config:
                 payload[key] = policy_config[key]
+    except Exception:
+        pass
+    # Resolved preset bundles (same display units as the threshold keys above) so the
+    # Settings UI can fill every gate knob live when the operator picks a stance —
+    # without the frontend hardcoding (and drifting from) the policy preset values.
+    try:
+        from forven.policy import _normalize_pipeline_config, pipeline_thresholds_for_display
+
+        payload["pipeline_presets"] = {
+            _name: pipeline_thresholds_for_display(_normalize_pipeline_config({"pipeline_preset": _name}))
+            for _name in ("relaxed", "default", "strict")
+        }
     except Exception:
         pass
     # Reflect the authoritative regime-gating values (config.json + env overrides),

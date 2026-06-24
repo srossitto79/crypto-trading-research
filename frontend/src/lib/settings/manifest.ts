@@ -70,9 +70,11 @@ export const SETTINGS_SUBSECTIONS: SettingsSubsection[] = [
   { id: 'trading-risk-advanced', area: 'trading', label: 'Risk advanced', description: 'Rarely-changed risk filter overrides.', advanced: true },
 
   // Lab
+  { id: 'lab-pipeline-preset', area: 'lab', label: 'Pipeline stance', description: 'Pick a stance preset to set every gate below in one move, then fine-tune individual knobs (which flips you to Custom).' },
   { id: 'lab-pipeline-quick-screen', area: 'lab', label: 'Quick Screen (Step 1)', description: 'First-pass quick screen thresholds before the gauntlet.' },
   { id: 'lab-pipeline-robustness-gauntlet', area: 'lab', label: 'Robustness Gauntlet (Step 2)', description: 'Robustness, trade count, and Sharpe thresholds for the gauntlet stage.' },
   { id: 'lab-pipeline-paper-live-gates', area: 'lab', label: 'Paper to Live gates', description: 'Gates a paper-trading strategy must clear to graduate to live.' },
+  { id: 'lab-pipeline-safety-floors', area: 'lab', label: 'Safety floors', description: 'Absolute anti-bypass rails clamped onto the promotion gates. The live_* floors gate REAL MONEY at the paper->live capital gate — loosen with care.' },
   { id: 'lab-pipeline-capacity', area: 'lab', label: 'Pipeline capacity', description: 'WIP caps for unattended strategy promotion lanes.' },
   { id: 'lab-pipeline-live-graduated', area: 'lab', label: 'Live graduated', description: 'Controls for strategies already running live.' },
   { id: 'lab-pipeline-testing-mode', area: 'lab', label: 'Pipeline testing mode', description: 'Bypass safety gates for end-to-end pipeline testing.', advanced: true },
@@ -431,6 +433,29 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
   },
 
   // -------------------- LAB: PIPELINE --------------------
+  // Stance preset selector. Picking a non-custom value persists `pipeline_preset`
+  // and the backend (policy._apply_pipeline_preset) resolves the whole knob bundle
+  // on load. Editing any individual pipeline knob below flips this to "custom"
+  // (handled in SettingsLab.svelte) so per-knob overrides win as-is.
+  {
+    id: 'pipeline.pipeline_preset',
+    label: 'Stance preset',
+    default: 'default',
+    type: 'select',
+    options: [
+      { value: 'relaxed', label: 'Relaxed' },
+      { value: 'default', label: 'Default' },
+      { value: 'strict', label: 'Strict' },
+      { value: 'custom', label: 'Custom' },
+    ],
+    area: 'lab',
+    subsection: 'lab-pipeline-preset',
+    backendSection: 'pipeline',
+    backendPath: 'pipeline_preset',
+    description:
+      'Bundle of gate thresholds applied at load. Relaxed = easiest path to paper (min_trades 5, WFA fold 25%, paper 5 closed trades). Default = balanced (min_trades 20, WFA fold 33%, paper 10 closed trades). Strict = rigorous (min_trades 30, WFA fold 50%, paper 50 closed trades, cost-stress required). Custom = the per-knob values below are used as-is.',
+    usedBy: ['forven.policy'],
+  },
   // Pipeline testing mode (via updatePipelineSettings / pipelineConfig)
   {
     id: 'pipeline.testing_mode',
@@ -522,6 +547,19 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     description:
       'Robustness-score floor (0-100) for the quick-screen guardrails (Gate3). The composite score is mostly earned inside the gauntlet, so fresh strategies score near zero — lower this (or enable testing mode) if the pipeline starves at quick screen. Was a hardcoded 50 before.',
     usedBy: ['forven.brain'],
+  },
+  {
+    id: 'pipeline.quick_screen.min_is_sharpe',
+    label: 'Quick-screen min IS Sharpe',
+    default: 0,
+    type: 'number',
+    area: 'lab',
+    subsection: 'lab-pipeline-quick-screen',
+    backendSection: 'pipeline',
+    backendPath: 'quick_screen.min_is_sharpe',
+    description:
+      'In-sample Sharpe floor enforced at the quick-screen overfitting guardrail (Gate1). Default 0 rejects only genuinely negative IS edge; the Strict preset raises it to 0.2.',
+    usedBy: ['forven.policy', 'forven.brain'],
   },
   {
     id: 'pipeline.quick_screen.fitness_min_trades',
@@ -658,6 +696,19 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     usedBy: ['forven.strategy_lifecycle', 'forven.routers.robustness'],
   },
   {
+    id: 'pipeline.gauntlet.hard_min_is_sharpe',
+    label: 'Gauntlet hard min IS Sharpe',
+    default: 0,
+    type: 'number',
+    area: 'lab',
+    subsection: 'lab-pipeline-robustness-gauntlet',
+    backendSection: 'pipeline',
+    backendPath: 'gauntlet.hard_min_is_sharpe',
+    description:
+      'Hard in-sample Sharpe sanity floor at the gauntlet entry guardrail — an auto-reject below this. Default 0 rejects only negative IS edge; the Strict preset raises it to 0.3.',
+    usedBy: ['forven.policy', 'forven.brain'],
+  },
+  {
     id: 'pipeline.gauntlet.min_oos_profit_factor',
     label: 'Gauntlet min OOS profit factor',
     default: 1.05,
@@ -719,7 +770,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'gauntlet.mc_max_dd_p95',
     description:
-      'Monte-Carlo 95th-percentile drawdown ceiling at the gauntlet->paper gate. SAFETY FLOOR: the paper gate enforces a hard maximum of 40% regardless of this value — you can make it stricter, not looser — and it fires whenever Monte Carlo actually ran.',
+      'Monte-Carlo 95th-percentile drawdown ceiling at the gauntlet->paper gate. Clamped by the editable safety_floors.mc_max_dd_p95 ceiling (default 50%) in the Safety floors panel; fires whenever Monte Carlo actually ran.',
     usedBy: ['forven.policy'],
   },
   {
@@ -745,7 +796,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'robustness_thresholds.wfa_fold_pass_rate_min',
     description:
-      'Fraction of walk-forward folds that must be OOS-positive to pass the gauntlet->paper gate. SAFETY FLOOR: the paper gate enforces a hard minimum of 40% (stricter allowed, looser ignored) and it fires whenever walk-forward ran, regardless of the required-tests list.',
+      'Fraction of walk-forward folds that must be OOS-positive to pass the gauntlet->paper gate. Clamped by the editable safety_floors.wfa_fold_pass_rate_min floor (default 20%) in the Safety floors panel; fires whenever walk-forward ran, regardless of the required-tests list.',
     usedBy: ['forven.policy'],
   },
   {
@@ -759,7 +810,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'robustness_thresholds.param_jitter_pass_rate_min',
     description:
-      'Fraction of parameter-jitter perturbations that must stay profitable to pass the gauntlet->paper gate. SAFETY FLOOR: the paper gate enforces a hard minimum of 60% (stricter allowed, looser ignored) and it fires whenever param-jitter ran, regardless of the required-tests list.',
+      'Fraction of parameter-jitter perturbations that must stay profitable to pass the gauntlet->paper gate. Clamped by the editable safety_floors.param_jitter_pass_rate_min floor (default 30%) in the Safety floors panel; fires whenever param-jitter ran, regardless of the required-tests list.',
     usedBy: ['forven.policy'],
   },
 
@@ -1018,6 +1069,97 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'paper_trading.max_oos_is_ratio',
     description: 'Blocks live graduation when OOS Sharpe exceeds IS Sharpe by more than this ratio (a lucky/overfit OOS window).',
     usedBy: ['forven.policy', 'forven.strategy_lifecycle'],
+  },
+
+  // Safety floors — absolute anti-bypass rails clamped onto the promotion gates.
+  // These bound how far a relaxed preset / custom config can soften the path; set a
+  // floor to 0 (or a *_max_* ceiling to 1.0) to remove that rail entirely. The
+  // min_*/mc_*/wfa_*/param_jitter_* floors clamp the gauntlet->PAPER entry gate (no
+  // real capital); the live_* floors clamp the paper->LIVE (real money) gate.
+  // The ratio floors are stored/read as fractions (0-1), NOT whole percent.
+  {
+    id: 'pipeline.safety_floors.min_trades',
+    label: 'Floor: min trades (->paper)',
+    default: 3,
+    type: 'number',
+    area: 'lab',
+    subsection: 'lab-pipeline-safety-floors',
+    backendSection: 'pipeline',
+    backendPath: 'safety_floors.min_trades',
+    description: 'Absolute minimum gauntlet trade count no preset/custom config can soften below at the gauntlet->paper gate.',
+    usedBy: ['forven.policy'],
+  },
+  {
+    id: 'pipeline.safety_floors.min_robustness_score',
+    label: 'Floor: min robustness (->paper)',
+    default: 0,
+    type: 'number',
+    area: 'lab',
+    subsection: 'lab-pipeline-safety-floors',
+    backendSection: 'pipeline',
+    backendPath: 'safety_floors.min_robustness_score',
+    description: 'Absolute robustness-score floor (0-100) clamped onto the gauntlet->paper gate. Default 0 = no extra rail beyond the gauntlet knob itself.',
+    usedBy: ['forven.policy'],
+  },
+  {
+    id: 'pipeline.safety_floors.mc_max_dd_p95',
+    label: 'Floor: Monte-Carlo p95 max DD (->paper)',
+    default: 0.5,
+    type: 'number',
+    area: 'lab',
+    subsection: 'lab-pipeline-safety-floors',
+    backendSection: 'pipeline',
+    backendPath: 'safety_floors.mc_max_dd_p95',
+    description: 'Ceiling (fraction 0-1) on the Monte-Carlo 95th-percentile drawdown at the gauntlet->paper gate. Tail DD can never be relaxed above this. 0.50 = 50%.',
+    usedBy: ['forven.policy'],
+  },
+  {
+    id: 'pipeline.safety_floors.wfa_fold_pass_rate_min',
+    label: 'Floor: WFA fold pass-rate (->paper)',
+    default: 0.2,
+    type: 'number',
+    area: 'lab',
+    subsection: 'lab-pipeline-safety-floors',
+    backendSection: 'pipeline',
+    backendPath: 'safety_floors.wfa_fold_pass_rate_min',
+    description: 'Absolute walk-forward fold pass-rate floor (fraction 0-1) clamped onto the gauntlet->paper gate. 0.20 = 20% of folds OOS-positive.',
+    usedBy: ['forven.policy'],
+  },
+  {
+    id: 'pipeline.safety_floors.param_jitter_pass_rate_min',
+    label: 'Floor: param-jitter pass-rate (->paper)',
+    default: 0.3,
+    type: 'number',
+    area: 'lab',
+    subsection: 'lab-pipeline-safety-floors',
+    backendSection: 'pipeline',
+    backendPath: 'safety_floors.param_jitter_pass_rate_min',
+    description: 'Absolute parameter-jitter pass-rate floor (fraction 0-1) clamped onto the gauntlet->paper gate. 0.30 = 30% of perturbations stay profitable.',
+    usedBy: ['forven.policy'],
+  },
+  {
+    id: 'pipeline.safety_floors.live_min_closed_trades',
+    label: 'Floor: live min closed trades (REAL MONEY)',
+    default: 3,
+    type: 'number',
+    area: 'lab',
+    subsection: 'lab-pipeline-safety-floors',
+    backendSection: 'pipeline',
+    backendPath: 'safety_floors.live_min_closed_trades',
+    description: 'REAL-MONEY rail: absolute minimum closed paper trades clamped onto the paper->live capital gate. No preset can graduate a strategy to live below this.',
+    usedBy: ['forven.policy'],
+  },
+  {
+    id: 'pipeline.safety_floors.live_max_drawdown_pct',
+    label: 'Floor: live max drawdown (REAL MONEY)',
+    default: 0.25,
+    type: 'number',
+    area: 'lab',
+    subsection: 'lab-pipeline-safety-floors',
+    backendSection: 'pipeline',
+    backendPath: 'safety_floors.live_max_drawdown_pct',
+    description: 'REAL-MONEY rail: drawdown ceiling (fraction 0-1) clamped onto the paper->live capital gate. 0.25 = 25%. The effective live gate is the stricter of this and the paper drawdown knob.',
+    usedBy: ['forven.policy'],
   },
 
   // Pipeline capacity

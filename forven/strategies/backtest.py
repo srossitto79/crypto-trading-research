@@ -9612,27 +9612,15 @@ def walk_forward(
 
 
     if total_bars is None:
-
-
+        # Timeframe-AWARE bar count so the WFA window matches the quick_screen
+        # backtest's CALENDAR window (api_core._estimate_backtest_bars uses the same
+        # math). The old `days*24` heuristic made "N bars" mean N hours on EVERY
+        # timeframe, so 365 days = ~365 calendar days on 1h but ~1460 days on 4h —
+        # the WFA and quick_screen gates silently evaluated different windows.
+        from forven.api_core import _timeframe_to_minutes
         duration_days = int(settings.get("backtest_duration_days", 30))
-
-
-        if resolved_timeframe == "1h":
-
-
-            total_bars = duration_days * 24
-
-
-        elif resolved_timeframe == "1d":
-
-
-            total_bars = duration_days
-
-
-        else:
-
-
-            total_bars = duration_days * 24
+        minutes_per_bar = max(_timeframe_to_minutes(resolved_timeframe), 1)
+        total_bars = (duration_days * 24 * 60) // minutes_per_bar
 
 
     
