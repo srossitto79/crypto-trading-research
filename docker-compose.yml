@@ -1,0 +1,89 @@
+# ── Forven Paper-Trade Stack ────────────────────────────────────────
+#
+# Quick start:
+#   1. docker compose up -d
+#   2. docker compose exec forven python -m forven.agent health
+#   3. docker compose exec forven python -m forven.agent enqueue \
+#        --file /app/forven/strategies/builtin/example.py \
+#        --dataset BTC/USDT-1h
+#   4. docker compose exec forven python -m forven.agent list --status paper
+#
+# Paper-trade pipeline stages:
+#   researching → backtesting → paper → deployed
+#
+# The scheduler + gauntlet run inside the API process so strategies
+# auto-advance through gates when they meet criteria.
+
+services:
+  # ── Forven backend (API + scheduler + gauntlet) ──────────────────
+  backend:
+    build: .
+    image: forven:latest
+    container_name: forven-paper
+    restart: unless-stopped
+
+    ports:
+      - "8003:8003"
+
+    env_file:
+      - .env
+
+    environment:
+      # ── Container-specific overrides ──────────────────────────
+      - FORVEN_HOME=/data
+      - FORVEN_HOST=0.0.0.0
+
+      # ── Paper-trade behaviour ─────────────────────────────────
+      - FORVEN_BOT_OWNS_RUNTIME=true
+      - FORVEN_ENABLE_REGIME_LAB=0
+
+      # ── Python runtime ────────────────────────────────────────
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+
+    volumes:
+      - forven_data:/data
+      - ./forven/strategies/custom:/app/forven/strategies/custom:ro
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fSs http://127.0.0.1:8003/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: "4G"
+        reservations:
+          cpus: "1"
+          memory: "512M"
+
+  # ── SvelteKit frontend (vite preview of built static files) ───
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../Dockerfile.frontend
+      args:
+        - VITE_FORVEN_API_KEY=${VITE_FORVEN_API_KEY}
+        - VITE_FORVEN_OPERATOR_KEY=${VITE_FORVEN_OPERATOR_KEY}
+    image: forven-frontend:latest
+    container_name: forven-frontend
+    restart: unless-stopped
+
+    ports:
+      - "5173:5173"
+
+    environment:
+      - FORVEN_CLIENT_BASE=http://backend:8003
+
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  forven_data:
+    name: forven_data
+    driver: local

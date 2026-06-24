@@ -1,0 +1,55 @@
+# ── Git ──────────────────────────────────────────────────────────────
+.git
+.gitignore
+.gitattributes
+
+# ── Python ──────────────────────────────────────────────────────────
+__pycache__
+*.pyc
+*.pyo
+.venv
+venv
+*.egg-info
+.eggs
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# ── Node / Frontend (built separately in multi-stage) ───────────────
+frontend/node_modules
+frontend/.svelte-kit
+frontend/build
+
+# ── IDE / Editor ────────────────────────────────────────────────────
+.vscode
+.idea
+*.swp
+*.swo
+
+# ── OS ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Data / State (mounted as volume at runtime) ─────────────────────
+.forven
+.forven_home
+data
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# ── Secrets ─────────────────────────────────────────────────────────
+.env
+*.env
+!docker-compose.yml
+
+# ── CI / Tests ──────────────────────────────────────────────────────
+tests
+.github
+*.md
+!README.md
+
+# ── Temporary ───────────────────────────────────────────────────────
+.tmp
+*.log
