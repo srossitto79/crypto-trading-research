@@ -275,7 +275,18 @@ def run_code(
 
     # POSIX path: keep using subprocess.run with rlimit-based preexec.
     cmd = [PYTHON_EXE, script_path]
-    env = {"PATH": os.environ.get("PATH", "/usr/bin:/usr/local/bin"), "HOME": tempfile.gettempdir()}
+    existing_pythonpath = str(os.environ.get("PYTHONPATH") or "").strip()
+    repo_root = str(REPO_ROOT)
+    pythonpath = (
+        repo_root
+        if not existing_pythonpath
+        else f"{repo_root}{os.pathsep}{existing_pythonpath}"
+    )
+    env = {
+        "PATH": os.environ.get("PATH", "/usr/bin:/usr/local/bin"),
+        "HOME": tempfile.gettempdir(),
+        "PYTHONPATH": pythonpath,
+    }
     for _k, _v in _BLAS_THREAD_ENV.items():
         env.setdefault(_k, os.environ.get(_k, _v))
     preexec_fn = _build_posix_preexec(max_memory_mb)

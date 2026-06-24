@@ -761,12 +761,24 @@ def add_job(
     timezone_str: str = "UTC",
     payload: dict | None = None,
 ):
-    """Add a scheduler job."""
+    """Add a scheduler job, preserving any operator toggle state on reconcile.
+
+    New jobs start enabled. Existing jobs keep their current enabled value so
+    that a user-disabled job stays disabled across restarts and settings saves.
+    """
     with get_db() as conn:
         conn.execute(
-            """INSERT OR REPLACE INTO scheduler_jobs
-            (id, name, enabled, schedule_type, schedule_expr, timezone, command, payload, next_run_at)
-            VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO scheduler_jobs
+               (id, name, enabled, schedule_type, schedule_expr, timezone, command, payload, next_run_at)
+               VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(id) DO UPDATE SET
+                   name         = excluded.name,
+                   schedule_type = excluded.schedule_type,
+                   schedule_expr = excluded.schedule_expr,
+                   timezone     = excluded.timezone,
+                   command      = excluded.command,
+                   payload      = excluded.payload,
+                   next_run_at  = excluded.next_run_at""",
             (
                 job_id, name, schedule_type, schedule_expr,
                 timezone_str, command, json.dumps(payload) if payload else None,

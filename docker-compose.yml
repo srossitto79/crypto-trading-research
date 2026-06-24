@@ -44,7 +44,6 @@ services:
     volumes:
       - forven_data:/data
       - ./forven:/app/forven:cached
-      - ./forven/strategies/custom:/app/forven/strategies/custom:ro
 
     healthcheck:
       test: ["CMD-SHELL", "curl -fSs http://127.0.0.1:8003/api/health || exit 1"]

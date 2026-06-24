@@ -944,14 +944,24 @@ def resolve_strategy_family(strategy_type: str | None) -> str:
     if stype in SUPPORTED_PARAM_FAMILIES:
         return stype
 
+    # Custom-registered types must not be resolved to a built-in family via
+    # prefix matching — a strategy named "rsi_volume_oi" is NOT an "rsi" family
+    # variant; treating it as one would silently strip its custom params through
+    # canonicalize_params' family-scoped allowlist. Check the registry first so
+    # that registered custom types always pass through with their own type name.
+    try:
+        from forven.strategies.registry import _TYPE_MAP
+        if stype in _TYPE_MAP:
+            return stype
+    except Exception:
+        pass
+
     # Prefer the longest matching prefix so families such as ``vwap_pullback``
     # win over the shorter ``vwap`` prefix.
     for family in sorted(SUPPORTED_PARAM_FAMILIES, key=len, reverse=True):
         if stype.startswith(f"{family}_"):
             return family
-    
-    # Check if it's a registered type that might have a family prefix
-    # Default to the type itself if we can't determine the family
+
     return stype
 
 def extract_execution_params_from_rule_blobs(

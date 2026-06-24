@@ -4,6 +4,7 @@
 		getJobs,
 		getDashboardOverview,
 		getForvenSchedulerJobs,
+		updateForvenSchedulerJob,
 		type Job,
 		type DashboardOverview,
 		type ForvenSchedulerJob,
@@ -191,6 +192,25 @@
 		if (s === 'failed' || s === 'error') return 'text-red-400';
 		if (s === 'running') return 'text-yellow-400';
 		return 'text-gray-400';
+	}
+
+	let togglingJobs = new Set<string>();
+
+	async function toggleJob(job: ForvenSchedulerJob) {
+		const jobId = String(job.id ?? '');
+		if (!jobId || togglingJobs.has(jobId)) return;
+		const newEnabled = !job.enabled;
+		togglingJobs = new Set(togglingJobs).add(jobId);
+		// Optimistic update so the toggle feels instant
+		schedulerJobs = schedulerJobs.map(j => String(j.id) === jobId ? { ...j, enabled: newEnabled } : j);
+		try {
+			await updateForvenSchedulerJob(jobId, job.schedule_type ?? 'interval', job.schedule_expr ?? '', newEnabled);
+		} catch {
+			// Revert on failure
+			schedulerJobs = schedulerJobs.map(j => String(j.id) === jobId ? { ...j, enabled: !newEnabled } : j);
+		} finally {
+			togglingJobs = new Set([...togglingJobs].filter(id => id !== jobId));
+		}
 	}
 </script>
 
@@ -447,9 +467,22 @@
 						</thead>
 						<tbody class="text-xs">
 							{#each schedulerJobs as job}
-								<tr class="border-b border-[#111] hover:bg-[#111] transition-colors {!job.enabled ? 'opacity-40' : ''}">
-									<td class="px-4 py-2">
-										<span class="w-2 h-2 rounded-full inline-block {job.enabled ? 'bg-green-400' : 'bg-gray-600'}"></span>
+								<tr class="border-b border-[#111] hover:bg-[#111] transition-colors {!job.enabled ? 'opacity-50' : ''}">
+									<td class="px-4 py-2.5">
+										<button
+											type="button"
+											on:click|stopPropagation={() => toggleJob(job)}
+											disabled={togglingJobs.has(String(job.id))}
+											title="{job.enabled ? 'Disable' : 'Enable'} {job.name}"
+											aria-label="{job.enabled ? 'Disable' : 'Enable'} {job.name}"
+											class="relative inline-flex h-4 w-7 flex-shrink-0 rounded-full transition-colors duration-150
+												{job.enabled ? 'bg-green-500' : 'bg-gray-700'}
+												{togglingJobs.has(String(job.id)) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}"
+										>
+											<span class="pointer-events-none absolute top-0.5 left-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform duration-150
+												{job.enabled ? 'translate-x-3' : 'translate-x-0'}">
+											</span>
+										</button>
 									</td>
 									<td class="px-4 py-2 text-gray-300 whitespace-nowrap">{job.name || '-'}</td>
 									<td class="px-4 py-2 text-gray-500 font-mono text-[11px]">{job.schedule_type === 'interval' ? formatIntervalMs(job.schedule_expr) : job.schedule_expr || '-'}</td>
