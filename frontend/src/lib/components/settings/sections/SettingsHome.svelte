@@ -93,9 +93,9 @@
 				settings.notify_health_reports ||
 				settings.notify_errors,
 		);
-		const webhook = (settings.discord_webhook_url as string | undefined) ?? '';
-		const botToken = (settings.discord_bot_token as string | undefined) ?? '';
-		if (anyNotifyOn && !webhook && !botToken) {
+		const webhookConfigured = Boolean(settings.discord_webhook_configured);
+		const botTokenConfigured = Boolean(settings.discord_bot_token_configured);
+		if (anyNotifyOn && !webhookConfigured && !botTokenConfigured) {
 			issues.push({
 				key: 'notify-no-transport',
 				label: 'Notifications are enabled but no Discord transport is configured.',

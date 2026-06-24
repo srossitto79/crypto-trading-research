@@ -11,6 +11,7 @@ from forven.db import get_db
 CANDIDATE_ACTION_KINDS = {"develop_candidate", "expand_viable_crucible"}
 TRUSTED_CANDIDATE_ORIGINS = {
     "autonomous_follow_through",
+    "brain_assigned",
     "crucible_planner",
     "hypothesis_promotion_loop",
     "operator_generate_strategies",
@@ -102,6 +103,13 @@ def _task_payload_matches_candidate_request(
     if origin_mode != "crucible_planner" and action_kind and action_kind not in CANDIDATE_ACTION_KINDS:
         return False
 
+    # Brain-dispatched tasks (origin_mode="brain_assigned") are created without
+    # a specific crucible_id because the brain doesn't know at dispatch time which
+    # crucible the agent will target. The brain is already trusted at the top of
+    # validate_candidate_strategy_creation; its dispatched tasks inherit that trust.
+    if origin_mode == "brain_assigned":
+        return True
+
     payload_crucible_id = str(payload.get("crucible_id") or "").strip()
     payload_hypothesis_id = str(payload.get("hypothesis_id") or "").strip()
     if not payload_crucible_id and not payload_hypothesis_id:
@@ -135,7 +143,6 @@ def _find_matching_running_candidate_task(
             FROM agent_tasks
             WHERE agent_id = ?
               AND status = 'running'
-              AND type = 'develop_candidate'
             ORDER BY COALESCE(started_at, created_at) DESC
             LIMIT 20
             """,

@@ -86,7 +86,7 @@ def validate_strategy_code(code: str) -> dict:
         }
 
     test_code = _wrap_with_test_harness(current_code)
-    exec_result = run_code(test_code, timeout=30, max_memory_mb=256)
+    exec_result = run_code(test_code, timeout=30)
 
     valid = (
         final_lint["passed"]

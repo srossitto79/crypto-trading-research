@@ -152,6 +152,15 @@ def _tool_assign_agent_task(params: dict) -> str:
             f"{', '.join(available)}"
         )
 
+    # Strategy-developer tasks need a trusted origin_mode so the register_strategy
+    # trust gate allows them to create crucible-linked candidates. Brain-dispatched
+    # tasks may work on any crucible the agent selects during execution.
+    if agent_id == "strategy-developer":
+        if input_data is None:
+            input_data = {}
+        input_data.setdefault("origin_mode", "brain_assigned")
+        input_data.setdefault("action_kind", "develop_candidate")
+
     assign_task(agent_id, task_type, title, description, input_data=input_data, strategy_id=strategy_id)
 
     # Also broadcast to Discord (removed due to noise)

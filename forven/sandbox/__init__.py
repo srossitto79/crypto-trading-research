@@ -49,7 +49,17 @@ if not IS_WINDOWS:
 def _build_posix_preexec(max_memory_mb: int):
     def _apply_limits() -> None:
         resource.setrlimit(resource.RLIMIT_CPU, (MAX_CPU_SECONDS, MAX_CPU_SECONDS))
-        resource.setrlimit(resource.RLIMIT_AS, (max_memory_mb * 1024 * 1024, max_memory_mb * 1024 * 1024))
+        # RLIMIT_AS limits virtual address space, not physical memory. Scientific Python
+        # (pandas + numpy) maps 600MB–1GB+ of virtual pages on import even though RSS
+        # stays small, so a tight AS cap causes MemoryError before any user code runs.
+        # Use RLIMIT_DATA (heap/BSS) instead — it stops runaway in-memory allocations
+        # without penalising mmap-heavy library imports. Fall back gracefully if the
+        # platform doesn't expose RLIMIT_DATA (it's always available on Linux).
+        try:
+            data_limit = max(max_memory_mb, 512) * 1024 * 1024
+            resource.setrlimit(resource.RLIMIT_DATA, (data_limit, data_limit))
+        except (AttributeError, ValueError):
+            pass
         resource.setrlimit(resource.RLIMIT_FSIZE, (MAX_FILE_SIZE_MB * 1024 * 1024, MAX_FILE_SIZE_MB * 1024 * 1024))
         resource.setrlimit(resource.RLIMIT_NOFILE, (MAX_OPEN_FILES, MAX_OPEN_FILES))
 
