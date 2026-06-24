@@ -263,8 +263,16 @@ async def _stream_openai_chat(endpoint, headers, body, *, include_usage: bool = 
     tool_accum: dict[int, dict] = {}
     usage: dict = {}
 
+    # Fix Host header for strict APIs (OpenRouter, DeepSeek)
+    # Extract host from endpoint URL to avoid "Invalid host header" errors
+    from urllib.parse import urlparse
+    parsed = urlparse(endpoint)
+    request_headers = {**headers}
+    if parsed.hostname:
+        request_headers["Host"] = parsed.hostname
+
     async with httpx.AsyncClient(timeout=build_provider_timeout()) as client:
-        async with client.stream("POST", endpoint, json=stream_body, headers=headers) as resp:
+        async with client.stream("POST", endpoint, json=stream_body, headers=request_headers) as resp:
             resp.raise_for_status()
             async for line in resp.aiter_lines():
                 payload = _sse_data(line)
@@ -333,8 +341,15 @@ async def _stream_anthropic_messages(endpoint, headers, body):
     usage: dict = {}
     stop_reason = "end_turn"
 
+    # Fix Host header for strict APIs
+    from urllib.parse import urlparse
+    parsed = urlparse(endpoint)
+    request_headers = {**headers}
+    if parsed.hostname:
+        request_headers["Host"] = parsed.hostname
+
     async with httpx.AsyncClient(timeout=build_provider_timeout()) as client:
-        async with client.stream("POST", endpoint, json=stream_body, headers=headers) as resp:
+        async with client.stream("POST", endpoint, json=stream_body, headers=request_headers) as resp:
             resp.raise_for_status()
             async for line in resp.aiter_lines():
                 payload = _sse_data(line)
@@ -458,8 +473,15 @@ class OpenAIProvider(ToolCallProvider):
             "tool_choice": "auto",
         }
 
+        # Fix Host header for strict APIs (OpenRouter, DeepSeek)
+        from urllib.parse import urlparse
+        parsed = urlparse(self.ENDPOINT)
+        request_headers = {**headers}
+        if parsed.hostname:
+            request_headers["Host"] = parsed.hostname
+
         async with httpx.AsyncClient(timeout=build_provider_timeout()) as client:
-            resp = await client.post(self.ENDPOINT, json=body, headers=headers)
+            resp = await client.post(self.ENDPOINT, json=body, headers=request_headers)
             resp.raise_for_status()
             data = resp.json()
 

@@ -881,18 +881,20 @@ def _extract_spot_usdc_balance(info: HyperliquidInfoClient, wallet: str) -> tupl
     return float(total_usd), float(free_usd)
 
 
-def get_exchange(
+def _get_hyperliquid_clients(
     testnet: bool = True,
     *,
     vault_address: str | None = None,
 ) -> tuple[Exchange, HyperliquidInfoClient, str]:
-    """Initialize HyperLiquid exchange and info clients.
+    """Initialize HyperLiquid exchange and info clients (internal use only).
 
     vault_address routes orders to a sub-account (Approach C direction books):
     the master private key still SIGNS, but orders execute on behalf of the
     sub-account, and the returned info address points at the sub-account so
     reads (positions, balance, open orders) target it too. None preserves the
     legacy single-wallet behavior exactly.
+
+    INTERNAL: Use get_exchange() for the abstract interface instead.
     """
     creds = _get_creds()
     pk = str(creds.get("HL_API_SECRET", "") or "").strip()
@@ -1001,10 +1003,10 @@ def _exchange_for_trading(
     # Pass vault_address only when routing, so the non-routed path calls
     # get_exchange with its exact legacy signature (byte-identical behavior).
     if vault_address:
-        exchange, info, address = get_exchange(testnet, vault_address=vault_address)
+        exchange, info, address = _get_hyperliquid_clients(testnet, vault_address=vault_address)
         auth_wallet = _configured_main_wallet()
     else:
-        exchange, info, address = get_exchange(testnet)
+        exchange, info, address = _get_hyperliquid_clients(testnet)
         auth_wallet = address
     _ensure_agent_authorized_for_trading(
         exchange, info, auth_wallet, str(getattr(exchange, "base_url", ""))
@@ -1868,9 +1870,9 @@ def get_positions(testnet: bool = True, *, account_address: str | None = None) -
         return sim_get_positions()
 
     if account_address:
-        _, info, address = get_exchange(testnet, vault_address=account_address)
+        _, info, address = _get_hyperliquid_clients(testnet, vault_address=account_address)
     else:
-        _, info, address = get_exchange(testnet)
+        _, info, address = _get_hyperliquid_clients(testnet)
     state = _with_breaker("account", hl_account_breaker, info.user_state, address)
     return {
         "positions": state.get("assetPositions", []),
@@ -1974,9 +1976,9 @@ def get_open_orders(testnet: bool = True, *, account_address: str | None = None)
         return []
 
     if account_address:
-        _, info, address = get_exchange(testnet, vault_address=account_address)
+        _, info, address = _get_hyperliquid_clients(testnet, vault_address=account_address)
     else:
-        _, info, address = get_exchange(testnet)
+        _, info, address = _get_hyperliquid_clients(testnet)
     return _with_breaker("account", hl_account_breaker, info.open_orders, address)
 
 
@@ -2000,9 +2002,9 @@ def get_user_fills(
 
     try:
         if account_address:
-            _, info, address = get_exchange(testnet, vault_address=account_address)
+            _, info, address = _get_hyperliquid_clients(testnet, vault_address=account_address)
         else:
-            _, info, address = get_exchange(testnet)
+            _, info, address = _get_hyperliquid_clients(testnet)
     except Exception as exc:
         log.debug("get_user_fills: client unavailable (%s)", exc)
         return []
@@ -2039,7 +2041,7 @@ def get_all_mids(testnet: bool = True) -> dict[str, float]:
         return {}
 
     try:
-        _, info, _ = get_exchange(testnet)
+        _, info, _ = _get_hyperliquid_clients(testnet)
     except Exception as exc:
         # all_mids is public; keep market-data paths resilient when creds are missing.
         log.debug("get_all_mids: using public info client (%s)", exc)

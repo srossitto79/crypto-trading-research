@@ -43,6 +43,7 @@ services:
 
     volumes:
       - forven_data:/data
+      - ./forven:/app/forven:cached
       - ./forven/strategies/custom:/app/forven/strategies/custom:ro
 
     healthcheck:
