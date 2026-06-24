@@ -986,6 +986,7 @@ async def _run_brain_task(task: dict) -> None:
     tool_tokens = set_tool_context(
         "brain", f"B{int(task['id']):04d}", tools_context=brain_tools_context
     )
+    brain_trace: list[dict] = []
     try:
         response = await _call_with_tools(
             provider,
@@ -993,6 +994,8 @@ async def _run_brain_task(task: dict) -> None:
             [{"role": "user", "content": message}],
             context,
             tools=brain_tools,
+            agent_id="brain",
+            trace=brain_trace,
         )
     finally:
         reset_tool_context(tool_tokens)
@@ -1005,7 +1008,18 @@ async def _run_brain_task(task: dict) -> None:
     with get_db() as conn:
         conn.execute(
             "UPDATE tasks SET status='done', completed_at=?, result=? WHERE id=?",
-            (datetime.now(timezone.utc).isoformat(), json.dumps({"response": _brain_response_text(response)}), task["id"]),
+            (
+                datetime.now(timezone.utc).isoformat(),
+                json.dumps({
+                    "response": _brain_response_text(response),
+                    "request": {
+                        "system": (context or "")[:12000],
+                        "messages": [{"role": "user", "content": message}],
+                    },
+                    "ai_trace": brain_trace,
+                }),
+                task["id"],
+            ),
         )
 
     try:

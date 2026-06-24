@@ -7721,6 +7721,33 @@ def get_agent_terminal(agent_id: str):
                 (agent_id,),
             ).fetchall()
             calls_payload = [dict(r) for r in call_rows]
+            # The Brain reasons via a separate brain_invoke task (different table);
+            # fold those in so its terminal shows its real request->response decisions
+            # (and per-provider trace), not just the RAG recall lookups.
+            if agent_id == "brain":
+                brain_rows = conn.execute(
+                    "SELECT id, status, result, error, created_at, completed_at "
+                    "FROM tasks WHERE type='brain_invoke' ORDER BY id DESC LIMIT 25"
+                ).fetchall()
+                for r in brain_rows:
+                    d = dict(r)
+                    calls_payload.append({
+                        "id": d["id"],
+                        "title": f"Brain cycle #{d['id']}",
+                        "status": d["status"],
+                        "provider": None,
+                        "model_id": None,
+                        "output_data": d.get("result"),
+                        "error": d.get("error"),
+                        "created_at": d["created_at"],
+                        "completed_at": d.get("completed_at"),
+                    })
+                # Normalize the two created_at formats (ISO 'T' vs space) before sorting.
+                calls_payload.sort(
+                    key=lambda c: str(c.get("created_at") or "").replace("T", " ")[:19],
+                    reverse=True,
+                )
+                calls_payload = calls_payload[:40]
         except Exception:
             calls_payload = []
     details = inspect_agent(agent_id)
