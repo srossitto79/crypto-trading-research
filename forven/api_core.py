@@ -1512,6 +1512,27 @@ _DEFAULT_SETTINGS_PAYLOAD = {
     "hyperliquid_api_address": "",
     "hyperliquid_has_key": False,
     "hyperliquid_testnet": True,
+    "binance_api_key": "",
+    "binance_api_secret": "",
+    "binance_has_key": False,
+    "binance_testnet": True,
+    "kraken_api_key": "",
+    "kraken_api_secret": "",
+    "kraken_has_key": False,
+    "kraken_testnet": True,
+    "okx_api_key": "",
+    "okx_api_secret": "",
+    "okx_api_passphrase": "",
+    "okx_has_key": False,
+    "okx_testnet": True,
+    "coinbase_api_key": "",
+    "coinbase_api_secret": "",
+    "coinbase_has_key": False,
+    "generic_ccxt_exchange": "",
+    "generic_ccxt_api_key": "",
+    "generic_ccxt_api_secret": "",
+    "generic_ccxt_has_key": False,
+    "generic_ccxt_testnet": True,
     "max_position_size_pct": 10,
     "max_risk_per_trade_pct": 10,
     "recovery_emergency_stop_max_pct": 5,
@@ -2124,15 +2145,20 @@ def _load_settings_payload() -> dict:
     payload["hyperliquid_wallet"] = str(payload.get("hyperliquid_wallet") or "").strip()
     payload["hyperliquid_api_address"] = str(payload.get("hyperliquid_api_address") or "").strip()
 
-    # Hyperliquid is the only supported live-execution venue. Normalize any
-    # legacy/removed selection (e.g. a stored "binance") so the UI and runtime
-    # always see a valid executable exchange.
-    if str(payload.get("exchange") or "").strip().lower() != "hyperliquid":
-        payload["exchange"] = "hyperliquid"
+    # Multiple exchanges now supported via CCXT abstraction. Validate exchange choice.
+    supported_exchanges = {"hyperliquid", "binance", "kraken", "okx", "coinbase", "generic_ccxt"}
+    exchange = str(payload.get("exchange") or "").strip().lower()
+    if exchange not in supported_exchanges:
+        payload["exchange"] = "hyperliquid"  # Default fallback
 
     secrets = _load_settings_secrets()
     payload["agent_model_keys"] = _coerce_agent_model_keys(payload.get("agent_model_keys"))
     payload["hyperliquid_has_key"] = bool(str(secrets.get("hyperliquid_private_key", "")).strip())
+    payload["binance_has_key"] = bool(str(secrets.get("binance_api_key", "")).strip() and str(secrets.get("binance_api_secret", "")).strip())
+    payload["kraken_has_key"] = bool(str(secrets.get("kraken_api_key", "")).strip() and str(secrets.get("kraken_api_secret", "")).strip())
+    payload["okx_has_key"] = bool(str(secrets.get("okx_api_key", "")).strip() and str(secrets.get("okx_api_secret", "")).strip())
+    payload["coinbase_has_key"] = bool(str(secrets.get("coinbase_api_key", "")).strip() and str(secrets.get("coinbase_api_secret", "")).strip())
+    payload["generic_ccxt_has_key"] = bool(str(secrets.get("generic_ccxt_api_key", "")).strip() and str(secrets.get("generic_ccxt_api_secret", "")).strip())
     payload["discord_webhook_configured"] = bool(str(secrets.get("discord_webhook_url", "")).strip())
     # Check if main bot token is configured in config.json or DISCORD_TOKEN env var
     try:
@@ -2247,9 +2273,9 @@ def _apply_settings_section(section: str, payload: dict) -> dict:
     if section == "exchange":
         exchange = str(payload.get("exchange", "")).strip().lower()
         if exchange:
-            # Hyperliquid is the only supported live-execution venue; coerce any
-            # other value (e.g. a legacy "binance" selection) to hyperliquid.
-            updates["exchange"] = exchange if exchange == "hyperliquid" else "hyperliquid"
+            # Multiple exchanges supported via CCXT. Validate and set.
+            supported_exchanges = {"hyperliquid", "binance", "kraken", "okx", "coinbase", "generic_ccxt"}
+            updates["exchange"] = exchange if exchange in supported_exchanges else "hyperliquid"
 
     elif section == "hyperliquid":
         wallet_payload_key = None
@@ -2296,6 +2322,132 @@ def _apply_settings_section(section: str, payload: dict) -> dict:
                 payload.get(testnet_payload_key),
                 updates["hyperliquid_testnet"],
             )
+
+    elif section == "binance":
+        for key_name in ("api_key", "binance_api_key"):
+            if key_name in payload:
+                api_key = str(payload.get(key_name) or "").strip()
+                if api_key:
+                    secrets["binance_api_key"] = api_key
+                else:
+                    secrets.pop("binance_api_key", None)
+                break
+        for key_name in ("api_secret", "binance_api_secret"):
+            if key_name in payload:
+                api_secret = str(payload.get(key_name) or "").strip()
+                if api_secret:
+                    secrets["binance_api_secret"] = api_secret
+                else:
+                    secrets.pop("binance_api_secret", None)
+                break
+        if "use_testnet" in payload or "binance_testnet" in payload:
+            for key_name in ("use_testnet", "binance_testnet"):
+                if key_name in payload:
+                    updates["binance_testnet"] = _coerce_bool(payload.get(key_name), updates.get("binance_testnet", True))
+                    break
+
+    elif section == "kraken":
+        for key_name in ("api_key", "kraken_api_key"):
+            if key_name in payload:
+                api_key = str(payload.get(key_name) or "").strip()
+                if api_key:
+                    secrets["kraken_api_key"] = api_key
+                else:
+                    secrets.pop("kraken_api_key", None)
+                break
+        for key_name in ("api_secret", "kraken_api_secret"):
+            if key_name in payload:
+                api_secret = str(payload.get(key_name) or "").strip()
+                if api_secret:
+                    secrets["kraken_api_secret"] = api_secret
+                else:
+                    secrets.pop("kraken_api_secret", None)
+                break
+        if "use_testnet" in payload or "kraken_testnet" in payload:
+            for key_name in ("use_testnet", "kraken_testnet"):
+                if key_name in payload:
+                    updates["kraken_testnet"] = _coerce_bool(payload.get(key_name), updates.get("kraken_testnet", True))
+                    break
+
+    elif section == "okx":
+        for key_name in ("api_key", "okx_api_key"):
+            if key_name in payload:
+                api_key = str(payload.get(key_name) or "").strip()
+                if api_key:
+                    secrets["okx_api_key"] = api_key
+                else:
+                    secrets.pop("okx_api_key", None)
+                break
+        for key_name in ("api_secret", "okx_api_secret"):
+            if key_name in payload:
+                api_secret = str(payload.get(key_name) or "").strip()
+                if api_secret:
+                    secrets["okx_api_secret"] = api_secret
+                else:
+                    secrets.pop("okx_api_secret", None)
+                break
+        for key_name in ("passphrase", "okx_api_passphrase"):
+            if key_name in payload:
+                passphrase = str(payload.get(key_name) or "").strip()
+                if passphrase:
+                    secrets["okx_api_passphrase"] = passphrase
+                else:
+                    secrets.pop("okx_api_passphrase", None)
+                break
+        if "use_testnet" in payload or "okx_testnet" in payload:
+            for key_name in ("use_testnet", "okx_testnet"):
+                if key_name in payload:
+                    updates["okx_testnet"] = _coerce_bool(payload.get(key_name), updates.get("okx_testnet", True))
+                    break
+
+    elif section == "coinbase":
+        for key_name in ("api_key", "coinbase_api_key"):
+            if key_name in payload:
+                api_key = str(payload.get(key_name) or "").strip()
+                if api_key:
+                    secrets["coinbase_api_key"] = api_key
+                else:
+                    secrets.pop("coinbase_api_key", None)
+                break
+        for key_name in ("api_secret", "coinbase_api_secret"):
+            if key_name in payload:
+                api_secret = str(payload.get(key_name) or "").strip()
+                if api_secret:
+                    secrets["coinbase_api_secret"] = api_secret
+                else:
+                    secrets.pop("coinbase_api_secret", None)
+                break
+
+    elif section == "generic-ccxt":
+        for key_name in ("exchange_id", "generic_ccxt_exchange"):
+            if key_name in payload:
+                exchange_id = str(payload.get(key_name) or "").strip().lower()
+                if exchange_id:
+                    updates["generic_ccxt_exchange"] = exchange_id
+                else:
+                    updates.pop("generic_ccxt_exchange", None)
+                break
+        for key_name in ("api_key", "generic_ccxt_api_key"):
+            if key_name in payload:
+                api_key = str(payload.get(key_name) or "").strip()
+                if api_key:
+                    secrets["generic_ccxt_api_key"] = api_key
+                else:
+                    secrets.pop("generic_ccxt_api_key", None)
+                break
+        for key_name in ("api_secret", "generic_ccxt_api_secret"):
+            if key_name in payload:
+                api_secret = str(payload.get(key_name) or "").strip()
+                if api_secret:
+                    secrets["generic_ccxt_api_secret"] = api_secret
+                else:
+                    secrets.pop("generic_ccxt_api_secret", None)
+                break
+        if "use_testnet" in payload or "generic_ccxt_testnet" in payload:
+            for key_name in ("use_testnet", "generic_ccxt_testnet"):
+                if key_name in payload:
+                    updates["generic_ccxt_testnet"] = _coerce_bool(payload.get(key_name), updates.get("generic_ccxt_testnet", True))
+                    break
 
     elif section == "trading-mode":
         if "trading_mode" in payload:

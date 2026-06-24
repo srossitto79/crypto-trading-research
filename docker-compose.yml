@@ -19,7 +19,7 @@ services:
   backend:
     build: .
     image: forven:latest
-    container_name: forven-paper
+    container_name: forven-backend
     restart: unless-stopped
 
     ports:
