@@ -49,6 +49,18 @@ def test_gemini_belong_rule_keeps_chat_drops_other_modalities() -> None:
     assert not ac._discovery_model_should_belong("gemini", "text-embedding-004")
 
 
+def test_openai_belong_rule_auto_accepts_new_chat_models() -> None:
+    # New chat/reasoning models auto-pass without a code change...
+    for m in ("gpt-5.5", "gpt-6", "o3", "o4-mini", "o3-mini", "o5",
+              "chatgpt-4o-latest", "codex-5.3", "gpt-4o-mini"):
+        assert ac._discovery_model_should_belong("openai", m), m
+    # ...while non-chat modalities are still dropped.
+    for m in ("text-embedding-3-large", "whisper-1", "tts-1", "dall-e-3",
+              "gpt-image-1", "omni-moderation-latest", "gpt-4o-realtime-preview",
+              "gpt-4o-audio-preview", "gpt-4o-transcribe", "davinci-002", "babbage-002"):
+        assert not ac._discovery_model_should_belong("openai", m), m
+
+
 def test_deepseek_belong_rule() -> None:
     assert ac._discovery_model_should_belong("deepseek", "deepseek-chat")
     assert ac._discovery_model_should_belong("deepseek", "deepseek-reasoner")

@@ -254,7 +254,121 @@ def test_lmstudio_tool_provider_omits_auth_header_without_token(monkeypatch):
     assert result.text == "ok"
 
 
-def test_lmstudio_fallback_chain_keeps_minimax_recovery(monkeypatch):
+def test_model_policy_save_preserves_auxiliary(forven_db):
+    """Saving model-policy must NOT reset auxiliary routing to the defaults."""
+    from forven import model_routing
+
+    policy = model_routing.get_model_routing()
+    policy["auxiliary"]["recall"] = {
+        "provider": "gemini", "model_id": "gemini-2.5-flash-lite",
+        "base_url": None, "api_key": None,
+    }
+    model_routing.update_model_routing(policy)
+
+    # Save a model-policy update that does NOT include auxiliary.
+    api_core._coerce_model_policy_update_payload(
+        api_core.ModelPolicyUpdateBody(provider_priority=["gemini", "openai"])
+    )
+
+    after = model_routing.get_model_routing()
+    assert after["auxiliary"]["recall"]["provider"] == "gemini"
+    assert after["auxiliary"]["recall"]["model_id"] == "gemini-2.5-flash-lite"
+
+
+def test_auth_provider_connected_matches_runtime_gate(forven_db, monkeypatch):
+    """payload['connected'] must equal model_selection.provider_is_connected —
+    membership AND a usable token — so an expired/gone token shows NOT connected
+    even though the provider is still in the connected set."""
+    from forven import model_selection as ms
+
+    # In the connected set but the token resolves -> connected.
+    monkeypatch.setattr(ms, "list_connected_providers", lambda: {"openai"})
+    monkeypatch.setattr(ms, "_provider_has_token", lambda provider: True)
+    assert api_core._build_auth_provider_payload("openai")["connected"] is True
+
+    # Still in the connected set, but token gone -> NOT connected (the old
+    # membership-only check would have wrongly reported True here).
+    monkeypatch.setattr(ms, "_provider_has_token", lambda provider: False)
+    assert api_core._build_auth_provider_payload("openai")["connected"] is False
+
+
+def test_model_policy_save_warns_on_not_connected_provider(forven_db, monkeypatch):
+    """Saving a policy pointing at a not-connected provider still persists but
+    returns a structured warnings array naming the (provider, model)."""
+    from forven import model_selection as ms
+
+    monkeypatch.setattr(ms, "provider_is_connected", lambda provider: provider == "openai")
+
+    result = api_core._update_model_policy(
+        api_core.ModelPolicyUpdateBody(
+            provider_priority=["openai", "openrouter"],
+            default_models={"openai": "gpt-5.2", "openrouter": "anthropic/claude-sonnet-4"},
+        )
+    )
+
+    assert "warnings" in result
+    warned = {(w["provider"], w["model"]) for w in result["warnings"]}
+    assert ("openrouter", "anthropic/claude-sonnet-4") in warned
+    # The connected provider is NOT warned.
+    assert all(w["provider"] != "openai" for w in result["warnings"])
+    assert all("not connected" in w["reason"] for w in result["warnings"])
+
+
+def test_model_policy_save_no_warnings_when_all_connected(forven_db, monkeypatch):
+    from forven import model_selection as ms
+
+    monkeypatch.setattr(ms, "provider_is_connected", lambda provider: True)
+    result = api_core._update_model_policy(
+        api_core.ModelPolicyUpdateBody(
+            default_models={"openai": "gpt-5.2"},
+        )
+    )
+    assert result["warnings"] == []
+
+
+def test_patch_agent_model_warns_on_not_connected_provider(forven_db, monkeypatch):
+    from forven import model_selection as ms
+    from forven.db import get_db
+
+    with get_db() as conn:
+        conn.execute(
+            "INSERT INTO agents (id, name, role, model, model_id, enabled) "
+            "VALUES (?, ?, ?, ?, ?, 1)",
+            ("agent-warn-test", "agent-warn-test", "strategy-developer", "openai", ""),
+        )
+
+    monkeypatch.setattr(ms, "provider_is_connected", lambda provider: False)
+
+    result = api_core.patch_agent_model(
+        "agent-warn-test",
+        api_core.LegacyAgentModelBody(model="openrouter", model_id="anthropic/claude-sonnet-4"),
+    )
+
+    assert result["warnings"], "expected a not-connected warning"
+    assert result["warnings"][0]["provider"] == "openrouter"
+    assert "not connected" in result["warnings"][0]["reason"]
+
+
+def test_patch_agent_model_no_warning_when_connected(forven_db, monkeypatch):
+    from forven import model_selection as ms
+    from forven.db import get_db
+
+    with get_db() as conn:
+        conn.execute(
+            "INSERT INTO agents (id, name, role, model, model_id, enabled) "
+            "VALUES (?, ?, ?, ?, ?, 1)",
+            ("agent-ok-test", "agent-ok-test", "strategy-developer", "openai", ""),
+        )
+
+    monkeypatch.setattr(ms, "provider_is_connected", lambda provider: True)
+    result = api_core.patch_agent_model(
+        "agent-ok-test",
+        api_core.LegacyAgentModelBody(model="openai", model_id="gpt-5.2"),
+    )
+    assert result["warnings"] == []
+
+
+def test_lmstudio_fallback_chain_is_fail_closed_no_forced_appends(monkeypatch):
     from forven import model_routing
 
     legacy_policy = deepcopy(model_routing._DEFAULT_MODEL_ROUTING)
@@ -264,8 +378,10 @@ def test_lmstudio_fallback_chain_keeps_minimax_recovery(monkeypatch):
     ]
     monkeypatch.setattr(model_routing, "kv_get", lambda *args, **kwargs: legacy_policy)
 
+    # Fail-closed: only the operator-configured chain is returned. We no longer
+    # force-append cross-provider hops (the old "-> minimax recovery"), which
+    # routed spend to a provider the operator never selected.
     assert model_routing.get_fallback_chain("lmstudio") == [
         ("lmstudio", "local-model"),
         ("openai", "gpt-5.2"),
-        ("minimax", "MiniMax-M2.5"),
     ]
