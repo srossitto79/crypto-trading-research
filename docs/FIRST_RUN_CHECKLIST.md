@@ -85,8 +85,17 @@ Notes:
 
 - [ ] Review `.env.example`
 - [ ] Keep `FORVEN_EXECUTION_MODE=paper`
+- [ ] **Generate and set `FORVEN_OPERATOR_KEY`** (required for LLM provider config):
+
+```powershell
+python -m forven auth init-operator-key
+# Copy the generated key and add it to .env:
+# FORVEN_OPERATOR_KEY=<key>
+```
+
+- [ ] Restart the backend after updating `.env`
 - [ ] Set `FORVEN_ENCRYPTION_KEY` if you want portable encrypted secrets
-- [ ] Set `FORVEN_API_KEY` and `FORVEN_OPERATOR_KEY` if the API will be used beyond localhost
+- [ ] Set `FORVEN_API_KEY` if the API will be used beyond localhost
 - [ ] Log in to AI providers as needed:
 
 ```powershell
@@ -96,7 +105,8 @@ python -m forven auth login minimax
 python -m forven auth status
 ```
 
-- [ ] In the UI, review Settings for provider auth, exchange settings, API keys, notifications, and pipeline settings
+- [ ] In the UI, go to Settings → Agents → AI Providers and verify OAuth flows work without browser console hacks
+- [ ] Review other Settings: exchange, API keys, notifications, pipeline settings
 
 ## 6. Perform a basic smoke test
 

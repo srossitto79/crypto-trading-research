@@ -52,6 +52,24 @@ def auth_migrate():
     migrate_from_openclaw()
 
 
+@auth.command("init-operator-key")
+def auth_init_operator_key():
+    """Generate and print FORVEN_OPERATOR_KEY for .env configuration."""
+    import secrets
+    import os
+    from pathlib import Path
+
+    key = secrets.token_urlsafe(32)
+    print("\n✓ Generated FORVEN_OPERATOR_KEY:")
+    print(f"  {key}\n")
+    print("Add this to your .env file or shell environment:")
+    print(f"  export FORVEN_OPERATOR_KEY='{key}'")
+    print(f"  # or in .env:")
+    print(f"  FORVEN_OPERATOR_KEY={key}\n")
+    print("Then restart the Forven backend:\n")
+    print("  python -m forven api\n")
+
+
 # --- Configure ---
 
 @cli.command()

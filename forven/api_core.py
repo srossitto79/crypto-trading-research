@@ -166,6 +166,15 @@ def _bootstrap_scheduler_jobs():
 
 async def _on_startup():
     import time as _time
+    import os
+
+    # Check if FORVEN_OPERATOR_KEY is configured
+    if not os.getenv("FORVEN_OPERATOR_KEY"):
+        log.warning(
+            "FORVEN_OPERATOR_KEY not set. This is required to configure LLM providers. "
+            "Run: python -m forven auth init-operator-key"
+        )
+
     _BOOTSTRAP_MAX_RETRIES = 3
     _BOOTSTRAP_RETRY_DELAY = 5.0
     try:

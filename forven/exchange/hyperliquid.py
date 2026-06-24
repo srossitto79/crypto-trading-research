@@ -2207,4 +2207,33 @@ class HyperLiquidFeed:
             except Exception:
                 pass
             self._fallback_counter += 1
-            await asyncio.sleep(5)
+
+
+# ======================== ExchangeInterface Integration ========================
+# Module-level exchange management for use with ExchangeInterface.
+# Allows code to swap exchanges (e.g., mock for testing) at runtime.
+
+_default_exchange: "ExchangeInterface | None" = None
+
+
+def get_exchange(testnet: bool = True) -> "ExchangeInterface":
+    """Get or create the default exchange instance (HyperliquidExchange).
+
+    Returns:
+        ExchangeInterface: The active exchange (HyperliquidExchange by default).
+    """
+    global _default_exchange
+    if _default_exchange is None:
+        from forven.exchange.hyperliquid_adapter import HyperliquidExchange
+        _default_exchange = HyperliquidExchange(testnet=testnet)
+    return _default_exchange
+
+
+def set_exchange(exchange: "ExchangeInterface") -> None:
+    """Set a custom exchange instance (e.g., MockExchange for testing).
+
+    Args:
+        exchange: An ExchangeInterface implementation to use.
+    """
+    global _default_exchange
+    _default_exchange = exchange

@@ -183,7 +183,10 @@ def require_operator_access(request: HTTPConnection) -> None:
         return
     if _request_secret_matches(request, expected_operator_key, header_names=(_OPERATOR_KEY_HEADER,)):
         return
-    raise HTTPException(status_code=401, detail="Invalid or missing operator key")
+    raise HTTPException(
+        status_code=401,
+        detail="Invalid or missing operator key. Run 'python -m forven auth init-operator-key' to generate one, then add it to your .env file."
+    )
 
 
 async def require_api_access_ws(ws: HTTPConnection) -> bool:
