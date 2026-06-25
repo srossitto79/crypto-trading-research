@@ -4,12 +4,14 @@
 
 	export let job: ForvenSchedulerJob;
 	export let onSave: (jobId: string | number, scheduleType: string, scheduleExpr: string, enabled: boolean) => Promise<void>;
+	export let onRun: ((jobId: string | number) => Promise<void>) | undefined = undefined;
 	export let showErrors = false;
 
 	let isEditing = false;
 	let draftType: 'cron' | 'interval' = 'cron';
 	let draftExpr = '';
 	let saving = false;
+	let running = false;
 	let errorMessage = '';
 	let showError = false;
 	let autoExpanded = false;
@@ -111,6 +113,19 @@
 		draftExpr = toDisplayExpr(normalizedExpr, draftType);
 		errorMessage = '';
 		isEditing = true;
+	}
+
+	async function handleRun() {
+		if (!onRun || !hasJobId(job.id) || running) return;
+		running = true;
+		errorMessage = '';
+		try {
+			await onRun(job.id);
+		} catch (err) {
+			errorMessage = err instanceof Error ? err.message : 'Failed to trigger job';
+		} finally {
+			running = false;
+		}
 	}
 
 	async function handleEnabledToggle(event: Event) {
@@ -220,15 +235,38 @@
 		</span>
 	</td>
 	<td class="px-4 py-2">
-		<label class="relative inline-flex items-center cursor-pointer">
-			<input
-				type="checkbox"
-				class="sr-only peer"
-				checked={Boolean(job.enabled)}
-				on:change={handleEnabledToggle}
-			/>
-			<div class="w-10 h-5 bg-gray-700 rounded-full peer-checked:bg-cyan-500 transition-colors relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-4 after:h-4 after:bg-[#111] after:border after:border-[#333] after:rounded-full after:transition-transform peer-checked:after:translate-x-[20px]"></div>
-		</label>
+		<div class="flex items-center gap-3">
+			<label class="relative inline-flex items-center cursor-pointer">
+				<input
+					type="checkbox"
+					class="sr-only peer"
+					checked={Boolean(job.enabled)}
+					on:change={handleEnabledToggle}
+				/>
+				<div class="w-10 h-5 bg-gray-700 rounded-full peer-checked:bg-cyan-500 transition-colors relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-4 after:h-4 after:bg-[#111] after:border after:border-[#333] after:rounded-full after:transition-transform peer-checked:after:translate-x-[20px]"></div>
+			</label>
+			{#if onRun}
+				<button
+					type="button"
+					title="Execute now"
+					aria-label="Execute now"
+					disabled={running}
+					on:click={handleRun}
+					class="text-gray-500 hover:text-cyan-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+				>
+					{#if running}
+						<svg class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<circle cx="12" cy="12" r="10" stroke-opacity="0.25"/>
+							<path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/>
+						</svg>
+					{:else}
+						<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+							<path d="M8 5v14l11-7z"/>
+						</svg>
+					{/if}
+				</button>
+			{/if}
+		</div>
 	</td>
 </tr>
 {#if showErrors && job.last_error}

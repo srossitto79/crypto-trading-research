@@ -18,7 +18,8 @@
 		getForvenAgentModelOptions,
 		getForvenModelPolicy,
 		updateForvenAgent,
-		updateForvenSchedulerJob
+		updateForvenSchedulerJob,
+		triggerSchedulerJobNow
 	} from '$lib/api';
 	import {
 		listMCPServers,
@@ -1276,6 +1277,21 @@
 		}
 	}
 
+	async function handleSchedulerRunNow(jobId: string | number) {
+		try {
+			const result = await triggerSchedulerJobNow(jobId);
+			if (!result?.ok) {
+				throw new Error(result?.error || 'Failed to trigger job');
+			}
+			addToast('Job queued — runs on next scheduler tick (~30s)', 'success');
+			await fetchData();
+		} catch (err) {
+			const message = err instanceof Error ? err.message : 'Failed to trigger job';
+			addToast(message, 'error');
+			throw err;
+		}
+	}
+
 	function startDataRealtime(intervalMs: number) {
 		dataRealtime?.stop();
 		dataRealtime = createRealtimeRefresh(fetchData, {
@@ -1767,6 +1783,7 @@
 		<SchedulesTab
 			jobs={schedulerJobs}
 			onSave={handleSchedulerSave}
+			onRun={handleSchedulerRunNow}
 			showErrors={$agentHubSettings.showSchedulerErrors}
 			loading={loading}
 		/>

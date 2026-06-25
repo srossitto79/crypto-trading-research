@@ -167,6 +167,24 @@ _PIPELINE_INTAKE_JOB_IDS = {
 # scanner-hourly manages open paper positions (exits/stops) and must keep
 # running during failure storms.
 _AUTONOMY_BACKPRESSURE_JOB_IDS = set(_PIPELINE_INTAKE_JOB_IDS)
+# Data-collection and DB-maintenance jobs that must always run regardless of
+# system mode. Manual mode is meant to freeze autonomous trading/strategy
+# decisions, not infrastructure data fetching.
+_ALWAYS_RUN_JOB_IDS = {
+    "forven-data-ohlcv-keepalive",
+    "forven-data-oi-collect",
+    "forven-data-funding-collect",
+    "forven-data-lsr-collect",
+    "forven-data-taker-collect",
+    "forven-data-liquidation-collect",
+    "forven-data-fng-collect",
+    "forven-data-macro-collect",
+    "forven-data-btcdom-collect",
+    "forven-data-engine-catchup",
+    "forven-data-bv-backfill",
+    "forven-wal-checkpoint",
+    "forven-db-maintenance",
+}
 _AUTONOMY_BACKPRESSURE_LOOKBACK_MINUTES = 120
 _AUTONOMY_PENDING_TASK_LIMIT = 20
 _AUTONOMY_RECENT_FAILURE_LIMIT = 12
@@ -2264,7 +2282,7 @@ async def tick():
     autonomy_paused = is_autonomy_paused()
     for next_dt, job in _get_due_jobs(jobs, now):
         _record_scheduler_tick_progress()
-        if autonomy_paused:
+        if autonomy_paused and job.get("id") not in _ALWAYS_RUN_JOB_IDS:
             try:
                 next_run_str = _compute_next_run(
                     job["schedule_type"],

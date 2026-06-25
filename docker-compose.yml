@@ -77,7 +77,7 @@ services:
       - "5173:5173"
 
     environment:
-      - FORVEN_CLIENT_BASE=http://backend:8003
+      - FORVEN_CLIENT_BASE=http://192.168.0.200:8003
 
     depends_on:
       backend:

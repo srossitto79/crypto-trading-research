@@ -267,6 +267,27 @@ def patch_scheduler_job(job_id: str, payload: SchedulerJobUpdate) -> dict[str, o
     return {"ok": True, "id": str(job_id), "next_run_at": next_run}
 
 
+def run_scheduler_job_now(job_id: str) -> dict[str, object]:
+    from datetime import datetime, timezone
+    from forven.db import get_db
+
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT id, name, running_since FROM scheduler_jobs WHERE id = ?",
+            (job_id,),
+        ).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="scheduler job not found")
+        if row["running_since"]:
+            return {"ok": False, "error": "Job is already running"}
+        past = (datetime.now(timezone.utc).replace(microsecond=0).isoformat())
+        conn.execute(
+            "UPDATE scheduler_jobs SET next_run_at = ?, last_status = 'pending' WHERE id = ?",
+            (past, job_id),
+        )
+    return {"ok": True, "triggered": True, "id": str(job_id)}
+
+
 def reconcile_scheduler_jobs() -> dict[str, object]:
     from forven.db import init_db
 

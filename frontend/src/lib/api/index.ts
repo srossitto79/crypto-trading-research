@@ -392,6 +392,7 @@ export {
 	getForvenSchedulerJobs,
 	processAgentTaskQueues,
 	updateForvenSchedulerJob,
+	triggerSchedulerJobNow,
 	getForvenAgents,
 	getForvenAgentDocuments,
 	updateForvenAgent,

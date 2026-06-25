@@ -15,6 +15,7 @@
 		scheduleExpr: string,
 		enabled: boolean,
 	) => Promise<void>;
+	export let onRun: ((jobId: string | number) => Promise<void>) | undefined = undefined;
 	export let showErrors = false;
 	export let loading = false;
 </script>
@@ -45,7 +46,7 @@
 				</thead>
 				<tbody class="divide-y divide-[#222]">
 					{#each jobs as job (job.id)}
-						<SchedulerJobRow {job} {onSave} {showErrors} />
+						<SchedulerJobRow {job} {onSave} {onRun} {showErrors} />
 					{:else}
 						<tr><td colspan="5" class="px-4 py-4 text-center text-gray-500">No jobs configured</td></tr>
 					{/each}

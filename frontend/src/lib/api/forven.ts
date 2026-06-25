@@ -797,6 +797,12 @@ export async function processAgentTaskQueues(
 	});
 }
 
+export async function triggerSchedulerJobNow(
+	jobId: string | number
+): Promise<{ ok: boolean; triggered?: boolean; error?: string }> {
+	return fetchApi(`/scheduler/${jobId}/run`, { method: 'POST' });
+}
+
 export async function updateForvenSchedulerJob(
 	jobId: string | number,
 	scheduleType: string,

@@ -5,6 +5,7 @@
 		getDashboardOverview,
 		getForvenSchedulerJobs,
 		updateForvenSchedulerJob,
+		triggerSchedulerJobNow,
 		type Job,
 		type DashboardOverview,
 		type ForvenSchedulerJob,
@@ -195,6 +196,21 @@
 	}
 
 	let togglingJobs = new Set<string>();
+	let triggeringJobs = new Set<string>();
+
+	async function triggerJob(job: ForvenSchedulerJob) {
+		const jobId = String(job.id ?? '');
+		if (!jobId || triggeringJobs.has(jobId)) return;
+		triggeringJobs = new Set(triggeringJobs).add(jobId);
+		try {
+			const result = await triggerSchedulerJobNow(jobId);
+			if (result?.ok) {
+				schedulerJobs = schedulerJobs.map(j => String(j.id) === jobId ? { ...j, last_status: 'pending' } : j);
+			}
+		} finally {
+			triggeringJobs = new Set([...triggeringJobs].filter(id => id !== jobId));
+		}
+	}
 
 	async function toggleJob(job: ForvenSchedulerJob) {
 		const jobId = String(job.id ?? '');
@@ -463,6 +479,7 @@
 								<th class="px-4 py-2 font-medium text-right">Next Run</th>
 								<th class="px-4 py-2 font-medium text-right">Last Run</th>
 								<th class="px-4 py-2 font-medium text-right">Last Status</th>
+								<th class="px-4 py-2 font-medium"></th>
 							</tr>
 						</thead>
 						<tbody class="text-xs">
@@ -489,6 +506,27 @@
 									<td class="px-4 py-2 text-right text-gray-400 tabular-nums">{timeAgo(job.next_run_at)}</td>
 									<td class="px-4 py-2 text-right text-gray-400 tabular-nums">{timeAgo(job.last_run_at)}</td>
 									<td class="px-4 py-2 text-right font-bold uppercase {schedulerStatusColor(job.last_status)}">{job.last_status || '-'}</td>
+									<td class="px-4 py-2 text-right">
+										<button
+											type="button"
+											title="Execute now"
+											aria-label="Execute now"
+											disabled={triggeringJobs.has(String(job.id))}
+											on:click|stopPropagation={() => triggerJob(job)}
+											class="text-gray-600 hover:text-cyan-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+										>
+											{#if triggeringJobs.has(String(job.id))}
+												<svg class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+													<circle cx="12" cy="12" r="10" stroke-opacity="0.25"/>
+													<path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/>
+												</svg>
+											{:else}
+												<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+													<path d="M8 5v14l11-7z"/>
+												</svg>
+											{/if}
+										</button>
+									</td>
 								</tr>
 							{/each}
 						</tbody>

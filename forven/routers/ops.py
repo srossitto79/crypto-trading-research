@@ -73,6 +73,11 @@ def patch_scheduler_job(job_id: str, body: SchedulerJobUpdate):
     return control_plane_ops.patch_scheduler_job(job_id, body)
 
 
+@router.post("/api/scheduler/{job_id}/run")
+def run_scheduler_job_now(job_id: str):
+    return control_plane_ops.run_scheduler_job_now(job_id)
+
+
 @router.post("/api/scheduler/reconcile")
 def reconcile_scheduler_jobs():
     return control_plane_ops.reconcile_scheduler_jobs()
