@@ -86,6 +86,32 @@ services:
       backend:
         condition: service_healthy
 
+  # ── Discord bot (gateway only — backend owns all runtime loops) ──
+  discord-bot:
+    image: axiom:latest
+    container_name: axiom-discord
+    restart: unless-stopped
+    entrypoint: ["python", "-m", "axiom", "bot", "start"]
+
+    env_file:
+      - .env
+
+    environment:
+      - AXIOM_HOME=/data
+      - DISCORD_OWNER_ID=966019983379419186
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      # Gateway only — backend owns scheduler/agent/brain loops
+      # AXIOM_BOT_OWNS_RUNTIME is intentionally NOT set
+
+    volumes:
+      - axiom_data:/data
+      - ./axiom:/app/axiom:cached
+
+    depends_on:
+      backend:
+        condition: service_healthy
+
 volumes:
   axiom_data:
     name: axiom_data

@@ -107,7 +107,10 @@ def _load_discord_config() -> tuple[dict, dict, int]:
     channels = {**_DEFAULT_CHANNELS, **channel_overrides}
     channel_names = {v: k for k, v in channels.items()}
     
-    owner_val = cfg.get("discord_owner_id")
+    owner_val = (
+        cfg.get("discord_owner_id")
+        or os.environ.get("DISCORD_OWNER_ID")
+    )
     owner_id = int(owner_val) if owner_val else 0
     return channels, channel_names, owner_id
 

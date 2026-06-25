@@ -38,10 +38,12 @@ def _custom_dir() -> Path:
     override = os.environ.get("AXIOM_STRATEGIES_CUSTOM_DIR")
     if override:
         return Path(override)
-    # Package-relative, like every other custom-strategy consumer. The old
-    # CWD-relative "Axiom/strategies/custom" fallback pointed at a directory
-    # that never exists in production (audit M-7).
-    return Path(__file__).resolve().parent.parent / "strategies" / "custom"
+    # Use AXIOM_HOME so custom strategies land in the persistent data volume
+    # (e.g. /data/strategies/custom in Docker, ~/.Axiom/strategies/custom locally).
+    # The old Path(__file__)-relative fallback leaked source-tree paths in error
+    # messages and wrote files to the ephemeral /app directory in containers.
+    from axiom.config import AXIOM_HOME
+    return AXIOM_HOME / "strategies" / "custom"
 
 
 def _read_strategy_code() -> str:

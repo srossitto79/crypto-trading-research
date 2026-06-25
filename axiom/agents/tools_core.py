@@ -165,12 +165,16 @@ async def _kill_shell_process_tree(proc: asyncio.subprocess.Process) -> None:
         pass
 
 
+_SHELL_RUNTIME_HINT = (
+    "This runtime is Windows — use cmd/PowerShell syntax (dir, type, Get-ChildItem, Select-String)."
+    if os.name == "nt" else
+    "This runtime is Linux — use Unix/bash syntax (ls, cat, find, grep)."
+)
+
 @register_tool(
     name="run_shell",
     description=(
-        "Execute a shell command and return stdout/stderr. This runtime is Windows, "
-        "so prefer cmd/PowerShell syntax such as dir, type, Get-ChildItem, and "
-        "Select-String instead of Unix commands like ls or find. Max 120s timeout."
+        f"Execute a shell command and return stdout/stderr. {_SHELL_RUNTIME_HINT} Max 120s timeout."
     ),
     input_schema={
         "type": "object",
