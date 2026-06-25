@@ -1757,6 +1757,7 @@ class DataManager:
         *,
         include_macro: bool = False,
         exclude_streams: tuple[str, ...] = (),
+        live: bool = False,
     ) -> pd.DataFrame:
         """Join crypto-native derivatives data onto an OHLCV DataFrame.
 
@@ -1798,7 +1799,8 @@ class DataManager:
             if _data_engine_read_enabled():
                 from forven.dataeng.hub import get_data_hub
 
-                return get_data_hub().enrich(df, symbol, timeframe)
+                result = get_data_hub().enrich(df, symbol, timeframe)
+                return self._apply_lan_enrichment(result, symbol, timeframe, live=live)
         except Exception as exc:
             log.debug("DataHub enrichment failed for %s/%s; falling back to legacy enrich: %s", symbol, timeframe, exc)
 
@@ -1871,7 +1873,22 @@ class DataManager:
             except Exception as exc:
                 log.debug("SPY enrichment skipped: %s", exc)
 
-        return result
+        return self._apply_lan_enrichment(result, symbol, timeframe, live=live)
+
+    def _apply_lan_enrichment(
+        self,
+        df: pd.DataFrame,
+        symbol: str,
+        timeframe: str,
+        *,
+        live: bool = False,
+    ) -> pd.DataFrame:
+        try:
+            from forven.lan_enricher import get_lan_enricher
+            return get_lan_enricher().enrich(df, symbol, timeframe, live=live)
+        except Exception as exc:
+            log.debug("LAN enrichment skipped for %s/%s: %s", symbol, timeframe, exc)
+            return df
 
     def _enrich_funding(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:
         from forven.data import symbol_to_fs

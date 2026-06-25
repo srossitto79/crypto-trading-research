@@ -1008,7 +1008,6 @@ def get_data_health():
         "oi",
         "long_short_ratio",
         "taker_volume",
-        "liquidations",
         "fear_greed",
         "macro",
         "btc_dominance",
@@ -1026,6 +1025,93 @@ def get_data_health():
     return {**legacy, "streams": streams, "generated_at": _now_iso()}
 
 
+def _probe_lan_health() -> list[dict]:
+    """Probe the LAN metrics API and return per-category stream health entries.
+
+    Makes ONE call to /assets/bitcoin/metrics and splits the result into
+    four category rows: lan_onchain, lan_orderbook, lan_liquidations,
+    lan_sentiment. Falls back to 'recovering' (cache exists) or 'down' on
+    connection failure.
+    """
+    import os
+    import requests as _requests
+    from forven.lan_enricher import _SKIP_COLS
+
+    base_url = os.environ.get("LAN_METRICS_URL", "http://192.168.0.210:8001").rstrip("/")
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    _LAN_CATEGORIES: list[tuple[str, object]] = [
+        ("lan_liquidations", lambda m: m.startswith("liq_")),
+        ("lan_orderbook",    lambda m: m.startswith("l2_")),
+        ("lan_sentiment",    lambda m: m in ("news_sentiment", "news_volume")),
+        ("lan_onchain",      lambda m: not m.startswith(("liq_", "l2_")) and m not in ("news_sentiment", "news_volume")),
+    ]
+
+    def _has_cache() -> bool:
+        try:
+            from forven.data import data_root as _dr
+            cache_root = _dr() / "lan_cache"
+            return cache_root.exists() and any(cache_root.rglob("*.parquet"))
+        except Exception:
+            return False
+
+    def _last_cache_mtime() -> str | None:
+        try:
+            from forven.data import data_root as _dr
+            files = list((_dr() / "lan_cache").rglob("*.parquet"))
+            if not files:
+                return None
+            return datetime.fromtimestamp(max(f.stat().st_mtime for f in files), tz=timezone.utc).isoformat()
+        except Exception:
+            return None
+
+    try:
+        r = _requests.get(f"{base_url}/assets/bitcoin/metrics", timeout=5)
+        r.raise_for_status()
+        items = r.json()
+    except Exception as exc:
+        status = "recovering" if _has_cache() else "down"
+        error = str(exc)[:200]
+        return [
+            {
+                "stream": name,
+                "status": status,
+                "consecutive_failures": 1,
+                "last_success": _last_cache_mtime(),
+                "last_run": now_iso,
+                "last_error": error,
+                "total_rows": 0,
+            }
+            for name, _ in _LAN_CATEGORIES
+        ]
+
+    metric_names: list[str] = []
+    for item in items:
+        if isinstance(item, str):
+            name = item
+        elif isinstance(item, dict):
+            name = str(item.get("metric") or item.get("name") or "")
+        else:
+            continue
+        if name and name not in _SKIP_COLS:
+            metric_names.append(name)
+
+    last_cache = _last_cache_mtime() or now_iso
+    entries: list[dict] = []
+    for stream_name, matcher in _LAN_CATEGORIES:
+        count = sum(1 for m in metric_names if matcher(m))
+        entries.append({
+            "stream": stream_name,
+            "status": "healthy" if count > 0 else "never_ran",
+            "consecutive_failures": 0,
+            "last_success": last_cache if count > 0 else None,
+            "last_run": now_iso,
+            "last_error": None,
+            "total_rows": count,
+        })
+    return entries
+
+
 def get_collection_health() -> dict:
     """Plain-language per-stream collection health + aggregate score for the
     /data source-health panel. Maps persisted telemetry's consecutive_failures to
@@ -1039,9 +1125,10 @@ def get_collection_health() -> dict:
         log.error("Failed to read collection telemetry: %s", exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
+    # liquidations removed: Binance endpoint deprecated, data served via LAN enricher
     known = [
         "ohlcv", "funding", "oi", "long_short_ratio", "taker_volume",
-        "liquidations", "fear_greed", "macro", "btc_dominance",
+        "fear_greed", "macro", "btc_dominance",
     ]
     order = {"down": 0, "recovering": 1, "healthy": 2, "never_ran": 3}
     streams: list[dict] = []
@@ -1064,6 +1151,12 @@ def get_collection_health() -> dict:
             "last_error": entry.get("last_error"),
             "total_rows": int(entry.get("total_rows", 0) or 0),
         })
+
+    try:
+        streams.extend(_probe_lan_health())
+    except Exception as exc:
+        log.debug("LAN health probe failed: %s", exc)
+
     streams.sort(key=lambda s: order.get(s["status"], 9))
     return {"score": data_health_score(), "streams": streams}
 

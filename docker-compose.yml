@@ -34,8 +34,11 @@ services:
       - FORVEN_HOST=0.0.0.0
 
       # ── Paper-trade behaviour ─────────────────────────────────
-      - FORVEN_BOT_OWNS_RUNTIME=true
+      # - FORVEN_BOT_OWNS_RUNTIME=true # dont set it so the api will manage it without a separate container
       - FORVEN_ENABLE_REGIME_LAB=0
+
+      # ── LAN metrics enricher ──────────────────────────────────
+      - LAN_METRICS_URL=http://192.168.0.210:8001
 
       # ── Python runtime ────────────────────────────────────────
       - PYTHONUNBUFFERED=1

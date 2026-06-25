@@ -1628,7 +1628,7 @@ def _enrich_scan_frame(df: pd.DataFrame, asset: str, timeframe: str) -> pd.DataF
         # backtest dataset path passes the full pair, so this was a silent
         # backtest/paper data-parity gap. Pass the pair form here too.
         enrich_symbol = asset if "/" in str(asset) else f"{asset}/USDT"
-        df = data_manager.enrich(df, enrich_symbol, timeframe, exclude_streams=("funding", "oi"))
+        df = data_manager.enrich(df, enrich_symbol, timeframe, exclude_streams=("funding", "oi"), live=True)
     except Exception as exc:
         log.warning("Scan order-flow enrichment skipped for %s/%s: %s", asset, timeframe, exc)
     return df
