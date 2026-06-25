@@ -1,12 +1,12 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from forven.api_domains import jobs as jobs_domain
-from forven.db import get_db
+from axiom.api_domains import jobs as jobs_domain
+from axiom.db import get_db
 
 
-def test_jobs_compat_lists_and_fetches_task_jobs(forven_db):
+def test_jobs_compat_lists_and_fetches_task_jobs(AXIOM_db):
     now = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
         conn.execute(

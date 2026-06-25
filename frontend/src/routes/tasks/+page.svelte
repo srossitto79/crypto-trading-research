@@ -4,7 +4,7 @@
 	import { page } from '$app/stores';
 	import {
 		assignErrorToAgent,
-		dismissForvenAgentTask,
+		dismissAxiomAgentTask,
 		getPipelineMotionLog,
 		getTaskAudit,
 		getTaskContainers,
@@ -186,7 +186,7 @@
 		actionError = null;
 		actionPending = { ...actionPending, [task.id]: true };
 		try {
-			await dismissForvenAgentTask(task.id, 'tasks');
+			await dismissAxiomAgentTask(task.id, 'tasks');
 			await loadTasks();
 		} catch (e) {
 			actionError = e instanceof Error ? e.message : 'Failed to dismiss task';

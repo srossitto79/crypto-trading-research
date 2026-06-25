@@ -1,4 +1,4 @@
-"""Regression tests for backtesting strategy-type resolution."""
+﻿"""Regression tests for backtesting strategy-type resolution."""
 
 from __future__ import annotations
 
@@ -11,12 +11,12 @@ from unittest.mock import patch
 import pytest
 from fastapi import HTTPException
 
-from forven.db import get_db
+from axiom.db import get_db
 
 
-def test_create_backtesting_strategy_infers_macd_type(forven_db):
-    from forven.routers.backtesting import create_backtesting_strategy
-    from forven.hypotheses import create_hypothesis
+def test_create_backtesting_strategy_infers_macd_type(AXIOM_db):
+    from axiom.routers.backtesting import create_backtesting_strategy
+    from axiom.hypotheses import create_hypothesis
 
     hypothesis = create_hypothesis(
         title="MACD crossover",
@@ -57,9 +57,9 @@ def test_create_backtesting_strategy_infers_macd_type(forven_db):
     assert row["hypothesis_id"] == hypothesis["id"]
 
 
-def test_create_backtesting_strategy_routes_rule_blob_payload_to_research_only(forven_db):
-    from forven.routers.backtesting import create_backtesting_strategy
-    from forven.hypotheses import create_hypothesis
+def test_create_backtesting_strategy_routes_rule_blob_payload_to_research_only(AXIOM_db):
+    from axiom.routers.backtesting import create_backtesting_strategy
+    from axiom.hypotheses import create_hypothesis
 
     hypothesis = create_hypothesis(
         title="Legacy rule blob",
@@ -101,9 +101,9 @@ def test_create_backtesting_strategy_routes_rule_blob_payload_to_research_only(f
     assert "unsupported rule-blob params" in str(row["notes"])
 
 
-def test_create_backtesting_strategy_maps_orb_variant_to_research_only(forven_db):
-    from forven.routers.backtesting import create_backtesting_strategy
-    from forven.hypotheses import create_hypothesis
+def test_create_backtesting_strategy_maps_orb_variant_to_research_only(AXIOM_db):
+    from axiom.routers.backtesting import create_backtesting_strategy
+    from axiom.hypotheses import create_hypothesis
 
     hypothesis = create_hypothesis(
         title="NY displacement ORB",
@@ -136,8 +136,8 @@ def test_create_backtesting_strategy_maps_orb_variant_to_research_only(forven_db
     assert response["status"] == "research_only"
 
 
-def test_create_backtesting_strategy_rejects_unknown_hypothesis_id(forven_db):
-    from forven.routers.backtesting import create_backtesting_strategy
+def test_create_backtesting_strategy_rejects_unknown_hypothesis_id(AXIOM_db):
+    from axiom.routers.backtesting import create_backtesting_strategy
 
     payload = {
         "name": "MACD 5/13/3 ETH 15m",
@@ -158,8 +158,8 @@ def test_create_backtesting_strategy_rejects_unknown_hypothesis_id(forven_db):
     assert "unknown hypothesis_id" in str(exc.value.detail)
 
 
-def test_post_backtesting_run_local_infers_type_from_strategy_context(forven_db):
-    from forven.api_core import post_backtesting_run
+def test_post_backtesting_run_local_infers_type_from_strategy_context(AXIOM_db):
+    from axiom.api_core import post_backtesting_run
 
     now = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
@@ -191,12 +191,12 @@ def test_post_backtesting_run_local_infers_type_from_strategy_context(forven_db)
         captured.update(kwargs)
         return {"ok": True, "metrics": {}, "trades": []}
 
-    fake_backtest_module = types.ModuleType("forven.strategies.backtest")
+    fake_backtest_module = types.ModuleType("axiom.strategies.backtest")
     fake_backtest_module.backtest_strategy = _fake_backtest_strategy
 
-    with patch("forven.api_core.kv_get", return_value={"remote_engine_enabled": False}), patch.dict(
+    with patch("axiom.api_core.kv_get", return_value={"remote_engine_enabled": False}), patch.dict(
         sys.modules,
-        {"forven.strategies.backtest": fake_backtest_module},
+        {"axiom.strategies.backtest": fake_backtest_module},
     ):
         response = post_backtesting_run(
             {
@@ -211,8 +211,8 @@ def test_post_backtesting_run_local_infers_type_from_strategy_context(forven_db)
     assert captured.get("strategy_type") == "macd"
 
 
-def test_post_backtesting_run_local_resolves_decorated_strategy_name(forven_db):
-    from forven.api_core import post_backtesting_run
+def test_post_backtesting_run_local_resolves_decorated_strategy_name(AXIOM_db):
+    from axiom.api_core import post_backtesting_run
 
     now = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
@@ -244,12 +244,12 @@ def test_post_backtesting_run_local_resolves_decorated_strategy_name(forven_db):
         captured.update(kwargs)
         return {"ok": True, "metrics": {}, "trades": []}
 
-    fake_backtest_module = types.ModuleType("forven.strategies.backtest")
+    fake_backtest_module = types.ModuleType("axiom.strategies.backtest")
     fake_backtest_module.backtest_strategy = _fake_backtest_strategy
 
-    with patch("forven.api_core.kv_get", return_value={"remote_engine_enabled": False}), patch.dict(
+    with patch("axiom.api_core.kv_get", return_value={"remote_engine_enabled": False}), patch.dict(
         sys.modules,
-        {"forven.strategies.backtest": fake_backtest_module},
+        {"axiom.strategies.backtest": fake_backtest_module},
     ):
         response = post_backtesting_run(
             {
@@ -264,10 +264,10 @@ def test_post_backtesting_run_local_resolves_decorated_strategy_name(forven_db):
     assert captured.get("strategy_type") == "rsi_momentum"
 
 
-def test_post_backtesting_run_local_rejects_unsupported_execution_controls(forven_db, monkeypatch):
-    from forven.api_core import post_backtesting_run
-    import forven.backtesting as backtesting_mod
-    import forven.strategies.backtest as bt_mod
+def test_post_backtesting_run_local_rejects_unsupported_execution_controls(AXIOM_db, monkeypatch):
+    from axiom.api_core import post_backtesting_run
+    import axiom.backtesting as backtesting_mod
+    import axiom.strategies.backtest as bt_mod
 
     now = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
@@ -297,7 +297,7 @@ def test_post_backtesting_run_local_rejects_unsupported_execution_controls(forve
         lambda **_kwargs: (_ for _ in ()).throw(AssertionError("backtest_strategy should not run")),
     )
 
-    with patch("forven.api_core.kv_get", return_value={"remote_engine_enabled": False}):
+    with patch("axiom.api_core.kv_get", return_value={"remote_engine_enabled": False}):
         response = post_backtesting_run(
             {
                 "strategy_id": "S00140",
@@ -310,8 +310,8 @@ def test_post_backtesting_run_local_rejects_unsupported_execution_controls(forve
     assert "stop_loss_pct" in str(response.get("error") or "")
 
 
-def test_post_backtesting_run_local_persists_result_rows_for_agent_flow(forven_db, monkeypatch):
-    from forven.api_core import post_backtesting_run
+def test_post_backtesting_run_local_persists_result_rows_for_agent_flow(AXIOM_db, monkeypatch):
+    from axiom.api_core import post_backtesting_run
 
     now = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
@@ -356,16 +356,16 @@ def test_post_backtesting_run_local_persists_result_rows_for_agent_flow(forven_d
         ],
     }
 
-    fake_backtest_module = types.ModuleType("forven.strategies.backtest")
+    fake_backtest_module = types.ModuleType("axiom.strategies.backtest")
     fake_backtest_module.backtest_strategy = lambda **_kwargs: dict(fake_run)
 
-    monkeypatch.setattr("forven.api_core._write_backtest_result_artifacts", lambda *args, **kwargs: None)
-    monkeypatch.setattr("forven.api_core.auto_assign_best_symbol", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr("forven.vectordb.store_backtest_result", lambda **_kwargs: None)
+    monkeypatch.setattr("axiom.api_core._write_backtest_result_artifacts", lambda *args, **kwargs: None)
+    monkeypatch.setattr("axiom.api_core.auto_assign_best_symbol", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr("axiom.vectordb.store_backtest_result", lambda **_kwargs: None)
 
-    with patch("forven.api_core.kv_get", return_value={"remote_engine_enabled": False}), patch.dict(
+    with patch("axiom.api_core.kv_get", return_value={"remote_engine_enabled": False}), patch.dict(
         sys.modules,
-        {"forven.strategies.backtest": fake_backtest_module},
+        {"axiom.strategies.backtest": fake_backtest_module},
     ):
         response = post_backtesting_run(
             {
@@ -428,8 +428,8 @@ def test_post_backtesting_run_local_persists_result_rows_for_agent_flow(forven_d
     assert [event["event"] for event in task_audit] == ["created", "started", "completed"]
 
 
-def test_post_backtesting_run_local_sanitizes_nonfinite_metrics_for_json_response(forven_db, monkeypatch):
-    from forven.api_core import post_backtesting_run
+def test_post_backtesting_run_local_sanitizes_nonfinite_metrics_for_json_response(AXIOM_db, monkeypatch):
+    from axiom.api_core import post_backtesting_run
 
     now = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
@@ -467,16 +467,16 @@ def test_post_backtesting_run_local_sanitizes_nonfinite_metrics_for_json_respons
         "trades": [],
     }
 
-    fake_backtest_module = types.ModuleType("forven.strategies.backtest")
+    fake_backtest_module = types.ModuleType("axiom.strategies.backtest")
     fake_backtest_module.backtest_strategy = lambda **_kwargs: dict(fake_run)
 
-    monkeypatch.setattr("forven.api_core._write_backtest_result_artifacts", lambda *args, **kwargs: None)
-    monkeypatch.setattr("forven.api_core.auto_assign_best_symbol", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr("forven.vectordb.store_backtest_result", lambda **_kwargs: None)
+    monkeypatch.setattr("axiom.api_core._write_backtest_result_artifacts", lambda *args, **kwargs: None)
+    monkeypatch.setattr("axiom.api_core.auto_assign_best_symbol", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr("axiom.vectordb.store_backtest_result", lambda **_kwargs: None)
 
-    with patch("forven.api_core.kv_get", return_value={"remote_engine_enabled": False}), patch.dict(
+    with patch("axiom.api_core.kv_get", return_value={"remote_engine_enabled": False}), patch.dict(
         sys.modules,
-        {"forven.strategies.backtest": fake_backtest_module},
+        {"axiom.strategies.backtest": fake_backtest_module},
     ):
         response = post_backtesting_run(
             {
@@ -490,8 +490,8 @@ def test_post_backtesting_run_local_sanitizes_nonfinite_metrics_for_json_respons
     json.dumps(response, allow_nan=False)
 
 
-def test_get_backtest_result_sanitizes_stored_infinite_profit_factor(forven_db):
-    from forven.api_core import get_backtest_result
+def test_get_backtest_result_sanitizes_stored_infinite_profit_factor(AXIOM_db):
+    from axiom.api_core import get_backtest_result
 
     now = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
@@ -539,8 +539,8 @@ def test_get_backtest_result_sanitizes_stored_infinite_profit_factor(forven_db):
     json.dumps(payload, allow_nan=False)
 
 
-def test_get_backtesting_runs_sanitizes_nested_nonfinite_metrics(forven_db):
-    from forven.api_core import get_backtesting_runs
+def test_get_backtesting_runs_sanitizes_nested_nonfinite_metrics(AXIOM_db):
+    from axiom.api_core import get_backtesting_runs
 
     now = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
@@ -569,8 +569,8 @@ def test_get_backtesting_runs_sanitizes_nested_nonfinite_metrics(forven_db):
     json.dumps(payload, allow_nan=False)
 
 
-def test_get_backtest_results_lists_sqlite_rows_without_touching_chroma(forven_db, monkeypatch):
-    from forven.api_core import get_backtest_results
+def test_get_backtest_results_lists_sqlite_rows_without_touching_chroma(AXIOM_db, monkeypatch):
+    from axiom.api_core import get_backtest_results
 
     now = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
@@ -612,7 +612,7 @@ def test_get_backtest_results_lists_sqlite_rows_without_touching_chroma(forven_d
         )
 
     monkeypatch.setattr(
-        "forven.api_core._chroma_backtest_records",
+        "axiom.api_core._chroma_backtest_records",
         lambda: (_ for _ in ()).throw(AssertionError("Chroma should not be read when SQLite has rows")),
     )
 

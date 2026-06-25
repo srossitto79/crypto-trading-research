@@ -7,18 +7,18 @@
 	import { createRealtimeRefresh, type RealtimeRefreshController } from '$lib/utils/realtime';
 	import { createPersistedStore } from '$lib/stores';
 	import {
-		createForvenStrategyDeveloperAgent,
-		deleteForvenAgent,
-		dismissForvenAgentTask,
-		getForvenAgents,
-		getForvenAgentTasks,
-		getForvenSchedulerJobs,
-		getForvenLogs,
-		getForvenAgentTerminal,
-		getForvenAgentModelOptions,
-		getForvenModelPolicy,
-		updateForvenAgent,
-		updateForvenSchedulerJob,
+		createAxiomStrategyDeveloperAgent,
+		deleteAxiomAgent,
+		dismissAxiomAgentTask,
+		getAxiomAgents,
+		getAxiomAgentTasks,
+		getAxiomSchedulerJobs,
+		getAxiomLogs,
+		getAxiomAgentTerminal,
+		getAxiomAgentModelOptions,
+		getAxiomModelPolicy,
+		updateAxiomAgent,
+		updateAxiomSchedulerJob,
 		triggerSchedulerJobNow
 	} from '$lib/api';
 	import {
@@ -30,7 +30,7 @@
 		type MCPGrant,
 	} from '$lib/api/mcp';
 	import { addToast } from '$lib/stores/processTracker';
-	import type { ForvenAgent, ForvenAgentTask, ForvenAgentModelOption, ForvenAgentUpdatePayload, ForvenModelPolicyResponse, ForvenProvider, ForvenSchedulerJob } from '$lib/api';
+	import type { AxiomAgent, AxiomAgentTask, AxiomAgentModelOption, AxiomAgentUpdatePayload, AxiomModelPolicyResponse, AxiomProvider, AxiomSchedulerJob } from '$lib/api';
 	import AgentSettingsDrawer from './components/AgentSettingsDrawer.svelte';
 	import type { AgentHubSettings } from './components/agentHubSettings';
 	import SchedulerJobRow from './components/SchedulerJobRow.svelte';
@@ -149,7 +149,7 @@
 		void fetchData();
 	}
 
-	type AgentProvider = ForvenProvider;
+	type AgentProvider = AxiomProvider;
 
 	interface AgentCard {
 		id: string;
@@ -295,20 +295,20 @@
 	const requiredCoreAgentIds = fallbackAgentDefBase
 		.filter((agent) => agent.visibility === 'visible')
 		.map((agent) => agent.id);
-	let modelPolicy: ForvenModelPolicyResponse | null = null;
+	let modelPolicy: AxiomModelPolicyResponse | null = null;
 	let modelPresets: AgentModelPreset[] = [];
 	let fallbackModelPresets: AgentModelPreset[] = [];
-	let agentModelOptions: ForvenAgentModelOption[] = [];
+	let agentModelOptions: AxiomAgentModelOption[] = [];
 
-	let agents: ForvenAgent[] = [];
+	let agents: AxiomAgent[] = [];
 	$: agentNamesById = agents.reduce<Record<string, string>>((acc, agent) => {
 		const id = String(agent?.id ?? '').trim();
 		const name = String(agent?.name ?? '').trim();
 		if (id && name) acc[id] = name;
 		return acc;
 	}, {});
-	let agentTasks: ForvenAgentTask[] = [];
-	let schedulerJobs: ForvenSchedulerJob[] = [];
+	let agentTasks: AxiomAgentTask[] = [];
+	let schedulerJobs: AxiomSchedulerJob[] = [];
 	let logs: AgentLogEntry[] = [];
 	let agentLogs: AgentLogEntry[] = [];
 	let terminalLogs: AgentLogEntry[] = [];
@@ -520,7 +520,7 @@
 			.join(' ');
 	}
 
-	function resolveAgentModel(agent: ForvenAgent): { provider: AgentProvider; modelId: string; key: string } {
+	function resolveAgentModel(agent: AxiomAgent): { provider: AgentProvider; modelId: string; key: string } {
 		const providerRaw = String(agent.model ?? '').trim().toLowerCase();
 		const provider = inferAgentModelProvider(providerRaw, String(agent.model_id ?? ''));
 		const fallback = resolveFallbackAgentModel();
@@ -540,13 +540,13 @@
 		return `${provider}/${modelId}`;
 	}
 
-	async function dismissTaskAlert(task: ForvenAgentTask, silent = false): Promise<void> {
+	async function dismissTaskAlert(task: AxiomAgentTask, silent = false): Promise<void> {
 		const taskId = task.id;
 		if (taskId === undefined || taskId === null) return;
 		const source = String(task.source || 'agent_tasks').trim().toLowerCase() === 'tasks' ? 'tasks' : 'agent_tasks';
 		const taskIdKey = String(taskId);
 		try {
-			await dismissForvenAgentTask(taskId, source);
+			await dismissAxiomAgentTask(taskId, source);
 			agentTasks = agentTasks.filter((entry) => {
 				const entrySource = String(entry.source || 'agent_tasks').trim().toLowerCase() === 'tasks' ? 'tasks' : 'agent_tasks';
 				const entryId = entry.id === undefined || entry.id === null ? '' : String(entry.id);
@@ -576,23 +576,23 @@
 		}
 	}
 
-	function normalizeTaskKey(task: ForvenAgentTask): string {
+	function normalizeTaskKey(task: AxiomAgentTask): string {
 		const agent = String(task.agent_id ?? '').trim();
 		if (task.id !== undefined && task.id !== null) return `${agent}:${task.id}`;
 		return `${agent}:${task.created_at ?? ''}:${task.title ?? task.type ?? 'task'}`;
 	}
 
-	function isCompletedTask(task: ForvenAgentTask): boolean {
+	function isCompletedTask(task: AxiomAgentTask): boolean {
 		const status = (task.status ?? '').toLowerCase();
 		return status === 'done' || status === 'completed' || status === 'reviewed';
 	}
 
-	function isErrorTask(task: ForvenAgentTask): boolean {
+	function isErrorTask(task: AxiomAgentTask): boolean {
 		const status = (task.status ?? '').toLowerCase();
 		return status === 'error' || status === 'failed';
 	}
 
-	function handleTaskCompletionAlert(nextTasks: ForvenAgentTask[]) {
+	function handleTaskCompletionAlert(nextTasks: AxiomAgentTask[]) {
 		const settingsValue = get(agentHubSettings);
 		if (!settingsValue.soundOnComplete) {
 			completionSoundPrimed = false;
@@ -702,7 +702,7 @@
 		return 'border-gray-800 text-gray-500';
 	}
 
-	function parseAgentStatus(task: ForvenAgentTask | undefined | null): string {
+	function parseAgentStatus(task: AxiomAgentTask | undefined | null): string {
 		return (task?.status ?? 'pending').toLowerCase();
 	}
 
@@ -712,8 +712,8 @@
 
 	/** Latest task for an agent (agentTasks is already newest-first from the API,
 	 * but we sort defensively). */
-	function latestTaskForAgent(agentId: string): ForvenAgentTask | null {
-		let best: ForvenAgentTask | null = null;
+	function latestTaskForAgent(agentId: string): AxiomAgentTask | null {
+		let best: AxiomAgentTask | null = null;
 		let bestTs = -1;
 		for (const task of agentTasks) {
 			if (String(task.agent_id ?? '').trim() !== agentId) continue;
@@ -771,7 +771,7 @@
 	).length;
 	$: rosterErrorCount = agentTasks.filter((task) => isErrorTask(task)).length;
 
-	function toAgentCard(agent: ForvenAgent): AgentCard | null {
+	function toAgentCard(agent: AxiomAgent): AgentCard | null {
 		const rawId = String((agent as { id?: string; agent_id?: string }).id ?? (agent as { id?: string; agent_id?: string }).agent_id ?? '').trim();
 		const id = rawId || inferAgentId(agent.name ?? '');
 		if (!id) return null;
@@ -819,7 +819,7 @@
 			.filter((agentId) => agentId.length > 0);
 	}
 
-	function mergeAgentCards(runtimeAgents: ForvenAgent[], runtimeTasks: ForvenAgentTask[], runtimeLogs: AgentLogEntry[]): AgentCard[] {
+	function mergeAgentCards(runtimeAgents: AxiomAgent[], runtimeTasks: AxiomAgentTask[], runtimeLogs: AgentLogEntry[]): AgentCard[] {
 		const discovered = runtimeAgents
 			.map((agent) => toAgentCard(agent))
 			.filter((agent): agent is AgentCard => agent !== null && agent.id.length > 0);
@@ -987,8 +987,8 @@
 	async function fetchModelOptions() {
 		try {
 			const [policyResponse, optionsResponse] = await Promise.allSettled([
-				getForvenModelPolicy(),
-				getForvenAgentModelOptions()
+				getAxiomModelPolicy(),
+				getAxiomAgentModelOptions()
 			]);
 			if (policyResponse.status === 'fulfilled') {
 				modelPolicy = policyResponse.value;
@@ -1010,10 +1010,10 @@
 	async function fetchData() {
 		try {
 			const [agentsRes, tasksRes, jobsRes, logsRes] = await Promise.allSettled([
-				getForvenAgents(),
-				getForvenAgentTasks(),
-				getForvenSchedulerJobs(),
-				getForvenLogs(50)
+				getAxiomAgents(),
+				getAxiomAgentTasks(),
+				getAxiomSchedulerJobs(),
+				getAxiomLogs(50)
 			]);
 
 			if (agentsRes.status === 'fulfilled') agents = agentsRes.value;
@@ -1067,7 +1067,7 @@
 		terminalLogs = [];
 		terminalCalls = [];
 		try {
-			const data = await getForvenAgentTerminal(agentId);
+			const data = await getAxiomAgentTerminal(agentId);
 			if (selectedAgent !== agentId) return;
 			terminalMemory = typeof data.memory === 'string' ? data.memory : '';
 			terminalCalls = Array.isArray((data as any).calls) ? (data as any).calls : [];
@@ -1165,7 +1165,7 @@
 		renameSavingId = card.id;
 		renameErrors = { ...renameErrors, [card.id]: '' };
 		try {
-			const updated = await updateForvenAgent(card.id, { name: draft });
+			const updated = await updateAxiomAgent(card.id, { name: draft });
 			agents = agents.map((item) => {
 				const id = String(item.id ?? '').trim();
 				return id === card.id ? { ...item, ...updated } : item;
@@ -1205,7 +1205,7 @@
 			// The model is no longer chosen here — the developer is created with the
 			// backend default; the operator then picks its model in
 			// Routing & Fallbacks → Agents.
-			const created = await createForvenStrategyDeveloperAgent({ name });
+			const created = await createAxiomStrategyDeveloperAgent({ name });
 			const createdId = String((created as { id?: string }).id ?? '').trim();
 			if (createdId) {
 				agents = [...agents.filter((item) => String(item.id ?? '').trim() !== createdId), created];
@@ -1230,7 +1230,7 @@
 		if (!confirmed) return;
 		removingAgentId = card.id;
 		try {
-			await deleteForvenAgent(card.id);
+			await deleteAxiomAgent(card.id);
 			agents = agents.filter((item) => String(item.id ?? '').trim() !== card.id);
 			addToast(`Removed "${card.name}"`, 'success');
 		} catch (err) {
@@ -1265,11 +1265,11 @@
 		editErrors = { ...editErrors, [card.id]: '' };
 		try {
 			// Model is set in Routing & Fallbacks → Agents, not here.
-			const payload: ForvenAgentUpdatePayload = {
+			const payload: AxiomAgentUpdatePayload = {
 				name,
 				instructions: editDraftInstructions
 			};
-			const updated = await updateForvenAgent(card.id, payload);
+			const updated = await updateAxiomAgent(card.id, payload);
 			agents = agents.map((item) => {
 				const id = String(item.id ?? '').trim();
 				return id === card.id ? { ...item, ...updated } : item;
@@ -1296,7 +1296,7 @@
 		savingJobs = new Set([...savingJobs, jobId]);
 		try {
 			const payloadExpr = scheduleType === 'interval' ? String(scheduleExpr).trim() : scheduleExpr.trim();
-			const result = await updateForvenSchedulerJob(jobId, scheduleType, payloadExpr, enabled);
+			const result = await updateAxiomSchedulerJob(jobId, scheduleType, payloadExpr, enabled);
 			if (!result?.ok) {
 				throw new Error(result?.error || 'Failed to save scheduler job');
 			}

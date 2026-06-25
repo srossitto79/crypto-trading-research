@@ -1,10 +1,10 @@
-"""HyperLiquid settings aliases for wallet/api-address/api-secret fields."""
+﻿"""HyperLiquid settings aliases for wallet/api-address/api-secret fields."""
 
 from __future__ import annotations
 
 
-def test_hyperliquid_settings_accept_actual_wallet_api_fields(forven_db):
-    import forven.api_core as core
+def test_hyperliquid_settings_accept_actual_wallet_api_fields(AXIOM_db):
+    import axiom.api_core as core
 
     payload = core._apply_settings_section(
         "hyperliquid",
@@ -21,12 +21,12 @@ def test_hyperliquid_settings_accept_actual_wallet_api_fields(forven_db):
     assert payload["hyperliquid_has_key"] is True
     assert payload["hyperliquid_testnet"] is True
 
-    secrets = core.kv_get("forven:settings:secrets", {}) or {}
+    secrets = core.kv_get("axiom:settings:secrets", {}) or {}
     assert secrets.get("hyperliquid_private_key") == "0x" + ("1" * 64)
 
 
-def test_hyperliquid_settings_accept_canonical_field_names(forven_db):
-    import forven.api_core as core
+def test_hyperliquid_settings_accept_canonical_field_names(AXIOM_db):
+    import axiom.api_core as core
 
     payload = core._apply_settings_section(
         "hyperliquid",
@@ -43,12 +43,12 @@ def test_hyperliquid_settings_accept_canonical_field_names(forven_db):
     assert payload["hyperliquid_has_key"] is True
     assert payload["hyperliquid_testnet"] is False
 
-    secrets = core.kv_get("forven:settings:secrets", {}) or {}
+    secrets = core.kv_get("axiom:settings:secrets", {}) or {}
     assert secrets.get("hyperliquid_private_key") == "0x" + ("2" * 64)
 
 
-def test_hyperliquid_private_key_update_preserves_existing_api_address(forven_db):
-    import forven.api_core as core
+def test_hyperliquid_private_key_update_preserves_existing_api_address(AXIOM_db):
+    import axiom.api_core as core
 
     core._apply_settings_section(
         "hyperliquid",

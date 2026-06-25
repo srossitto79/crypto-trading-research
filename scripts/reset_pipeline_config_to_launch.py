@@ -1,6 +1,6 @@
-"""Reset the live pipeline-threshold KV to the launch-grade defaults.
+﻿"""Reset the live pipeline-threshold KV to the launch-grade defaults.
 
-During the multi-day soak the active gate store (``forven:pipeline_thresholds``)
+During the multi-day soak the active gate store (``Axiom:pipeline_thresholds``)
 was loosened well past the code defaults — negative-return gauntlet admission,
 ``required_tests=['monte_carlo']`` (which SKIPS walk-forward), a no-op WFA
 pass-rate band ``[0.0, 1.0]``, quick-screen ``min_profit_factor 0.9`` (losers
@@ -20,10 +20,10 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
-from forven.db import get_db, kv_get
-from forven.policy import DEFAULT_PIPELINE_CONFIG, load_pipeline_config, save_pipeline_config
+from axiom.db import get_db, kv_get
+from axiom.policy import DEFAULT_PIPELINE_CONFIG, load_pipeline_config, save_pipeline_config
 
-ACTIVE_KEY = "forven:pipeline_thresholds"
+ACTIVE_KEY = "axiom:pipeline_thresholds"
 LEGACY_KEY = "juddex:pipeline_thresholds"
 
 
@@ -48,7 +48,7 @@ def main() -> None:
     save_pipeline_config(DEFAULT_PIPELINE_CONFIG)
     print(f"[reset] wrote launch defaults to {ACTIVE_KEY}")
 
-    # Drop the stale legacy key (load_pipeline_config reads the forven: key only).
+    # Drop the stale legacy key (load_pipeline_config reads the Axiom: key only).
     if before_legacy is not None:
         with get_db() as conn:
             conn.execute("DELETE FROM kv WHERE key = ?", (LEGACY_KEY,))

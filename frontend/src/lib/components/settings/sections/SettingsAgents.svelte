@@ -1,28 +1,28 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import {
-		getForvenAgents,
-		getForvenAgentDocuments,
-		updateForvenAgent,
-		updateForvenAgentDocument,
-		testForvenAgentDiscord,
-		getForvenSchedulerJobs,
-		updateForvenSchedulerJob,
-		getForvenAgentModelOptions,
+		getAxiomAgents,
+		getAxiomAgentDocuments,
+		updateAxiomAgent,
+		updateAxiomAgentDocument,
+		testAxiomAgentDiscord,
+		getAxiomSchedulerJobs,
+		updateAxiomSchedulerJob,
+		getAxiomAgentModelOptions,
 		updateSettingsSection,
-		getForvenAuthProviders,
-		setForvenAuthProvider,
-		deleteForvenAuthProvider,
-		testForvenAuthProvider,
-		startForvenAuthProviderOAuth,
-		completeForvenAuthProviderOAuth,
-		pollForvenAuthProviderOAuth,
-		cancelForvenAuthProviderOAuth,
-		type ForvenAgent,
-		type ForvenSchedulerJob,
-		type ForvenAgentModelOption,
-		type ForvenAuthProviderStatus,
-		type ForvenAuthProviderOAuthStartResponse,
+		getAxiomAuthProviders,
+		setAxiomAuthProvider,
+		deleteAxiomAuthProvider,
+		testAxiomAuthProvider,
+		startAxiomAuthProviderOAuth,
+		completeAxiomAuthProviderOAuth,
+		pollAxiomAuthProviderOAuth,
+		cancelAxiomAuthProviderOAuth,
+		type AxiomAgent,
+		type AxiomSchedulerJob,
+		type AxiomAgentModelOption,
+		type AxiomAuthProviderStatus,
+		type AxiomAuthProviderOAuthStartResponse,
 	} from '$lib/api';
 	import { openExternal } from '$lib/external-open';
 	import OpenCodeGoReferralNote from '$lib/components/OpenCodeGoReferralNote.svelte';
@@ -31,7 +31,7 @@
 	export let settings: Record<string, unknown> = {};
 	export let variant: 'default' | 'wizard' = 'default';
 
-	let agents: ForvenAgent[] = [];
+	let agents: AxiomAgent[] = [];
 	let selectedAgentId: string | null = null;
 	let agentDraft: {
 		name: string;
@@ -62,13 +62,13 @@
 	let agentError: string | null = null;
 	let agentsLoading = true;
 
-	let schedulerJobs: ForvenSchedulerJob[] = [];
+	let schedulerJobs: AxiomSchedulerJob[] = [];
 	let schedulerLoading = true;
 	let schedulerJobSaving: Record<string, boolean> = {};
 	let schedulerMessage: string | null = null;
 	let schedulerError: string | null = null;
 
-	let modelOptions: ForvenAgentModelOption[] = [];
+	let modelOptions: AxiomAgentModelOption[] = [];
 	let modelOptionsLoading = true;
 	let modelOptionsSaving = false;
 	let modelOptionsError: string | null = null;
@@ -76,7 +76,7 @@
 	let enabledModelKeys: Set<string> = new Set();
 	let modelOptionsRefreshing = false;
 
-	let authProviders: ForvenAuthProviderStatus[] = [];
+	let authProviders: AxiomAuthProviderStatus[] = [];
 	let authProvidersLoading = true;
 	let authProvidersError: string | null = null;
 	let authFile: string | null = null;
@@ -87,11 +87,11 @@
 	let providerBaseUrlInput: Record<string, string> = {};
 	let providerOAuthState: Record<
 		string,
-		(ForvenAuthProviderOAuthStartResponse & { code: string }) | null
+		(AxiomAuthProviderOAuthStartResponse & { code: string }) | null
 	> = {};
 	let providerOAuthStatus: Record<string, string> = {};
 
-	function draftFromAgent(a: ForvenAgent) {
+	function draftFromAgent(a: AxiomAgent) {
 		return {
 			name: (a.name ?? '') as string,
 			role: (a.role ?? '') as string,
@@ -109,7 +109,7 @@
 	async function loadAgentRoster(preserveSelection = true) {
 		agentsLoading = true;
 		try {
-			agents = await getForvenAgents();
+			agents = await getAxiomAgents();
 			if (preserveSelection && selectedAgentId) {
 				const match = agents.find((a) => a.id === selectedAgentId);
 				if (match) {
@@ -135,7 +135,7 @@
 		agentDraft = draftFromAgent(next);
 		agentDocsLoading = true;
 		try {
-			agentDocs = await getForvenAgentDocuments(id);
+			agentDocs = await getAxiomAgentDocuments(id);
 		} catch (e) {
 			agentError = e instanceof Error ? e.message : 'Failed to load agent documents';
 			agentDocs = { soul: '', agents: '', role: '' };
@@ -160,7 +160,7 @@
 				instructions: agentDraft.instructions.trimEnd(),
 			};
 			if (agentDraft.discord_token) payload.discord_token = agentDraft.discord_token;
-			await updateForvenAgent(selectedAgentId, payload);
+			await updateAxiomAgent(selectedAgentId, payload);
 			agentMessage = 'Agent updated';
 			await loadAgentRoster(true);
 			setTimeout(() => (agentMessage = null), 3000);
@@ -176,7 +176,7 @@
 		agentDocSaving = { ...agentDocSaving, [doc]: true };
 		agentError = null;
 		try {
-			await updateForvenAgentDocument(selectedAgentId, doc, agentDocs[doc]);
+			await updateAxiomAgentDocument(selectedAgentId, doc, agentDocs[doc]);
 			agentMessage = `${doc.toUpperCase()} saved`;
 			setTimeout(() => (agentMessage = null), 3000);
 		} catch (e) {
@@ -191,7 +191,7 @@
 		agentDiscordTesting = true;
 		agentError = null;
 		try {
-			const result = await testForvenAgentDiscord(
+			const result = await testAxiomAgentDiscord(
 				selectedAgentId,
 				agentDraft.discord_token || undefined,
 			);
@@ -207,7 +207,7 @@
 	async function loadSchedulerJobs() {
 		schedulerLoading = true;
 		try {
-			schedulerJobs = await getForvenSchedulerJobs();
+			schedulerJobs = await getAxiomSchedulerJobs();
 		} catch (e) {
 			schedulerError = e instanceof Error ? e.message : 'Failed to load scheduler jobs';
 		} finally {
@@ -215,13 +215,13 @@
 		}
 	}
 
-	async function saveSchedulerJob(job: ForvenSchedulerJob) {
+	async function saveSchedulerJob(job: AxiomSchedulerJob) {
 		if (job.id === undefined || job.id === null) return;
 		const key = String(job.id);
 		schedulerJobSaving = { ...schedulerJobSaving, [key]: true };
 		schedulerError = null;
 		try {
-			await updateForvenSchedulerJob(
+			await updateAxiomSchedulerJob(
 				job.id,
 				job.schedule_type ?? 'cron',
 				job.schedule_expr ?? '',
@@ -241,7 +241,7 @@
 		if (refresh) modelOptionsRefreshing = true;
 		else modelOptionsLoading = true;
 		try {
-			const res = await getForvenAgentModelOptions(refresh);
+			const res = await getAxiomAgentModelOptions(refresh);
 			modelOptions = res.options ?? [];
 			enabledModelKeys = new Set(
 				modelOptions.filter((o) => o.enabled).map((o) => o.key),
@@ -282,7 +282,7 @@
 		authProvidersLoading = true;
 		authProvidersError = null;
 		try {
-			const res = await getForvenAuthProviders();
+			const res = await getAxiomAuthProviders();
 			authProviders = res.providers ?? [];
 			authFile = res.auth_file ?? null;
 		} catch (e) {
@@ -312,7 +312,7 @@
 		setProviderBusy(provider, true);
 		setProviderError(provider, null);
 		try {
-			await setForvenAuthProvider(provider, { api_key: token });
+			await setAxiomAuthProvider(provider, { api_key: token });
 			providerTokenInput = { ...providerTokenInput, [provider]: '' };
 			setProviderMessage(provider, 'Saved');
 			await loadAuthProviders();
@@ -332,7 +332,7 @@
 		setProviderBusy(provider, true);
 		setProviderError(provider, null);
 		try {
-			await setForvenAuthProvider(provider, { base_url: url });
+			await setAxiomAuthProvider(provider, { base_url: url });
 			setProviderMessage(provider, 'Saved');
 			await loadAuthProviders();
 		} catch (e) {
@@ -346,7 +346,7 @@
 		setProviderBusy(provider, true);
 		setProviderError(provider, null);
 		try {
-			const res = await testForvenAuthProvider(provider);
+			const res = await testAxiomAuthProvider(provider);
 			setProviderMessage(
 				provider,
 				res.ok ? `Test passed (${res.status})` : `Test failed: ${res.message ?? res.status}`,
@@ -363,7 +363,7 @@
 		setProviderBusy(provider, true);
 		setProviderError(provider, null);
 		try {
-			await deleteForvenAuthProvider(provider);
+			await deleteAxiomAuthProvider(provider);
 			setProviderMessage(provider, 'Disconnected');
 			await loadAuthProviders();
 		} catch (e) {
@@ -389,7 +389,7 @@
 		stopPolling(provider);
 		POLL_TIMERS[provider] = setTimeout(async () => {
 			try {
-				const status = await pollForvenAuthProviderOAuth(provider, state);
+				const status = await pollAxiomAuthProviderOAuth(provider, state);
 				const flow = providerOAuthState[provider];
 				if (!flow) return; // cancelled mid-flight
 				switch (status.status) {
@@ -431,7 +431,7 @@
 		setProviderBusy(provider, true);
 		setProviderError(provider, null);
 		try {
-			const res = await startForvenAuthProviderOAuth(provider);
+			const res = await startAxiomAuthProviderOAuth(provider);
 			providerOAuthState = { ...providerOAuthState, [provider]: { ...res, code: '' } };
 			// Hand the authorize URL to the OS browser. In the packaged Tauri
 			// shell, window.open(_blank) is a silent no-op — the OAuth tab
@@ -481,7 +481,7 @@
 		setProviderBusy(provider, true);
 		setProviderError(provider, null);
 		try {
-			await completeForvenAuthProviderOAuth(provider, {
+			await completeAxiomAuthProviderOAuth(provider, {
 				code: code || undefined,
 				state: flow.state,
 				code_verifier: flow.code_verifier,
@@ -505,7 +505,7 @@
 		setProviderError(provider, null);
 		if (flow?.state) {
 			try {
-				await cancelForvenAuthProviderOAuth(provider, flow.state);
+				await cancelAxiomAuthProviderOAuth(provider, flow.state);
 			} catch {
 				/* best-effort */
 			}
@@ -871,7 +871,7 @@
 				No models discovered. Configure a provider under AI providers above.
 			</p>
 		{:else}
-			{@const grouped = modelOptions.reduce<Record<string, ForvenAgentModelOption[]>>(
+			{@const grouped = modelOptions.reduce<Record<string, AxiomAgentModelOption[]>>(
 				(acc, opt) => {
 					(acc[opt.provider] ??= []).push(opt);
 					return acc;

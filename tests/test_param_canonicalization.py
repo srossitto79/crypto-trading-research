@@ -1,20 +1,20 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 
 import pandas as pd
 import pytest
 
-import forven.api_core as api_core
-import forven.scanner as scanner_mod
-import forven.strategies.backtest as backtest_mod
-import forven.strategies.registry as registry_mod
-from forven.db import get_db
-from forven.strategies.certification import (
+import axiom.api_core as api_core
+import axiom.scanner as scanner_mod
+import axiom.strategies.backtest as backtest_mod
+import axiom.strategies.registry as registry_mod
+from axiom.db import get_db
+from axiom.strategies.certification import (
     EXECUTION_CERTIFIED_FAMILIES,
     certify_execution_strategy,
 )
-from forven.strategies.params import (
+from axiom.strategies.params import (
     canonicalize_params,
     canonicalize_params_with_metadata,
     extract_execution_params_from_rule_blobs,
@@ -326,7 +326,7 @@ def test_extract_execution_params_from_simple_macd_rule_blob():
     assert "entry_conditions" not in extracted
 
 
-def test_backtest_strategy_rejects_non_executable_rule_blob_params(forven_db, monkeypatch):
+def test_backtest_strategy_rejects_non_executable_rule_blob_params(AXIOM_db, monkeypatch):
     monkeypatch.setattr(
         backtest_mod,
         "load_backtest_candles",
@@ -347,7 +347,7 @@ def test_backtest_strategy_rejects_non_executable_rule_blob_params(forven_db, mo
     assert "can execute in paper/live" in str(result.get("error") or "")
 
 
-def test_backtest_strategy_rejects_invalid_williams_r_thresholds(forven_db, monkeypatch):
+def test_backtest_strategy_rejects_invalid_williams_r_thresholds(AXIOM_db, monkeypatch):
     monkeypatch.setattr(
         backtest_mod,
         "load_backtest_candles",
@@ -369,7 +369,7 @@ def test_backtest_strategy_rejects_invalid_williams_r_thresholds(forven_db, monk
     assert "Williams %R oversold must stay within -100..0" in str(result.get("error") or "")
 
 
-def test_backtest_strategy_rejects_invalid_stochastic_thresholds(forven_db, monkeypatch):
+def test_backtest_strategy_rejects_invalid_stochastic_thresholds(AXIOM_db, monkeypatch):
     monkeypatch.setattr(
         backtest_mod,
         "load_backtest_candles",
@@ -392,7 +392,7 @@ def test_backtest_strategy_rejects_invalid_stochastic_thresholds(forven_db, monk
     assert "Stochastic oversold must be less than overbought" in str(result.get("error") or "")
 
 
-def test_update_strategy_default_params_rejects_invalid_williams_r_thresholds(forven_db):
+def test_update_strategy_default_params_rejects_invalid_williams_r_thresholds(AXIOM_db):
     with get_db() as conn:
         conn.execute(
             """
@@ -428,7 +428,7 @@ def test_update_strategy_default_params_rejects_invalid_williams_r_thresholds(fo
     assert "Williams %R oversold must stay within -100..0" in str(excinfo.value.detail)
 
 
-def test_update_strategy_default_params_rejects_invalid_stochastic_thresholds(forven_db):
+def test_update_strategy_default_params_rejects_invalid_stochastic_thresholds(AXIOM_db):
     with get_db() as conn:
         conn.execute(
             """
@@ -465,7 +465,7 @@ def test_update_strategy_default_params_rejects_invalid_stochastic_thresholds(fo
     assert "Stochastic oversold must be less than overbought" in str(excinfo.value.detail)
 
 
-def test_update_strategy_default_params_merges_partial_update_into_existing_params(forven_db):
+def test_update_strategy_default_params_merges_partial_update_into_existing_params(AXIOM_db):
     with get_db() as conn:
         conn.execute(
             """
@@ -524,7 +524,7 @@ def test_update_strategy_default_params_merges_partial_update_into_existing_para
     assert json.loads(row["params"]) == result["params"]
 
 
-def test_update_strategy_default_params_syncs_timeframe_from_pinned_backtest(forven_db):
+def test_update_strategy_default_params_syncs_timeframe_from_pinned_backtest(AXIOM_db):
     """Pinning a backtest must sync strategies.timeframe/symbol — the paper scanner
     reads those columns directly, so a pin that only touches pinned_backtest_id
     leaves execution running on the strategy's creation-time timeframe."""

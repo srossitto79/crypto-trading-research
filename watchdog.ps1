@@ -1,9 +1,9 @@
-# Forven Service Watchdog
+# Axiom Service Watchdog
 # Run as a Windows Scheduled Task to auto-restart services if they go down.
 # Usage: powershell -NoProfile -ExecutionPolicy Bypass -File watchdog.ps1
 #
 # Create a Scheduled Task that runs every 2 minutes:
-#   schtasks /create /tn "ForvenWatchdog" /tr "powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File C:\path\to\Forven\watchdog.ps1" /sc minute /mo 2 /rl highest
+#   schtasks /create /tn "AxiomWatchdog" /tr "powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File C:\path\to\Axiom\watchdog.ps1" /sc minute /mo 2 /rl highest
 # Then mark the task itself Hidden in Task Scheduler (or via Set-ScheduledTask) to avoid visible shell popups.
 
 Set-StrictMode -Version Latest
@@ -27,11 +27,11 @@ function Write-Log {
 if (-not (Test-Path $logDir)) { New-Item -Path $logDir -ItemType Directory -Force | Out-Null }
 
 $BackendPort = 8003
-if (-not [string]::IsNullOrWhiteSpace($env:FORVEN_PORT)) { $BackendPort = [int]$env:FORVEN_PORT }
-$BackendHost = if (-not [string]::IsNullOrWhiteSpace($env:FORVEN_BIND_HOST)) {
-    $env:FORVEN_BIND_HOST.Trim()
-} elseif (-not [string]::IsNullOrWhiteSpace($env:FORVEN_HOST)) {
-    $env:FORVEN_HOST.Trim()
+if (-not [string]::IsNullOrWhiteSpace($env:AXIOM_PORT)) { $BackendPort = [int]$env:AXIOM_PORT }
+$BackendHost = if (-not [string]::IsNullOrWhiteSpace($env:AXIOM_BIND_HOST)) {
+    $env:AXIOM_BIND_HOST.Trim()
+} elseif (-not [string]::IsNullOrWhiteSpace($env:AXIOM_HOST)) {
+    $env:AXIOM_HOST.Trim()
 } else {
     "127.0.0.1"
 }
@@ -206,7 +206,7 @@ function Get-BotHealthSnapshot {
 import json
 from datetime import datetime, timezone
 
-from forven.db import get_db, kv_get
+from axiom.db import get_db, kv_get
 
 
 def parse_ts(value):
@@ -308,8 +308,8 @@ if ([string]::IsNullOrWhiteSpace($env:PYTHONPATH)) {
 } else {
     $env:PYTHONPATH = "$RepoRoot;$env:PYTHONPATH"
 }
-if ([string]::IsNullOrWhiteSpace($env:FORVEN_HOME)) {
-    $env:FORVEN_HOME = Join-Path $env:USERPROFILE ".forven"
+if ([string]::IsNullOrWhiteSpace($env:AXIOM_HOME)) {
+    $env:AXIOM_HOME = Join-Path $env:USERPROFILE ".axiom"
 }
 
 $logRoot = Join-Path (Join-Path $RepoRoot ".tmp") "logs"
@@ -347,7 +347,7 @@ try {
         $backendLog = Join-Path $logRoot "unified_backend.log"
         $backendErr = Join-Path $logRoot "unified_backend.err.log"
         $proc = Start-Process -FilePath $python `
-            -ArgumentList @("-m","uvicorn","--app-dir",$RepoRoot,"forven.api:app","--host",$BackendHost,"--port",$BackendPort.ToString(),"--workers","1") `
+            -ArgumentList @("-m","uvicorn","--app-dir",$RepoRoot,"axiom.api:app","--host",$BackendHost,"--port",$BackendPort.ToString(),"--workers","1") `
             -WorkingDirectory $RepoRoot -RedirectStandardOutput $backendLog -RedirectStandardError $backendErr `
             -WindowStyle Hidden -PassThru
         Write-Log ("Backend started as PID " + $proc.Id)
@@ -360,7 +360,7 @@ $botAlive = $false
 $botHealthy = $true
 $botHealthReason = $null
 # First check by lock file
-$botLockFile = Join-Path $env:FORVEN_HOME "bot.lock"
+$botLockFile = Join-Path $env:AXIOM_HOME "bot.lock"
 if (Test-Path $botLockFile) {
     try {
         $botPid = [int](Get-Content $botLockFile -ErrorAction SilentlyContinue).Trim()
@@ -411,7 +411,7 @@ if ($botAlive -and -not $botHealthy) {
 }
 
 if (-not $botAlive) {
-    $configPath = Join-Path $env:FORVEN_HOME "config.json"
+    $configPath = Join-Path $env:AXIOM_HOME "config.json"
     $tokenOk = $false
     if (Test-Path $configPath) {
         try {
@@ -423,9 +423,9 @@ if (-not $botAlive) {
 
     if ($tokenOk) {
         if (Test-Path $botLockFile) { Remove-Item $botLockFile -Force -ErrorAction SilentlyContinue }
-        $botLog = Join-Path $logRoot "forven_bot.log"
-        $botErr = Join-Path $logRoot "forven_bot.err.log"
-        $proc = Start-Process -FilePath $python -ArgumentList "-c `"from forven.bot import run_bot; run_bot()`"" `
+        $botLog = Join-Path $logRoot "axiom_bot.log"
+        $botErr = Join-Path $logRoot "axiom_bot.err.log"
+        $proc = Start-Process -FilePath $python -ArgumentList "-c `"from axiom.bot import run_bot; run_bot()`"" `
             -WorkingDirectory $RepoRoot -RedirectStandardOutput $botLog -RedirectStandardError $botErr `
             -WindowStyle Hidden -PassThru
         Write-Log ("Bot started as PID " + $proc.Id)
@@ -435,7 +435,7 @@ if (-not $botAlive) {
 
 # --- Check Daemon ---
 $daemonAlive = $false
-$daemonLockFile = Join-Path $env:FORVEN_HOME "daemon.lock"
+$daemonLockFile = Join-Path $env:AXIOM_HOME "daemon.lock"
 if (Test-Path $daemonLockFile) {
     try {
         $daemonPid = [int](Get-Content $daemonLockFile -ErrorAction SilentlyContinue).Trim()
@@ -445,15 +445,15 @@ if (Test-Path $daemonLockFile) {
 if (-not $daemonAlive) {
     try {
         $daemonProcs = Get-CimInstance Win32_Process -Filter "Name='python.exe'" -ErrorAction SilentlyContinue |
-            Where-Object { $_.CommandLine -match "forven.*daemon" }
+            Where-Object { $_.CommandLine -match "axiom.*daemon" }
         if ($daemonProcs) { $daemonAlive = $true }
     } catch {}
 }
 if (-not $daemonAlive) {
     if (Test-Path $daemonLockFile) { Remove-Item $daemonLockFile -Force -ErrorAction SilentlyContinue }
-    $daemonLog = Join-Path $logRoot "forven_daemon.log"
-    $daemonErr = Join-Path $logRoot "forven_daemon.err.log"
-    $proc = Start-Process -FilePath $python -ArgumentList @("-m","forven","daemon","start") `
+    $daemonLog = Join-Path $logRoot "axiom_daemon.log"
+    $daemonErr = Join-Path $logRoot "axiom_daemon.err.log"
+    $proc = Start-Process -FilePath $python -ArgumentList @("-m","axiom","daemon","start") `
         -WorkingDirectory $RepoRoot -RedirectStandardOutput $daemonLog -RedirectStandardError $daemonErr `
         -WindowStyle Hidden -PassThru
     Write-Log ("Daemon started as PID " + $proc.Id)
@@ -461,7 +461,7 @@ if (-not $daemonAlive) {
 }
 
 # --- Check Lab Worker (only if Regime Lab feature flag is enabled) ---
-$regimeLabFlag = if (-not [string]::IsNullOrWhiteSpace($env:FORVEN_ENABLE_REGIME_LAB)) { $env:FORVEN_ENABLE_REGIME_LAB.Trim().ToLowerInvariant() } else { "" }
+$regimeLabFlag = if (-not [string]::IsNullOrWhiteSpace($env:AXIOM_ENABLE_REGIME_LAB)) { $env:AXIOM_ENABLE_REGIME_LAB.Trim().ToLowerInvariant() } else { "" }
 $regimeLabEnabled = @("1", "true", "yes", "on") -contains $regimeLabFlag
 $labWorkerAlive = $false
 try {
@@ -471,11 +471,11 @@ try {
 } catch {}
 if (-not $labWorkerAlive -and $regimeLabEnabled) {
     # Clear stale PID lock so worker can start cleanly
-    $labPidFile = Join-Path (Join-Path $env:FORVEN_HOME "lab") "lab_worker.pid"
+    $labPidFile = Join-Path (Join-Path $env:AXIOM_HOME "lab") "lab_worker.pid"
     if (Test-Path $labPidFile) { Remove-Item $labPidFile -Force -ErrorAction SilentlyContinue }
-    $labWorkerLog = Join-Path $logRoot "forven_lab_worker.log"
-    $labWorkerErr = Join-Path $logRoot "forven_lab_worker.err.log"
-    $proc = Start-Process -FilePath $python -ArgumentList @("-m","forven","lab","worker") `
+    $labWorkerLog = Join-Path $logRoot "axiom_lab_worker.log"
+    $labWorkerErr = Join-Path $logRoot "axiom_lab_worker.err.log"
+    $proc = Start-Process -FilePath $python -ArgumentList @("-m","axiom","lab","worker") `
         -WorkingDirectory $RepoRoot -RedirectStandardOutput $labWorkerLog -RedirectStandardError $labWorkerErr `
         -WindowStyle Hidden -PassThru
     Write-Log ("Lab worker started as PID " + $proc.Id)
@@ -514,7 +514,7 @@ if ($labWorkerAlive -and $backendHealthy) {
         $progressJson = & $python -c @"
 import json, sys
 sys.path.insert(0, r'$RepoRoot')
-from forven.lab_db import get_lab_meta
+from axiom.lab_db import get_lab_meta
 p = get_lab_meta('pipeline_progress', {})
 print(json.dumps(p if isinstance(p, dict) else {}))
 "@ 2>$null
@@ -563,7 +563,7 @@ print(json.dumps(p if isinstance(p, dict) else {}))
             $schedJson = & $python -c @"
 import json, sys
 sys.path.insert(0, r'$RepoRoot')
-from forven.db import kv_get
+from axiom.db import kv_get
 tick = kv_get('scheduler:last_successful_tick', '')
 errs = kv_get('scheduler:consecutive_errors', 0)
 print(json.dumps({'tick': tick or '', 'errors': int(errs or 0)}))
@@ -585,7 +585,7 @@ print(json.dumps({'tick': tick or '', 'errors': int(errs or 0)}))
                     }
                 } catch {}
                 # Clear PID lock so worker can restart
-                $labPidFile = Join-Path (Join-Path $env:FORVEN_HOME "lab") "lab_worker.pid"
+                $labPidFile = Join-Path (Join-Path $env:AXIOM_HOME "lab") "lab_worker.pid"
                 if (Test-Path $labPidFile) { Remove-Item $labPidFile -Force -ErrorAction SilentlyContinue }
                 # Worker will be restarted on next watchdog cycle or by daemon
                 $restarted += "lab_worker(stalled)"

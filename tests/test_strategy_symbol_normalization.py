@@ -1,4 +1,4 @@
-"""Regression tests for ``forven.db._normalize_strategy_symbol``.
+﻿"""Regression tests for ``axiom.db._normalize_strategy_symbol``.
 
 Background — silent killer hunted on 2026-04-25: the symbol normalizer
 accepted any string and stored it verbatim, so corrupt formats produced by
@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import pytest
 
-from forven.db import _normalize_strategy_symbol, _repair_symbol_format
+from axiom.db import _normalize_strategy_symbol, _repair_symbol_format
 
 
 # --- _repair_symbol_format ------------------------------------------------

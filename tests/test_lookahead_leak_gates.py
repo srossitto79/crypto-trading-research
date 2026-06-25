@@ -1,14 +1,14 @@
-"""Data-leak / lookahead gates (2026-06-15).
+﻿"""Data-leak / lookahead gates (2026-06-15).
 
 A future-bar leak (e.g. `.shift(-1)`) makes a strategy's metrics impossibly good
 on BOTH the IS and OOS slices, so the IS/OOS-gap overfit detector (gap ~0) and
 the win-rate trap (needs PF < 1.2) both miss it, and it sails into PAPER.
 
-GATE A (forven.policy._implausible_metrics_reason): reject Sharpe >= 5 / PF >= 8
+GATE A (Axiom.policy._implausible_metrics_reason): reject Sharpe >= 5 / PF >= 8
 (or a Sharpe pegged at the +/-10 backtest clamp) on either slice, at quick_screen
 (primary, universal) and the gauntlet gate (defense-in-depth).
 
-GATE B (forven.strategies.lookahead_probe.detect_lookahead): a truncation-
+GATE B (Axiom.strategies.lookahead_probe.detect_lookahead): a truncation-
 invariance probe at registration — a causal signal at bar t must be unchanged
 when bars after t are withheld; if it flips, the strategy reads the future.
 """
@@ -18,13 +18,13 @@ from datetime import datetime, timezone
 
 import pandas as pd
 
-from forven.db import get_db
-from forven.policy import (
+from axiom.db import get_db
+from axiom.policy import (
     _evaluate_quick_screen_gate,
     _implausible_metrics_reason,
     load_pipeline_config,
 )
-from forven.strategies.lookahead_probe import detect_lookahead
+from axiom.strategies.lookahead_probe import detect_lookahead
 
 
 # ============================ GATE A: helper ===============================
@@ -113,7 +113,7 @@ def _sane_metrics(**overrides):
     return m
 
 
-def test_quick_screen_rejects_leak_metrics(forven_db):
+def test_quick_screen_rejects_leak_metrics(AXIOM_db):
     # Loosen the win-rate-trap-irrelevant structural floors are not in play here;
     # quick_screen reads metrics directly off the row.
     metrics = _sane_metrics(
@@ -129,7 +129,7 @@ def test_quick_screen_rejects_leak_metrics(forven_db):
     assert "implausible" in low or "leak" in low, reason
 
 
-def test_quick_screen_passes_sane_strategy(forven_db):
+def test_quick_screen_passes_sane_strategy(AXIOM_db):
     _insert_strategy("qs-sane", metrics=_sane_metrics())
     passed, reason = _evaluate_quick_screen_gate("qs-sane", load_pipeline_config())
     assert passed is True, reason

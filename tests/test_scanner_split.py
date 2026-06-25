@@ -1,10 +1,10 @@
-"""Tests for scanner signal/execution split flow."""
+﻿"""Tests for scanner signal/execution split flow."""
 
 from __future__ import annotations
 
-import forven.scanner as scanner_mod
-import forven.strategies.registry as registry_mod
-from forven.db import kv_get, kv_set
+import axiom.scanner as scanner_mod
+import axiom.strategies.registry as registry_mod
+from axiom.db import kv_get, kv_set
 
 
 def _stub_signals():
@@ -18,7 +18,7 @@ def _stub_signals():
     return {"S-STUB": signal}, [{"strategy_id": "S-STUB", "strategy": strat, "signal": signal}]
 
 
-def test_run_scan_signal_only_skips_execution(monkeypatch, forven_db):
+def test_run_scan_signal_only_skips_execution(monkeypatch, AXIOM_db):
     monkeypatch.setattr(scanner_mod, "_load_deployed_strategies", lambda: {"S-STUB": {"asset": "BTC"}})
     monkeypatch.setattr(scanner_mod, "_load_live_price_cache", lambda: ({}, None))
     monkeypatch.setattr(scanner_mod, "sync_from_trades", lambda: None)
@@ -49,7 +49,7 @@ def test_run_scan_signal_only_skips_execution(monkeypatch, forven_db):
     assert state.get("diagnostics", {}).get("S-STUB", {}).get("execution_decision") == "signal_only"
 
 
-def test_run_scan_with_execution_applies_actions(monkeypatch, forven_db):
+def test_run_scan_with_execution_applies_actions(monkeypatch, AXIOM_db):
     monkeypatch.setattr(scanner_mod, "_load_deployed_strategies", lambda: {"S-STUB": {"asset": "BTC"}})
     monkeypatch.setattr(scanner_mod, "_load_live_price_cache", lambda: ({}, None))
     monkeypatch.setattr(scanner_mod, "sync_from_trades", lambda: None)
@@ -83,7 +83,7 @@ def test_run_scan_with_execution_applies_actions(monkeypatch, forven_db):
     assert state.get("diagnostics", {}).get("S-STUB", {}).get("execution_decision") == "opened"
 
 
-def test_run_scan_execution_request_degrades_to_signal_only_by_policy(monkeypatch, forven_db):
+def test_run_scan_execution_request_degrades_to_signal_only_by_policy(monkeypatch, AXIOM_db):
     monkeypatch.setattr(scanner_mod, "_load_deployed_strategies", lambda: {"S-STUB": {"asset": "BTC"}})
     monkeypatch.setattr(scanner_mod, "_load_live_price_cache", lambda: ({}, None))
     monkeypatch.setattr(scanner_mod, "sync_from_trades", lambda: None)
@@ -114,7 +114,7 @@ def test_run_scan_execution_request_degrades_to_signal_only_by_policy(monkeypatc
     assert state.get("execution_summary", {}).get("execution_allowed") is False
 
 
-def test_run_scan_signal_only_preserves_prior_execution_summary(monkeypatch, forven_db):
+def test_run_scan_signal_only_preserves_prior_execution_summary(monkeypatch, AXIOM_db):
     kv_set(
         "scanner_state",
         {
@@ -143,8 +143,8 @@ def test_run_scan_signal_only_preserves_prior_execution_summary(monkeypatch, for
     assert state.get("execution_summary", {}).get("total_pnl_pct") == 0.12
 
 
-def test_manage_positions_queues_trade_execution_when_fast_path_disabled(monkeypatch, forven_db):
-    monkeypatch.setattr("forven.config.get_execution_mode", lambda: "paper")
+def test_manage_positions_queues_trade_execution_when_fast_path_disabled(monkeypatch, AXIOM_db):
+    monkeypatch.setattr("axiom.config.get_execution_mode", lambda: "paper")
     monkeypatch.setattr(scanner_mod, "_get_open_trades", lambda _strategy_id: [])
     monkeypatch.setattr(scanner_mod, "_paper_test_mode_enabled", lambda: False)
     monkeypatch.setattr(scanner_mod, "_paper_test_bypass_gates_enabled", lambda: False)
@@ -168,7 +168,7 @@ def test_manage_positions_queues_trade_execution_when_fast_path_disabled(monkeyp
     monkeypatch.setattr(scanner_mod, "_queue_trade_execution_intent", lambda _intent: (True, "T00999", None))
     monkeypatch.setattr(scanner_mod, "_execute_direct", lambda **_kwargs: (_ for _ in ()).throw(AssertionError("direct execution should not run")))
     monkeypatch.setattr(scanner_mod, "log_activity", lambda *args, **kwargs: None)
-    monkeypatch.setattr("forven.sim.clock.is_sim_active", lambda: False)
+    monkeypatch.setattr("axiom.sim.clock.is_sim_active", lambda: False)
 
     actions = scanner_mod.manage_positions(
         "S-STUB",
@@ -189,11 +189,11 @@ def test_manage_positions_queues_trade_execution_when_fast_path_disabled(monkeyp
     assert any(action.startswith("QUEUED long BTC") for action in actions)
 
 
-def test_manage_positions_executes_paper_stage_locally_by_default(monkeypatch, forven_db):
+def test_manage_positions_executes_paper_stage_locally_by_default(monkeypatch, AXIOM_db):
     fills: list[dict] = []
     opened: dict = {}
 
-    monkeypatch.setattr("forven.config.get_execution_mode", lambda: "paper")
+    monkeypatch.setattr("axiom.config.get_execution_mode", lambda: "paper")
     monkeypatch.setattr(scanner_mod, "_get_open_trades", lambda _strategy_id: [])
     monkeypatch.setattr(scanner_mod, "_paper_test_mode_enabled", lambda: False)
     monkeypatch.setattr(scanner_mod, "_paper_test_bypass_gates_enabled", lambda: False)
@@ -220,7 +220,7 @@ def test_manage_positions_executes_paper_stage_locally_by_default(monkeypatch, f
     monkeypatch.setattr(scanner_mod, "_execute_direct", lambda **_kwargs: (_ for _ in ()).throw(AssertionError("paper local execution should not call exchange")))
     monkeypatch.setattr(scanner_mod, "_update_trade_fill", lambda **kwargs: fills.append(kwargs))
     monkeypatch.setattr(scanner_mod, "log_activity", lambda *args, **kwargs: None)
-    monkeypatch.setattr("forven.sim.clock.is_sim_active", lambda: False)
+    monkeypatch.setattr("axiom.sim.clock.is_sim_active", lambda: False)
 
     actions = scanner_mod.manage_positions(
         "S-LOCAL",
@@ -246,10 +246,10 @@ def test_manage_positions_executes_paper_stage_locally_by_default(monkeypatch, f
     assert any(action.startswith("OPENED long BTC") for action in actions)
 
 
-def test_manage_positions_preserves_blocked_signal_reason(monkeypatch, forven_db):
+def test_manage_positions_preserves_blocked_signal_reason(monkeypatch, AXIOM_db):
     diagnostics: dict[str, dict] = {}
 
-    monkeypatch.setattr("forven.config.get_execution_mode", lambda: "paper")
+    monkeypatch.setattr("axiom.config.get_execution_mode", lambda: "paper")
     monkeypatch.setattr(scanner_mod, "_get_open_trades", lambda _strategy_id: [])
     monkeypatch.setattr(scanner_mod, "_paper_test_mode_enabled", lambda: False)
     monkeypatch.setattr(scanner_mod, "_paper_test_bypass_gates_enabled", lambda: False)

@@ -1,13 +1,13 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 from types import SimpleNamespace
 
 import pandas as pd
 
-from forven.db import get_db
-from forven.strategies import backtest as backtest_mod
-from forven.strategies.base import BaseStrategy, DirectionalSignals, Signal
+from axiom.db import get_db
+from axiom.strategies import backtest as backtest_mod
+from axiom.strategies.base import BaseStrategy, DirectionalSignals, Signal
 
 
 def _price_frame() -> pd.DataFrame:
@@ -112,7 +112,7 @@ def _patch_backtest_environment(monkeypatch):
     )
 
 
-def test_backtest_strategy_supports_mirrored_short_only(forven_db, monkeypatch):
+def test_backtest_strategy_supports_mirrored_short_only(AXIOM_db, monkeypatch):
     _patch_backtest_environment(monkeypatch)
     monkeypatch.setattr(
         backtest_mod,
@@ -140,7 +140,7 @@ def test_backtest_strategy_supports_mirrored_short_only(forven_db, monkeypatch):
     assert result["trades"][0]["pnl_pct"] > 0
 
 
-def test_backtest_strategy_supports_both_side_directional_signals(forven_db, monkeypatch):
+def test_backtest_strategy_supports_both_side_directional_signals(AXIOM_db, monkeypatch):
     _patch_backtest_environment(monkeypatch)
     monkeypatch.setattr(
         backtest_mod,
@@ -168,7 +168,7 @@ def test_backtest_strategy_supports_both_side_directional_signals(forven_db, mon
     assert {trade["direction"] for trade in result["trades"]} == {"long", "short"}
 
 
-def test_backtest_strategy_persists_full_config_for_legacy_history_rows(forven_db, monkeypatch):
+def test_backtest_strategy_persists_full_config_for_legacy_history_rows(AXIOM_db, monkeypatch):
     _patch_backtest_environment(monkeypatch)
     monkeypatch.setattr(
         backtest_mod,

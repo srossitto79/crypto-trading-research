@@ -1,4 +1,4 @@
-"""Per-slot fallback chains actually EXECUTE at runtime.
+﻿"""Per-slot fallback chains actually EXECUTE at runtime.
 
 Covers: call_ai(route=...) iterating an explicit chain, get_auxiliary_routing
 exposing its configured aux fallbacks, and the agent tool-call chain using the
@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import asyncio
 
-from forven import ai
-from forven import model_routing as mr
+from axiom import ai
+from axiom import model_routing as mr
 
 
 def test_call_ai_route_iterates_explicit_chain(monkeypatch):
@@ -39,7 +39,7 @@ def test_call_ai_empty_route_raises(monkeypatch):
         pass
 
 
-def test_get_auxiliary_routing_exposes_configured_fallbacks(forven_db):
+def test_get_auxiliary_routing_exposes_configured_fallbacks(AXIOM_db):
     mr.update_model_routing({
         "auxiliary": {"recall": {"provider": "gemini", "model_id": "gemini-2.5-flash-lite",
                                  "base_url": None, "api_key": None}},
@@ -49,8 +49,8 @@ def test_get_auxiliary_routing_exposes_configured_fallbacks(forven_db):
     assert routing["fallbacks"] == [("groq", "llama-3.3-70b-versatile")]
 
 
-def test_tool_call_chain_uses_per_agent_fallbacks(forven_db):
-    from forven.agents.runner import _resolve_tool_call_chain
+def test_tool_call_chain_uses_per_agent_fallbacks(AXIOM_db):
+    from axiom.agents.runner import _resolve_tool_call_chain
 
     mr.update_model_routing({
         "fallback_chains": {

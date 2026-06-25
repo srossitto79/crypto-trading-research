@@ -1,4 +1,4 @@
-"""Phase 1 (P1-T12) — /api/brain router tests.
+﻿"""Phase 1 (P1-T12) — /api/brain router tests.
 
 Asserts:
 - GET/PUT /memory round-trips, 422 on cap violation.
@@ -12,10 +12,10 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from forven.api import app
-from forven.brain_decisions import link_agent_task, record_decision
-from forven.brain_memory import MAX_MEMORY_CHARS
-from forven.db import get_db
+from axiom.api import app
+from axiom.brain_decisions import link_agent_task, record_decision
+from axiom.brain_memory import MAX_MEMORY_CHARS
+from axiom.db import get_db
 
 
 def _ensure_agent(agent_id: str = "quant-researcher") -> None:
@@ -48,7 +48,7 @@ def _seed_task(
 # --------------------------------------------------------------------------- #
 
 
-def test_get_memory_returns_metadata(forven_db):
+def test_get_memory_returns_metadata(AXIOM_db):
     client = TestClient(app)
     r = client.get("/api/brain/memory")
     assert r.status_code == 200
@@ -58,7 +58,7 @@ def test_get_memory_returns_metadata(forven_db):
     assert body["char_count"] == len(body["body"] or "")
 
 
-def test_put_memory_overwrites(forven_db):
+def test_put_memory_overwrites(AXIOM_db):
     client = TestClient(app)
     r = client.put("/api/brain/memory", json={"body": "fresh notes", "mutation_type": "replace"})
     assert r.status_code == 200
@@ -67,7 +67,7 @@ def test_put_memory_overwrites(forven_db):
     assert body["char_count"] == len("fresh notes")
 
 
-def test_put_memory_rejects_oversize_with_422(forven_db):
+def test_put_memory_rejects_oversize_with_422(AXIOM_db):
     client = TestClient(app)
     too_big = "x" * (MAX_MEMORY_CHARS + 1)
     r = client.put("/api/brain/memory", json={"body": too_big, "mutation_type": "replace"})
@@ -78,7 +78,7 @@ def test_put_memory_rejects_oversize_with_422(forven_db):
     assert detail["cap"] == MAX_MEMORY_CHARS
 
 
-def test_memory_history_lists_mutations(forven_db):
+def test_memory_history_lists_mutations(AXIOM_db):
     client = TestClient(app)
     client.put("/api/brain/memory", json={"body": "first", "mutation_type": "replace"})
     client.put("/api/brain/memory", json={"body": "second", "mutation_type": "replace"})
@@ -96,7 +96,7 @@ def test_memory_history_lists_mutations(forven_db):
 # --------------------------------------------------------------------------- #
 
 
-def test_list_decisions_returns_pagination_envelope(forven_db):
+def test_list_decisions_returns_pagination_envelope(AXIOM_db):
     record_decision(cycle_id="c-1", situation_summary="A", decision_json={"a": 1})
     record_decision(cycle_id="c-2", situation_summary="B", decision_json={"b": 2})
 
@@ -113,7 +113,7 @@ def test_list_decisions_returns_pagination_envelope(forven_db):
     assert "decision_json" in item
 
 
-def test_list_decisions_filters_by_cycle_id(forven_db):
+def test_list_decisions_filters_by_cycle_id(AXIOM_db):
     record_decision(cycle_id="c-x", situation_summary="A", decision_json={})
     record_decision(cycle_id="c-y", situation_summary="B", decision_json={})
 
@@ -125,7 +125,7 @@ def test_list_decisions_filters_by_cycle_id(forven_db):
     assert len(items) >= 1
 
 
-def test_list_decisions_filters_by_outcome(forven_db):
+def test_list_decisions_filters_by_outcome(AXIOM_db):
     decision_id = record_decision(cycle_id="c-out", situation_summary="A", decision_json={})
     with get_db() as conn:
         conn.execute(
@@ -142,7 +142,7 @@ def test_list_decisions_filters_by_outcome(forven_db):
     assert all(it["outcome_observed"] == "success" for it in items)
 
 
-def test_list_decisions_filters_by_strategy_and_action_type(forven_db):
+def test_list_decisions_filters_by_strategy_and_action_type(AXIOM_db):
     decision_id_a = record_decision(cycle_id="c-a", situation_summary="A", decision_json={})
     decision_id_b = record_decision(cycle_id="c-b", situation_summary="B", decision_json={})
 
@@ -165,7 +165,7 @@ def test_list_decisions_filters_by_strategy_and_action_type(forven_db):
     assert all(it["id"] != decision_id_a for it in items)
 
 
-def test_get_decision_returns_full_row_with_linked_tasks(forven_db):
+def test_get_decision_returns_full_row_with_linked_tasks(AXIOM_db):
     decision_id = record_decision(
         cycle_id="c-deep",
         situation_summary="situ",
@@ -184,7 +184,7 @@ def test_get_decision_returns_full_row_with_linked_tasks(forven_db):
     assert any(t["id"] == task_id for t in body["linked_tasks"])
 
 
-def test_get_decision_404_when_missing(forven_db):
+def test_get_decision_404_when_missing(AXIOM_db):
     client = TestClient(app)
     r = client.get("/api/brain/decisions/999999")
     assert r.status_code == 404
@@ -195,7 +195,7 @@ def test_get_decision_404_when_missing(forven_db):
 # --------------------------------------------------------------------------- #
 
 
-def test_recall_endpoint_success(forven_db, monkeypatch):
+def test_recall_endpoint_success(AXIOM_db, monkeypatch):
     fake = {
         "summary": "synthesized",
         "hits": [{"source": "brain_decisions", "id": 1, "score": 0.0,
@@ -205,7 +205,7 @@ def test_recall_endpoint_success(forven_db, monkeypatch):
         "latency_ms": 7,
     }
     monkeypatch.setattr(
-        "forven.recall.recall_similar_situation",
+        "axiom.recall.recall_similar_situation",
         lambda *a, **kw: fake,
     )
 
@@ -221,18 +221,18 @@ def test_recall_endpoint_success(forven_db, monkeypatch):
     assert body["hits"][0]["id"] == 1
 
 
-def test_recall_endpoint_clamps_limit_high(forven_db):
+def test_recall_endpoint_clamps_limit_high(AXIOM_db):
     client = TestClient(app)
     r = client.get("/api/brain/recall?q=anything&limit=9999")
     # Pydantic returns 422 when limit exceeds the Field constraint.
     assert r.status_code == 422
 
 
-def test_recall_endpoint_handles_underlying_exception(forven_db, monkeypatch):
+def test_recall_endpoint_handles_underlying_exception(AXIOM_db, monkeypatch):
     def boom(*_a, **_kw):
         raise RuntimeError("aux wedged")
 
-    monkeypatch.setattr("forven.recall.recall_similar_situation", boom)
+    monkeypatch.setattr("axiom.recall.recall_similar_situation", boom)
 
     client = TestClient(app)
     r = client.get("/api/brain/recall?q=anything")

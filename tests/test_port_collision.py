@@ -1,4 +1,4 @@
-import socket, subprocess, sys
+﻿import socket, subprocess, sys
 
 def test_port_in_use_exits_with_message():
     s = socket.socket()
@@ -7,7 +7,7 @@ def test_port_in_use_exits_with_message():
     s.listen(1)
     try:
         r = subprocess.run(
-            [sys.executable, "-m", "forven.api", "--port", str(port)],
+            [sys.executable, "-m", "axiom.api", "--port", str(port)],
             capture_output=True, text=True, timeout=45,
         )
     finally:

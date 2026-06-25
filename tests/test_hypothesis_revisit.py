@@ -1,13 +1,13 @@
-"""Phase 7: revisit pass tests."""
+﻿"""Phase 7: revisit pass tests."""
 
 from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from forven.db import get_approval, get_db, kv_set
-from forven.hypotheses import create_hypothesis
-from forven.hypothesis_graduation import graduate_hypothesis
-from forven.hypothesis_revisit import force_revisit, run_revisit_pass
+from axiom.db import get_approval, get_db, kv_set
+from axiom.hypotheses import create_hypothesis
+from axiom.hypothesis_graduation import graduate_hypothesis
+from axiom.hypothesis_revisit import force_revisit, run_revisit_pass
 
 
 def _hyp(idx: int = 0) -> dict:
@@ -21,7 +21,7 @@ def _hyp(idx: int = 0) -> dict:
 
 def _set_discipline(**overrides) -> None:
     kv_set(
-        "forven:settings",
+        "axiom:settings",
         {"research_settings": {"hypothesis_discipline": overrides}},
     )
 
@@ -53,7 +53,7 @@ def _clear_protection(hid: str) -> None:
         conn.commit()
 
 
-def test_run_revisit_pass_promotes_due_hypothesis(forven_db):
+def test_run_revisit_pass_promotes_due_hypothesis(AXIOM_db):
     _set_discipline(active_pool_cap=10, revisit_interval_days=30)
     h = _hyp(0)
     graduate_hypothesis(h["id"])
@@ -85,7 +85,7 @@ def test_run_revisit_pass_promotes_due_hypothesis(forven_db):
     assert next_at > datetime.now(timezone.utc)
 
 
-def test_run_revisit_pass_skips_protected_graduated_crucible(forven_db):
+def test_run_revisit_pass_skips_protected_graduated_crucible(AXIOM_db):
     _set_discipline(active_pool_cap=10, revisit_interval_days=30)
     h = _hyp(0)
     graduate_hypothesis(h["id"])
@@ -127,7 +127,7 @@ def test_run_revisit_pass_skips_protected_graduated_crucible(forven_db):
     assert int(approval_count["n"] or 0) == 0
 
 
-def test_run_revisit_pass_skips_if_not_due(forven_db):
+def test_run_revisit_pass_skips_if_not_due(AXIOM_db):
     _set_discipline(active_pool_cap=10, revisit_interval_days=30)
     h = _hyp(0)
     graduate_hypothesis(h["id"])
@@ -139,7 +139,7 @@ def test_run_revisit_pass_skips_if_not_due(forven_db):
     assert result["evaluated"] == 0
 
 
-def test_run_revisit_pass_stops_on_pool_full(forven_db):
+def test_run_revisit_pass_stops_on_pool_full(AXIOM_db):
     # Raise cap first so we can set up the state, then lower it to simulate "full"
     _set_discipline(active_pool_cap=10, revisit_interval_days=30)
     _hyp(0)  # active
@@ -167,7 +167,7 @@ def test_run_revisit_pass_stops_on_pool_full(forven_db):
     assert row["manager_state"] == "graduated"  # unchanged
 
 
-def test_run_revisit_pass_respects_cap_mid_pass(forven_db):
+def test_run_revisit_pass_respects_cap_mid_pass(AXIOM_db):
     """With cap=3 and 2 active, only one graduated can be promoted per pass."""
     _set_discipline(active_pool_cap=3, revisit_interval_days=30)
     _hyp(0)  # active
@@ -197,7 +197,7 @@ def test_run_revisit_pass_respects_cap_mid_pass(forven_db):
     assert result["evaluated"] == 2
 
 
-def test_force_revisit_succeeds(forven_db):
+def test_force_revisit_succeeds(AXIOM_db):
     _set_discipline(active_pool_cap=10, revisit_interval_days=30)
     h = _hyp(0)
     graduate_hypothesis(h["id"])
@@ -219,7 +219,7 @@ def test_force_revisit_succeeds(forven_db):
     assert int(row["revisit_count"] or 0) == 1
 
 
-def test_force_revisit_protected_graduated_crucible_requires_approval(forven_db):
+def test_force_revisit_protected_graduated_crucible_requires_approval(AXIOM_db):
     _set_discipline(active_pool_cap=10, revisit_interval_days=30)
     h = _hyp(0)
     graduate_hypothesis(h["id"])
@@ -251,7 +251,7 @@ def test_force_revisit_protected_graduated_crucible_requires_approval(forven_db)
     assert int(row["revisit_count"] or 0) == 0
 
 
-def test_force_revisit_raises_value_error_when_not_graduated(forven_db):
+def test_force_revisit_raises_value_error_when_not_graduated(AXIOM_db):
     _set_discipline(active_pool_cap=10)
     h = _hyp(0)
     # h is still active — not eligible for revisit
@@ -259,18 +259,18 @@ def test_force_revisit_raises_value_error_when_not_graduated(forven_db):
         force_revisit(h["id"])
 
 
-def test_force_revisit_raises_value_error_for_unknown_id(forven_db):
+def test_force_revisit_raises_value_error_for_unknown_id(AXIOM_db):
     with pytest.raises(ValueError, match="unknown"):
         force_revisit("does-not-exist")
 
 
-def test_force_revisit_evicts_weakest_when_pool_full(forven_db):
+def test_force_revisit_evicts_weakest_when_pool_full(AXIOM_db):
     """When the pool is at cap, force_revisit evicts the weakest instead of refusing.
 
     Mirrors the pressure-valve semantics of create_hypothesis — operators
     re-activating a graduated hypothesis are never refused.
     """
-    from forven.db import get_db
+    from axiom.db import get_db
 
     _set_discipline(active_pool_cap=2, revisit_interval_days=30)
     a = _hyp(0)
@@ -296,7 +296,7 @@ def test_force_revisit_evicts_weakest_when_pool_full(forven_db):
         assert row["manager_state"] == "archived"
 
 
-def test_force_revisit_raises_when_no_eviction_possible(forven_db, monkeypatch):
+def test_force_revisit_raises_when_no_eviction_possible(AXIOM_db, monkeypatch):
     """Defensive fallback: RuntimeError only if no eviction victim exists."""
     _set_discipline(active_pool_cap=10, revisit_interval_days=30)
     h_g = _hyp(0)
@@ -306,7 +306,7 @@ def test_force_revisit_raises_when_no_eviction_possible(forven_db, monkeypatch):
     _set_discipline(active_pool_cap=1, revisit_interval_days=30)
     _hyp(1)  # occupies the single slot
 
-    import forven.hypotheses as hyp_module
+    import axiom.hypotheses as hyp_module
 
     monkeypatch.setattr(
         hyp_module, "_pick_weakest_active_hypothesis", lambda conn, protect_ids=(): None
@@ -315,9 +315,9 @@ def test_force_revisit_raises_when_no_eviction_possible(forven_db, monkeypatch):
         force_revisit(h_g["id"])
 
 
-def test_revisit_does_not_count_disproven_in_active_cap(forven_db):
+def test_revisit_does_not_count_disproven_in_active_cap(AXIOM_db):
     """Disproven hypotheses don't occupy the cap — a graduated one can still revive."""
-    from forven.hypotheses import update_hypothesis_status
+    from axiom.hypotheses import update_hypothesis_status
 
     _set_discipline(active_pool_cap=3, revisit_interval_days=30)
     h_active = _hyp(0)  # active

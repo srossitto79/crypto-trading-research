@@ -1,9 +1,9 @@
-"""Tests for forven.scheduler.apply_startup_catchup — collapse missed cycles."""
+﻿"""Tests for Axiom.scheduler.apply_startup_catchup — collapse missed cycles."""
 
 from datetime import datetime, timedelta, timezone
 
-from forven.db import get_db
-from forven.scheduler import apply_startup_catchup
+from axiom.db import get_db
+from axiom.scheduler import apply_startup_catchup
 
 
 def _insert_job(job_id: str, next_run_at: str, *, enabled: int = 1):
@@ -25,13 +25,13 @@ def _read_next_run(job_id: str) -> str | None:
     return row["next_run_at"] if row else None
 
 
-def test_no_jobs_returns_zero_counts(forven_db):
+def test_no_jobs_returns_zero_counts(AXIOM_db):
     summary = apply_startup_catchup()
     assert summary["total_jobs"] == 0
     assert summary["fast_forwarded"] == 0
 
 
-def test_fresh_job_not_touched(forven_db):
+def test_fresh_job_not_touched(AXIOM_db):
     """A job whose next_run_at is in the future is left alone."""
     now = datetime.now(timezone.utc)
     future = (now + timedelta(minutes=5)).isoformat()
@@ -41,7 +41,7 @@ def test_fresh_job_not_touched(forven_db):
     assert _read_next_run("test-job") == future
 
 
-def test_recently_overdue_job_not_collapsed(forven_db):
+def test_recently_overdue_job_not_collapsed(AXIOM_db):
     """Less than a minute late = normal slow tick, not catch-up territory."""
     now = datetime.now(timezone.utc)
     slightly_late = (now - timedelta(seconds=30)).isoformat()
@@ -51,7 +51,7 @@ def test_recently_overdue_job_not_collapsed(forven_db):
     assert _read_next_run("test-job") == slightly_late
 
 
-def test_long_overdue_job_collapsed_to_one_run(forven_db):
+def test_long_overdue_job_collapsed_to_one_run(AXIOM_db):
     """A job 6 hours late should be fast-forwarded so it runs ONCE on next tick."""
     now = datetime.now(timezone.utc)
     six_hours_ago = (now - timedelta(hours=6)).isoformat()
@@ -69,7 +69,7 @@ def test_long_overdue_job_collapsed_to_one_run(forven_db):
     assert (now - parsed) < timedelta(seconds=5)
 
 
-def test_disabled_jobs_ignored(forven_db):
+def test_disabled_jobs_ignored(AXIOM_db):
     """Disabled jobs are not surfaced by get_enabled_jobs and not touched."""
     now = datetime.now(timezone.utc)
     long_ago = (now - timedelta(days=2)).isoformat()
@@ -80,7 +80,7 @@ def test_disabled_jobs_ignored(forven_db):
     assert _read_next_run("disabled-job") == long_ago
 
 
-def test_mixed_jobs(forven_db):
+def test_mixed_jobs(AXIOM_db):
     """Mix of fresh / slightly-late / very-late: only the very-late get collapsed."""
     now = datetime.now(timezone.utc)
     _insert_job("fresh", (now + timedelta(minutes=5)).isoformat())
@@ -94,7 +94,7 @@ def test_mixed_jobs(forven_db):
     assert summary["stale_jobs"] == 2
 
 
-def test_job_with_null_next_run_skipped(forven_db):
+def test_job_with_null_next_run_skipped(AXIOM_db):
     """Jobs without next_run_at can't be fast-forwarded — leave alone."""
     _insert_job("no-next-run", "")
     summary = apply_startup_catchup()

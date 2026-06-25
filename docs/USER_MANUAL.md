@@ -1,20 +1,20 @@
-# Forven User Manual
+# Axiom User Manual
 
 This manual reflects the current application surface in this repository.
 
-## 1. What Forven Is
+## 1. What Axiom Is
 
-Forven is a local-first workspace for building, validating, supervising, and operating algorithmic trading strategies.
+Axiom is a local-first workspace for building, validating, supervising, and operating algorithmic trading strategies.
 
 Core pieces:
 
 - A FastAPI backend on `http://127.0.0.1:8003`
 - A SvelteKit frontend on `http://127.0.0.1:5173`
-- SQLite state stored under `FORVEN_HOME`
+- SQLite state stored under `AXIOM_HOME`
 - ChromaDB-backed memory and workspace context
-- CCXT-based exchange adapters under `forven/exchange/`
+- CCXT-based exchange adapters under `axiom/exchange/`
 
-Forven keeps research, approvals, runtime monitoring, and operational controls in one place instead of splitting them across notebooks, bots, and dashboards.
+Axiom keeps research, approvals, runtime monitoring, and operational controls in one place instead of splitting them across notebooks, bots, and dashboards.
 
 ## 2. Starting the App
 
@@ -31,7 +31,7 @@ bash start_all.sh
 ### Backend only
 
 ```powershell
-python -m uvicorn --app-dir . forven.api:app --host 127.0.0.1 --port 8003 --reload
+python -m uvicorn --app-dir . axiom.api:app --host 127.0.0.1 --port 8003 --reload
 ```
 
 ### Frontend only
@@ -44,9 +44,9 @@ npm run dev
 ### CLI
 
 ```powershell
-python -m forven --help
-python -m forven configure
-python -m forven auth status
+python -m axiom --help
+python -m axiom configure
+python -m axiom auth status
 ```
 
 ## 3. Main Navigation
@@ -104,7 +104,7 @@ The canonical lifecycle is:
 - `deployed`
 - `retired`
 
-These map to the policy gates managed in `forven/policy.py`.
+These map to the policy gates managed in `axiom/policy.py`.
 
 ### Operational review
 
@@ -124,8 +124,8 @@ Use `/memory` to inspect saved memories, annotations, and source health for the 
 - Keep new environments in `paper` mode.
 - Do not enable `mainnet` casually.
 - Review risk limits before enabling autonomous or exchange-connected behavior.
-- If API keys are configured for browser access, pair `FORVEN_API_KEY` with `VITE_FORVEN_API_KEY`, and pair `FORVEN_OPERATOR_KEY` with `VITE_FORVEN_OPERATOR_KEY`.
-- The live exchange code lives under `forven/exchange/` and should be treated as sensitive.
+- If API keys are configured for browser access, pair `AXIOM_API_KEY` with `VITE_AXIOM_API_KEY`, and pair `AXIOM_OPERATOR_KEY` with `VITE_AXIOM_OPERATOR_KEY`.
+- The live exchange code lives under `axiom/exchange/` and should be treated as sensitive.
 
 ## 7. Useful Health Checks
 
@@ -139,6 +139,6 @@ Use `/memory` to inspect saved memories, annotations, and source health for the 
 ## 8. Troubleshooting
 
 - Launcher logs live under `.tmp/logs/` on Unix-like systems and `.tmp\logs\` on Windows.
-- `python -m forven` is the CLI entrypoint, not the backend server.
+- `python -m axiom` is the CLI entrypoint, not the backend server.
 - If the frontend is up but API calls fail, verify `http://127.0.0.1:8003/api/health` first.
-- If auth or workspace state seems missing, check the active `FORVEN_HOME` path.
+- If auth or workspace state seems missing, check the active `AXIOM_HOME` path.

@@ -1,16 +1,16 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 
-from forven.control_plane import ops as control_plane_ops
-from forven.db import create_task_container, get_db
-from forven.system_mode_policy import (
+from axiom.control_plane import ops as control_plane_ops
+from axiom.db import create_task_container, get_db
+from axiom.system_mode_policy import (
     autonomous_hardening_allowed,
     autonomous_hypothesis_generation_allowed,
 )
 
 
-def test_semi_mode_policy_allows_hardening_but_blocks_generation(forven_db):
+def test_semi_mode_policy_allows_hardening_but_blocks_generation(AXIOM_db):
     assert autonomous_hardening_allowed("manual") is False
     assert autonomous_hypothesis_generation_allowed("manual") is False
 
@@ -21,8 +21,8 @@ def test_semi_mode_policy_allows_hardening_but_blocks_generation(forven_db):
     assert autonomous_hypothesis_generation_allowed("auto") is True
 
 
-def test_semi_mode_allows_system_hardening_tasks_to_be_claimed(forven_db):
-    from forven.db import claim_pending_agent_tasks
+def test_semi_mode_allows_system_hardening_tasks_to_be_claimed(AXIOM_db):
+    from axiom.db import claim_pending_agent_tasks
 
     control_plane_ops.update_system_mode("semi_auto")
 
@@ -45,8 +45,8 @@ def test_semi_mode_allows_system_hardening_tasks_to_be_claimed(forven_db):
     assert [int(task["id"]) for task in claimed] == [task_id]
 
 
-def test_semi_mode_blocks_agent_hypothesis_creation_tool(forven_db):
-    from forven.agents.tools_research import _tool_create_hypothesis
+def test_semi_mode_blocks_agent_hypothesis_creation_tool(AXIOM_db):
+    from axiom.agents.tools_research import _tool_create_hypothesis
 
     control_plane_ops.update_system_mode("semi_auto")
 
@@ -82,8 +82,8 @@ def _agent_task_status(task_id: int) -> str:
     return str(row["status"])
 
 
-def test_stop_start_system_preserves_manual_mode(forven_db):
-    from forven.system_pause import get_system_mode, is_system_paused
+def test_stop_start_system_preserves_manual_mode(AXIOM_db):
+    from axiom.system_pause import get_system_mode, is_system_paused
 
     control_plane_ops.update_system_mode("manual")
 
@@ -96,8 +96,8 @@ def test_stop_start_system_preserves_manual_mode(forven_db):
     assert is_system_paused() is False
 
 
-def test_stop_start_system_preserves_semi_auto_mode(forven_db):
-    from forven.system_pause import get_system_mode
+def test_stop_start_system_preserves_semi_auto_mode(AXIOM_db):
+    from axiom.system_pause import get_system_mode
 
     control_plane_ops.update_system_mode("semi_auto")
     control_plane_ops.stop_system()
@@ -106,8 +106,8 @@ def test_stop_start_system_preserves_semi_auto_mode(forven_db):
     assert get_system_mode() == "semi_auto"
 
 
-def test_resume_generation_in_manual_mode_stays_manual_and_does_not_thaw(forven_db):
-    from forven.system_pause import get_system_mode, is_generation_paused
+def test_resume_generation_in_manual_mode_stays_manual_and_does_not_thaw(AXIOM_db):
+    from axiom.system_pause import get_system_mode, is_generation_paused
 
     with get_db() as conn:
         frozen_id, _ = create_task_container(
@@ -141,8 +141,8 @@ def test_resume_generation_in_manual_mode_stays_manual_and_does_not_thaw(forven_
     assert _agent_task_status(frozen_id) == "pending"
 
 
-def test_generation_toggle_still_moves_between_semi_auto_and_auto(forven_db):
-    from forven.system_pause import get_system_mode
+def test_generation_toggle_still_moves_between_semi_auto_and_auto(AXIOM_db):
+    from axiom.system_pause import get_system_mode
 
     control_plane_ops.update_system_mode("semi_auto")
     control_plane_ops.resume_strategy_generation()
@@ -152,10 +152,10 @@ def test_generation_toggle_still_moves_between_semi_auto_and_auto(forven_db):
     assert get_system_mode() == "semi_auto"
 
 
-def test_fresh_install_default_manual_survives_stop_start(forven_db):
+def test_fresh_install_default_manual_survives_stop_start(AXIOM_db):
     """A fresh install (no mode ever persisted) reports manual; the first
     stop/start must not silently promote it to semi_auto/auto."""
-    from forven.system_pause import get_system_mode
+    from axiom.system_pause import get_system_mode
 
     assert get_system_mode() == "manual"
     control_plane_ops.stop_system()

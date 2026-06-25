@@ -1,10 +1,10 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
 
-from forven.api_domains import analytics as analytics_domain
-from forven.db import get_db
+from axiom.api_domains import analytics as analytics_domain
+from axiom.db import get_db
 
 
 def _insert_strategy(strategy_id: str, *, stage: str = "paper") -> None:
@@ -34,7 +34,7 @@ def _insert_strategy(strategy_id: str, *, stage: str = "paper") -> None:
         )
 
 
-def test_get_pipeline_funnel_returns_counts_and_flows(forven_db):
+def test_get_pipeline_funnel_returns_counts_and_flows(AXIOM_db):
     _insert_strategy("S10001", stage="paper")
     _insert_strategy("S10002", stage="backtesting")
     now = datetime.now(timezone.utc).isoformat()

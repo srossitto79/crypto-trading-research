@@ -1,0 +1,84 @@
+﻿from __future__ import annotations
+
+from typing import Any
+
+from axiom.gauntlet.models import normalize_step_key
+
+
+def _as_float(value: object, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except Exception:
+        return float(default)
+
+
+def _as_list(value: object) -> list[Any]:
+    return value if isinstance(value, list) else []
+
+
+def validate_robustness_payload(step_key: object, payload: dict[str, Any]) -> dict[str, Any]:
+    normalized = normalize_step_key(step_key)
+    if not isinstance(payload, dict):
+        return {"ok": False, "reason": "robustness payload is not an object"}
+    if payload.get("error"):
+        return {"ok": False, "reason": str(payload.get("error"))}
+
+    if normalized == "walk_forward":
+        splits = _as_list(payload.get("splits"))
+        folds = _as_list(payload.get("folds"))
+        fold_count = int(_as_float(payload.get("n_folds") or payload.get("fold_count") or len(splits) or len(folds), 0.0))
+        if fold_count < 2:
+            return {"ok": False, "reason": "walk-forward needs at least 2 folds with out-of-sample evidence"}
+        return {"ok": True, "reason": "walk-forward payload has fold evidence"}
+
+    if normalized == "monte_carlo":
+        simulations = int(_as_float(payload.get("n_simulations") or payload.get("simulations") or payload.get("num_simulations"), 0.0))
+        paths = _as_list(payload.get("equity_paths_sample"))
+        if simulations < 100 and not paths:
+            return {"ok": False, "reason": "Monte Carlo needs simulation-count or sampled path evidence"}
+        min_trades = int(_as_float(payload.get("min_trades") or payload.get("_min_trades"), 10.0))
+        trade_count = int(
+            _as_float(
+                payload.get("n_trades")
+                or payload.get("trade_count")
+                or payload.get("total_trades"),
+                0.0,
+            )
+        )
+        if trade_count < max(1, min_trades):
+            return {"ok": False, "reason": f"Monte Carlo needs at least {min_trades} baseline trades"}
+        return {"ok": True, "reason": "Monte Carlo payload has simulation evidence"}
+
+    if normalized == "parameter_jitter":
+        iterations = int(
+            _as_float(
+                payload.get("n_iterations")
+                or payload.get("iterations")
+                or payload.get("samples")
+                or payload.get("n_variants")
+                or payload.get("variants"),
+                0.0,
+            )
+        )
+        has_rate = any(key in payload for key in ("pass_rate", "stable_pct", "pct_positive_sharpe"))
+        if iterations < 10 or not has_rate:
+            return {"ok": False, "reason": "parameter jitter needs iterations and stability/pass-rate evidence"}
+        return {"ok": True, "reason": "parameter jitter payload has stability evidence"}
+
+    if normalized == "cost_stress":
+        has_cost_metric = any(
+            key in payload
+            for key in ("stressed_sharpe", "min_sharpe", "degradation_pct", "baseline_metrics", "stressed_metrics")
+        )
+        if not has_cost_metric:
+            return {"ok": False, "reason": "cost stress needs stressed performance evidence"}
+        return {"ok": True, "reason": "cost stress payload has stressed-cost evidence"}
+
+    if normalized == "regime_split":
+        regimes = _as_list(payload.get("regimes"))
+        n_regimes = int(_as_float(payload.get("n_regimes") or len(regimes), 0.0))
+        if n_regimes < 2:
+            return {"ok": False, "reason": "regime split needs at least 2 regimes to be meaningful"}
+        return {"ok": True, "reason": "regime split payload has multi-regime evidence"}
+
+    return {"ok": False, "reason": f"unknown robustness step: {step_key}"}

@@ -1,4 +1,4 @@
-"""DB migration safety (B-21/B-22, 2026-06-09 audit).
+﻿"""DB migration safety (B-21/B-22, 2026-06-09 audit).
 
 B-21: init_db must not silently commit half-applied migrations. Failures roll
 back to a SAVEPOINT and surface via the persistent kv flag
@@ -12,9 +12,9 @@ that were not rescued into the rebuilt table (maximize-data project).
 from __future__ import annotations
 
 
-import forven.db as db_mod
-from forven import migrations as mig
-from forven.db import (
+import axiom.db as db_mod
+from axiom import migrations as mig
+from axiom.db import (
     SCHEMA_MIGRATION_FAILED_KV_KEY,
     SCHEMA_VERSION,
     get_db,
@@ -75,7 +75,7 @@ def test_failing_gauntlet_schema_init_sets_flag(monkeypatch):
     # executescript (statements auto-commit; savepoints cannot span it), so
     # the contract for this step is idempotent-DDL + loud flag, not rollback.
     init_db()
-    import forven.gauntlet.store as gstore
+    import axiom.gauntlet.store as gstore
 
     def _boom(conn):
         raise RuntimeError("gauntlet boom")
@@ -121,7 +121,7 @@ def _force_legacy_drift(conn, rows):
         )
 
 
-def test_rebuild_keeps_legacy_table_when_rows_unrescued(forven_db):
+def test_rebuild_keeps_legacy_table_when_rows_unrescued(AXIOM_db):
     with get_db() as conn:
         conn.execute("INSERT INTO strategies (id, name) VALUES ('S1', 'Strat 1')")
         # r1 is rescuable; r2's strategy no longer exists (orphan).
@@ -155,7 +155,7 @@ def test_rebuild_keeps_legacy_table_when_rows_unrescued(forven_db):
         assert idx is not None and idx["tbl_name"] == "backtest_results"
 
 
-def test_rebuild_drops_legacy_table_when_all_rows_rescued(forven_db):
+def test_rebuild_drops_legacy_table_when_all_rows_rescued(AXIOM_db):
     with get_db() as conn:
         conn.execute("INSERT INTO strategies (id, name) VALUES ('S1', 'Strat 1')")
         conn.execute("INSERT INTO strategies (id, name) VALUES ('S2', 'Strat 2')")
@@ -171,7 +171,7 @@ def test_rebuild_drops_legacy_table_when_all_rows_rescued(forven_db):
         assert not db_mod._table_exists(conn, LEGACY_TABLE)
 
 
-def test_rebuild_keeps_legacy_table_when_schema_unrecognizable(forven_db):
+def test_rebuild_keeps_legacy_table_when_schema_unrecognizable(AXIOM_db):
     with get_db() as conn:
         conn.execute("DROP TABLE IF EXISTS backtest_results")
         conn.execute("CREATE TABLE backtest_results (foo TEXT)")
@@ -190,7 +190,7 @@ def test_rebuild_keeps_legacy_table_when_schema_unrecognizable(forven_db):
         assert row["foo"] == "precious"
 
 
-def test_second_rebuild_stashes_previously_kept_legacy_table(forven_db):
+def test_second_rebuild_stashes_previously_kept_legacy_table(AXIOM_db):
     # First rebuild: legacy table is kept because r2 is orphaned.
     with get_db() as conn:
         conn.execute("INSERT INTO strategies (id, name) VALUES ('S1', 'Strat 1')")
@@ -224,7 +224,7 @@ def test_second_rebuild_stashes_previously_kept_legacy_table(forven_db):
         assert "r3" in rescued
 
 
-def test_rebuild_drops_empty_leftover_legacy_table(forven_db):
+def test_rebuild_drops_empty_leftover_legacy_table(AXIOM_db):
     with get_db() as conn:
         conn.execute("INSERT INTO strategies (id, name) VALUES ('S1', 'Strat 1')")
         # Simulate an empty leftover legacy table from a prior run.

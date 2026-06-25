@@ -143,7 +143,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'exchange',
     backendPath: 'exchange',
     description: 'Which exchange the bot connects to for order placement. Supports Hyperliquid, Binance, Kraken, OKX, Coinbase, or any CCXT-supported exchange.',
-    usedBy: ['forven.api_core', 'forven.exchange'],
+    usedBy: ['axiom.api_core', 'axiom.exchange'],
     deepLinkTo: '/',
   },
 
@@ -158,7 +158,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'hyperliquid',
     backendPath: 'hyperliquid_wallet',
     description: 'On-chain wallet address Hyperliquid uses to attribute your orders and balances.',
-    usedBy: ['forven.exchange.hyperliquid', 'forven.api_core'],
+    usedBy: ['axiom.exchange.hyperliquid', 'axiom.api_core'],
   },
   {
     id: 'hyperliquid.api_address',
@@ -170,7 +170,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'hyperliquid',
     backendPath: 'hyperliquid_api_address',
     description: 'Hyperliquid API wallet address (separate from the funding wallet) used to sign requests.',
-    usedBy: ['forven.exchange.hyperliquid', 'forven.api_core'],
+    usedBy: ['axiom.exchange.hyperliquid', 'axiom.api_core'],
   },
   {
     id: 'hyperliquid.api_secret_key',
@@ -183,7 +183,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'api_secret_key',
     configuredByPath: 'hyperliquid_has_key',
     description: 'Private key Hyperliquid uses to sign API requests from this bot.',
-    usedBy: ['forven.exchange.hyperliquid', 'forven.api_core'],
+    usedBy: ['axiom.exchange.hyperliquid', 'axiom.api_core'],
   },
   {
     id: 'hyperliquid.use_testnet',
@@ -195,7 +195,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'hyperliquid',
     backendPath: 'hyperliquid_testnet',
     description: 'Route Hyperliquid orders to testnet so live mode stays paper-safe.',
-    usedBy: ['forven.exchange.hyperliquid', 'forven.api_core'],
+    usedBy: ['axiom.exchange.hyperliquid', 'axiom.api_core'],
   },
 
   // Binance credentials
@@ -210,7 +210,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'binance_api_key',
     configuredByPath: 'binance_has_key',
     description: 'API key from Binance API Management page.',
-    usedBy: ['forven.exchange.ccxt_adapter'],
+    usedBy: ['axiom.exchange.ccxt_adapter'],
   },
   {
     id: 'binance.api_secret',
@@ -223,7 +223,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'binance_api_secret',
     configuredByPath: 'binance_has_key',
     description: 'API secret from Binance API Management page.',
-    usedBy: ['forven.exchange.ccxt_adapter'],
+    usedBy: ['axiom.exchange.ccxt_adapter'],
   },
   {
     id: 'binance.use_testnet',
@@ -235,7 +235,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'binance',
     backendPath: 'binance_testnet',
     description: 'Route Binance orders to testnet (testnet.binance.vision). OFF = mainnet. Turn this ON only if you have Binance testnet API keys.',
-    usedBy: ['forven.exchange.ccxt_adapter'],
+    usedBy: ['axiom.exchange.ccxt_adapter'],
   },
 
   // Kraken credentials
@@ -250,7 +250,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'kraken_api_key',
     configuredByPath: 'kraken_has_key',
     description: 'API key from Kraken Settings → API page.',
-    usedBy: ['forven.exchange.ccxt_adapter'],
+    usedBy: ['axiom.exchange.ccxt_adapter'],
   },
   {
     id: 'kraken.api_secret',
@@ -263,7 +263,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'kraken_api_secret',
     configuredByPath: 'kraken_has_key',
     description: 'API secret from Kraken Settings → API page.',
-    usedBy: ['forven.exchange.ccxt_adapter'],
+    usedBy: ['axiom.exchange.ccxt_adapter'],
   },
   {
     id: 'kraken.use_testnet',
@@ -275,7 +275,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'kraken',
     backendPath: 'kraken_testnet',
     description: 'Route Kraken orders to sandbox. OFF = mainnet. Turn this ON only if you have Kraken testnet API keys.',
-    usedBy: ['forven.exchange.ccxt_adapter'],
+    usedBy: ['axiom.exchange.ccxt_adapter'],
   },
 
   // OKX credentials
@@ -290,7 +290,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'okx_api_key',
     configuredByPath: 'okx_has_key',
     description: 'API key from OKX Account → API page.',
-    usedBy: ['forven.exchange.ccxt_adapter'],
+    usedBy: ['axiom.exchange.ccxt_adapter'],
   },
   {
     id: 'okx.api_secret',
@@ -303,7 +303,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'okx_api_secret',
     configuredByPath: 'okx_has_key',
     description: 'API secret from OKX Account → API page.',
-    usedBy: ['forven.exchange.ccxt_adapter'],
+    usedBy: ['axiom.exchange.ccxt_adapter'],
   },
   {
     id: 'okx.api_passphrase',
@@ -316,7 +316,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'okx_api_passphrase',
     configuredByPath: 'okx_has_key',
     description: 'API passphrase from OKX Account → API page (required for OKX).',
-    usedBy: ['forven.exchange.ccxt_adapter'],
+    usedBy: ['axiom.exchange.ccxt_adapter'],
   },
   {
     id: 'okx.use_testnet',
@@ -328,7 +328,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'okx',
     backendPath: 'okx_testnet',
     description: 'Route OKX orders to testnet. OFF = mainnet. Turn this ON only if you have OKX testnet API keys.',
-    usedBy: ['forven.exchange.ccxt_adapter'],
+    usedBy: ['axiom.exchange.ccxt_adapter'],
   },
 
   // Coinbase credentials
@@ -343,7 +343,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'coinbase_api_key',
     configuredByPath: 'coinbase_has_key',
     description: 'API key from Coinbase Settings → API page.',
-    usedBy: ['forven.exchange.ccxt_adapter'],
+    usedBy: ['axiom.exchange.ccxt_adapter'],
   },
   {
     id: 'coinbase.api_secret',
@@ -356,7 +356,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'coinbase_api_secret',
     configuredByPath: 'coinbase_has_key',
     description: 'API secret from Coinbase Settings → API page.',
-    usedBy: ['forven.exchange.ccxt_adapter'],
+    usedBy: ['axiom.exchange.ccxt_adapter'],
   },
 
   // Generic CCXT credentials
@@ -370,7 +370,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'generic-ccxt',
     backendPath: 'generic_ccxt_exchange',
     description: 'CCXT exchange ID (e.g., "huobi", "gateio", "mexc"). See docs.ccxt.com for all supported exchanges.',
-    usedBy: ['forven.exchange.ccxt_adapter'],
+    usedBy: ['axiom.exchange.ccxt_adapter'],
   },
   {
     id: 'generic_ccxt.api_key',
@@ -383,7 +383,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'generic_ccxt_api_key',
     configuredByPath: 'generic_ccxt_has_key',
     description: 'API key for the selected exchange.',
-    usedBy: ['forven.exchange.ccxt_adapter'],
+    usedBy: ['axiom.exchange.ccxt_adapter'],
   },
   {
     id: 'generic_ccxt.api_secret',
@@ -396,7 +396,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'generic_ccxt_api_secret',
     configuredByPath: 'generic_ccxt_has_key',
     description: 'API secret for the selected exchange.',
-    usedBy: ['forven.exchange.ccxt_adapter'],
+    usedBy: ['axiom.exchange.ccxt_adapter'],
   },
   {
     id: 'generic_ccxt.use_testnet',
@@ -408,7 +408,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'generic-ccxt',
     backendPath: 'generic_ccxt_testnet',
     description: 'Use testnet/sandbox if available. OFF = mainnet. Turn this ON only if you have testnet API keys for this exchange.',
-    usedBy: ['forven.exchange.ccxt_adapter'],
+    usedBy: ['axiom.exchange.ccxt_adapter'],
   },
 
   // Mode & capital
@@ -426,7 +426,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'trading-mode',
     backendPath: 'trading_mode',
     description: 'Whether orders are simulated (paper) or routed to the real exchange (live).',
-    usedBy: ['forven.api_core', 'forven.bot', 'forven.runtime_worker'],
+    usedBy: ['axiom.api_core', 'axiom.bot', 'axiom.runtime_worker'],
   },
   {
     id: 'initial-capital.initial_capital',
@@ -439,7 +439,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'initial-capital',
     backendPath: 'initial_capital',
     description: 'Starting equity used to size positions and compute paper P&L.',
-    usedBy: ['forven.api_core', 'forven.bot', 'forven.simulation'],
+    usedBy: ['axiom.api_core', 'axiom.bot', 'axiom.simulation'],
   },
 
   // Risk: position sizing
@@ -455,7 +455,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'max_risk_per_trade_pct',
     description:
       'Largest share of equity a single trade may put at risk — this is the exact value risk enforcement reads. The legacy max_position_size_pct key is kept in sync automatically on save.',
-    usedBy: ['forven.exchange.risk', 'forven.runtime_worker', 'forven.bot'],
+    usedBy: ['axiom.exchange.risk', 'axiom.runtime_worker', 'axiom.bot'],
   },
   {
     id: 'risk.max_concurrent_positions',
@@ -468,7 +468,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'max_concurrent_positions',
     description:
       'Hard cap on simultaneously open LIVE positions on the shared real wallet. Bounded so the roster can diversify while margin and portfolio-budget limits still apply. 0 = unlimited.',
-    usedBy: ['forven.exchange.risk', 'forven.runtime_worker', 'forven.bot'],
+    usedBy: ['axiom.exchange.risk', 'axiom.runtime_worker', 'axiom.bot'],
   },
   {
     id: 'risk.paper_max_concurrent_positions',
@@ -481,7 +481,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'paper_max_concurrent_positions',
     description:
       'Cap on open positions PER paper session (each strategy is an isolated sandbox, so sessions never block each other). 0 = unlimited.',
-    usedBy: ['forven.exchange.risk'],
+    usedBy: ['axiom.exchange.risk'],
   },
   {
     id: 'risk.live_books_enabled',
@@ -494,7 +494,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'live_books_enabled',
     description:
       'Route LIVE longs and shorts to separate Hyperliquid sub-accounts so a long and a short on the same asset can coexist (one account nets them). Requires the book addresses below. Paper is unaffected.',
-    usedBy: ['forven.exchange.books', 'forven.scanner', 'forven.exchange.risk'],
+    usedBy: ['axiom.exchange.books', 'axiom.scanner', 'axiom.exchange.risk'],
   },
   {
     id: 'risk.hyperliquid_long_book_address',
@@ -507,7 +507,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'hyperliquid_long_book_address',
     description:
       'Hyperliquid sub-account address that holds LIVE long exposure. Leave blank to use the master wallet for longs.',
-    usedBy: ['forven.exchange.books', 'forven.scanner'],
+    usedBy: ['axiom.exchange.books', 'axiom.scanner'],
   },
   {
     id: 'risk.hyperliquid_short_book_address',
@@ -520,7 +520,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'hyperliquid_short_book_address',
     description:
       'Hyperliquid sub-account address that holds LIVE short exposure. While blank, the system runs LONG ONLY — short signals are skipped with a warning until a short sub-account is configured (a fresh mainnet wallet may need $100k cumulative volume to create a 2nd sub-account).',
-    usedBy: ['forven.exchange.books', 'forven.scanner'],
+    usedBy: ['axiom.exchange.books', 'axiom.scanner'],
   },
   {
     id: 'risk.hyperliquid_use_cross_margin',
@@ -533,7 +533,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'hyperliquid_use_cross_margin',
     description:
       'OFF (default) = ISOLATED margin: each live position loss is capped at its own margin at the leverage the bot sets per trade. ON = cross margin (the whole sub-account backs every position). Isolated is safer and matches the per-trade risk model. The bot sets leverage + this mode on the exchange before every live entry.',
-    usedBy: ['forven.exchange.hyperliquid'],
+    usedBy: ['axiom.exchange.hyperliquid'],
   },
   {
     id: 'risk.liq_distance_warn_pct',
@@ -547,7 +547,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'liq_distance_warn_pct',
     description:
       'Alert (warning) when an open LIVE position is within this % of its liquidation price. The daemon checks every open position each tick.',
-    usedBy: ['forven.daemon'],
+    usedBy: ['axiom.daemon'],
   },
   {
     id: 'risk.liq_distance_critical_pct',
@@ -561,7 +561,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'liq_distance_critical_pct',
     description:
       'Critical alert when an open LIVE position is within this % of its liquidation price — reduce or add margin.',
-    usedBy: ['forven.daemon'],
+    usedBy: ['axiom.daemon'],
   },
 
   // Risk: loss limits
@@ -577,7 +577,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'max_daily_loss_pct',
     description:
       'Share of equity lost in a day (realized plus unrealized) before new entries are blocked — this percent is the exact value risk enforcement reads. The legacy USD twin (max_daily_loss) is derived from initial capital on save.',
-    usedBy: ['forven.exchange.risk', 'forven.runtime_worker', 'forven.monitoring'],
+    usedBy: ['axiom.exchange.risk', 'axiom.runtime_worker', 'axiom.monitoring'],
     deepLinkTo: '/risk',
   },
   {
@@ -592,7 +592,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'max_drawdown_pct',
     description:
       'Peak-to-trough equity drawdown that triggers the kill switch. Enforcement clamps this to the 1–30% range.',
-    usedBy: ['forven.exchange.risk', 'forven.runtime_worker', 'forven.monitoring'],
+    usedBy: ['axiom.exchange.risk', 'axiom.runtime_worker', 'axiom.monitoring'],
     deepLinkTo: '/risk',
   },
   {
@@ -606,7 +606,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'risk',
     backendPath: 'cooldown_after_loss_hours',
     description: 'Pause before a new entry is permitted after a losing trade closes.',
-    usedBy: ['forven.exchange.risk', 'forven.runtime_worker'],
+    usedBy: ['axiom.exchange.risk', 'axiom.runtime_worker'],
   },
 
   // Risk: regime gating (deduped — ONLY under trading, not health)
@@ -620,7 +620,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'risk',
     backendPath: 'strict_regime_gating',
     description: 'Block trades when the strategy/regime compatibility check fails.',
-    usedBy: ['forven.runtime_worker', 'forven.policy', 'forven.routers.system'],
+    usedBy: ['axiom.runtime_worker', 'axiom.policy', 'axiom.routers.system'],
     deepLinkTo: '/lab',
   },
   {
@@ -633,7 +633,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'risk',
     backendPath: 'regime_min_confidence',
     description: 'Minimum regime-classifier confidence required before gating decisions are enforced.',
-    usedBy: ['forven.runtime_worker', 'forven.policy'],
+    usedBy: ['axiom.runtime_worker', 'axiom.policy'],
     deepLinkTo: '/lab',
   },
   {
@@ -646,7 +646,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'risk',
     backendPath: 'allow_unknown_regime_strategies',
     description: 'Let strategies whose regime affinity is unclassified pass the regime gate.',
-    usedBy: ['forven.runtime_worker', 'forven.policy'],
+    usedBy: ['axiom.runtime_worker', 'axiom.policy'],
     deepLinkTo: '/lab',
   },
 
@@ -661,7 +661,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'risk',
     backendPath: 'relaxed_trade_filters_enabled',
     description: 'Bypass sentiment and regime gates for testing — use only when validating plumbing.',
-    usedBy: ['forven.runtime_worker', 'forven.policy'],
+    usedBy: ['axiom.runtime_worker', 'axiom.policy'],
     advanced: true,
   },
 
@@ -687,7 +687,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'pipeline_preset',
     description:
       'Bundle of gate thresholds applied at load. Relaxed = easiest path to paper (min_trades 5, WFA fold 25%, paper 5 closed trades). Default = balanced (min_trades 20, WFA fold 33%, paper 10 closed trades). Strict = rigorous (min_trades 30, WFA fold 50%, paper 50 closed trades, cost-stress required). Custom = the per-knob values below are used as-is.',
-    usedBy: ['forven.policy'],
+    usedBy: ['axiom.policy'],
   },
   // Pipeline testing mode (via updatePipelineSettings / pipelineConfig)
   {
@@ -700,7 +700,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'testing_mode',
     description: 'Bypass safety gates so every strategy flows end-to-end through the pipeline.',
-    usedBy: ['forven.strategy_lifecycle', 'forven.routers.strategies'],
+    usedBy: ['axiom.strategy_lifecycle', 'axiom.routers.strategies'],
     advanced: true,
   },
 
@@ -716,7 +716,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'quick_screen.min_total_return_pct',
     description: 'Minimum cumulative return a strategy must produce to advance past quick screen.',
-    usedBy: ['forven.strategy_lifecycle', 'forven.routers.strategies'],
+    usedBy: ['axiom.strategy_lifecycle', 'axiom.routers.strategies'],
   },
   {
     id: 'pipeline.quick_screen.max_drawdown_pct',
@@ -729,7 +729,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'quick_screen.max_drawdown_pct',
     description: 'Largest drawdown tolerated in quick screen before a strategy is rejected.',
-    usedBy: ['forven.strategy_lifecycle', 'forven.routers.strategies'],
+    usedBy: ['axiom.strategy_lifecycle', 'axiom.routers.strategies'],
   },
   {
     id: 'pipeline.quick_screen.min_sharpe',
@@ -741,7 +741,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'quick_screen.min_sharpe',
     description: 'Lowest Sharpe a strategy must achieve in quick screen to reach the gauntlet.',
-    usedBy: ['forven.strategy_lifecycle', 'forven.routers.strategies'],
+    usedBy: ['axiom.strategy_lifecycle', 'axiom.routers.strategies'],
   },
   {
     id: 'pipeline.quick_screen.min_profit_factor',
@@ -753,7 +753,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'quick_screen.min_profit_factor',
     description: 'Profit-factor floor enforced at BOTH the in-sample and out-of-sample legs of the quick screen.',
-    usedBy: ['forven.policy', 'forven.brain'],
+    usedBy: ['axiom.policy', 'axiom.brain'],
   },
   {
     id: 'pipeline.quick_screen.min_trades',
@@ -766,7 +766,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'quick_screen.min_trades',
     description:
       'Minimum in-sample trade count for the quick-screen overfitting guardrails (Gate5). Was a hardcoded 30 before; deferred entirely when testing mode is on.',
-    usedBy: ['forven.brain'],
+    usedBy: ['axiom.brain'],
   },
   {
     id: 'pipeline.quick_screen.min_robustness_score',
@@ -779,7 +779,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'quick_screen.min_robustness_score',
     description:
       'Robustness-score floor (0-100) for the quick-screen guardrails (Gate3). The composite score is mostly earned inside the gauntlet, so fresh strategies score near zero — lower this (or enable testing mode) if the pipeline starves at quick screen. Was a hardcoded 50 before.',
-    usedBy: ['forven.brain'],
+    usedBy: ['axiom.brain'],
   },
   {
     id: 'pipeline.quick_screen.min_is_sharpe',
@@ -792,7 +792,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'quick_screen.min_is_sharpe',
     description:
       'In-sample Sharpe floor enforced at the quick-screen overfitting guardrail (Gate1). Default 0 rejects only genuinely negative IS edge; the Strict preset raises it to 0.2.',
-    usedBy: ['forven.policy', 'forven.brain'],
+    usedBy: ['axiom.policy', 'axiom.brain'],
   },
   {
     id: 'pipeline.quick_screen.fitness_min_trades',
@@ -805,7 +805,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'quick_screen.fitness_min_trades',
     description:
       'Trade count at which the fitness scorer awards full marks for sample size. Was a hardcoded 20 before; wired so the fitness curve is tunable.',
-    usedBy: ['forven.policy'],
+    usedBy: ['axiom.policy'],
   },
   {
     id: 'pipeline.quick_screen.fitness_min_profit_factor',
@@ -818,7 +818,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'quick_screen.fitness_min_profit_factor',
     description:
       'Profit-factor reference the fitness scorer scales against (full PF marks at this + 2.0). Was a hardcoded 1.3 before.',
-    usedBy: ['forven.policy'],
+    usedBy: ['axiom.policy'],
   },
 
   // Gauntlet (Step 2)
@@ -832,7 +832,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'gauntlet_auto_quick_screen_enabled',
     description: 'Automatically creates a gauntlet workflow for new quick-screen strategy containers.',
-    usedBy: ['forven.strategy_lifecycle', 'forven.gauntlet.engine'],
+    usedBy: ['axiom.strategy_lifecycle', 'axiom.gauntlet.engine'],
   },
   {
     id: 'risk.allow_unsupported_backtest_risk_controls',
@@ -844,7 +844,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'risk',
     backendPath: 'allow_unsupported_backtest_risk_controls',
     description: 'When OFF (default), strategies whose stop-loss/take-profit/sizing the local backtest cannot enforce are blocked from promotion into paper/live. Turn ON only to bypass the parity gate while iterating.',
-    usedBy: ['forven.policy'],
+    usedBy: ['axiom.policy'],
   },
   {
     id: 'risk.canonical_requires_forward_proof',
@@ -856,7 +856,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'risk',
     backendPath: 'canonical_requires_forward_proof',
     description: 'When ON, a strategy must reach a forward-traded stage (paper/live) before it earns canonical protection — a gauntlet pass alone is not enough. Tighten this as you approach live.',
-    usedBy: ['forven.hypothesis_graduation'],
+    usedBy: ['axiom.hypothesis_graduation'],
   },
   {
     id: 'pipeline.gauntlet_step_stale_minutes',
@@ -869,7 +869,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'gauntlet_step_stale_minutes',
     description: 'Minutes before a running gauntlet workflow step is recovered as retryable runtime-blocked after restart.',
-    usedBy: ['forven.gauntlet.engine', 'forven.api'],
+    usedBy: ['axiom.gauntlet.engine', 'axiom.api'],
     advanced: true,
   },
   {
@@ -890,7 +890,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'gate_sweep_timeframes',
     description: 'Timeframes used for the multi-timeframe sweep before validation optimization.',
-    usedBy: ['forven.gauntlet.tasks', 'forven.routers.lifecycle'],
+    usedBy: ['axiom.gauntlet.tasks', 'axiom.routers.lifecycle'],
   },
   {
     id: 'pipeline.gauntlet.min_robustness_score',
@@ -902,7 +902,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'gauntlet.min_robustness_score',
     description: 'Composite robustness-score floor required to survive the gauntlet.',
-    usedBy: ['forven.strategy_lifecycle', 'forven.routers.robustness'],
+    usedBy: ['axiom.strategy_lifecycle', 'axiom.routers.robustness'],
   },
   {
     id: 'pipeline.gauntlet.min_trades',
@@ -914,7 +914,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'gauntlet.min_trades',
     description: 'Minimum closed trades in the gauntlet sample before results are trusted.',
-    usedBy: ['forven.strategy_lifecycle', 'forven.routers.robustness'],
+    usedBy: ['axiom.strategy_lifecycle', 'axiom.routers.robustness'],
   },
   {
     id: 'pipeline.gauntlet.min_sharpe',
@@ -926,7 +926,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'gauntlet.min_sharpe',
     description: 'Minimum Sharpe the gauntlet must show for graduation.',
-    usedBy: ['forven.strategy_lifecycle', 'forven.routers.robustness'],
+    usedBy: ['axiom.strategy_lifecycle', 'axiom.routers.robustness'],
   },
   {
     id: 'pipeline.gauntlet.hard_min_is_sharpe',
@@ -939,7 +939,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'gauntlet.hard_min_is_sharpe',
     description:
       'Hard in-sample Sharpe sanity floor at the gauntlet entry guardrail — an auto-reject below this. Default 0 rejects only negative IS edge; the Strict preset raises it to 0.3.',
-    usedBy: ['forven.policy', 'forven.brain'],
+    usedBy: ['axiom.policy', 'axiom.brain'],
   },
   {
     id: 'pipeline.gauntlet.min_oos_profit_factor',
@@ -951,7 +951,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'gauntlet.min_oos_profit_factor',
     description: 'Out-of-sample profit-factor floor a strategy must clear at the gauntlet gate before paper promotion.',
-    usedBy: ['forven.policy', 'forven.strategy_lifecycle'],
+    usedBy: ['axiom.policy', 'axiom.strategy_lifecycle'],
   },
   {
     id: 'pipeline.gauntlet.max_drawdown_pct',
@@ -964,7 +964,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'gauntlet.max_drawdown_pct',
     description: 'Maximum drawdown a gauntlet candidate may incur.',
-    usedBy: ['forven.strategy_lifecycle', 'forven.routers.robustness'],
+    usedBy: ['axiom.strategy_lifecycle', 'axiom.routers.robustness'],
   },
   {
     id: 'pipeline.gauntlet.required_tests',
@@ -976,7 +976,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     // whenever the test actually ran.
     default: ['walk_forward', 'param_jitter', 'cost_stress'],
     type: 'csv',
-    // Canonical test names from forven.policy._GAUNTLET_VALIDATION_TYPES —
+    // Canonical test names from axiom.policy._GAUNTLET_VALIDATION_TYPES —
     // providing options renders this as checkboxes instead of a free-text CSV.
     options: [
       { value: 'walk_forward', label: 'Walk-forward' },
@@ -990,7 +990,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'gauntlet.required_tests',
     description: 'Robustness tests that must pass before graduation.',
-    usedBy: ['forven.strategy_lifecycle', 'forven.routers.robustness'],
+    usedBy: ['axiom.strategy_lifecycle', 'axiom.routers.robustness'],
   },
   {
     id: 'pipeline.gauntlet.mc_max_dd_p95',
@@ -1004,7 +1004,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'gauntlet.mc_max_dd_p95',
     description:
       'Monte-Carlo 95th-percentile drawdown ceiling at the gauntlet->paper gate. Clamped by the editable safety_floors.mc_max_dd_p95 ceiling (default 50%) in the Safety floors panel; fires whenever Monte Carlo actually ran.',
-    usedBy: ['forven.policy'],
+    usedBy: ['axiom.policy'],
   },
   {
     id: 'pipeline.gauntlet.wfa_min_folds',
@@ -1016,7 +1016,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'gauntlet.wfa_min_folds',
     description: 'Minimum number of walk-forward folds required at the gauntlet->paper gate.',
-    usedBy: ['forven.policy'],
+    usedBy: ['axiom.policy'],
   },
   {
     id: 'pipeline.robustness_thresholds.wfa_fold_pass_rate_min',
@@ -1030,7 +1030,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'robustness_thresholds.wfa_fold_pass_rate_min',
     description:
       'Fraction of walk-forward folds that must be OOS-positive to pass the gauntlet->paper gate. Clamped by the editable safety_floors.wfa_fold_pass_rate_min floor (default 20%) in the Safety floors panel; fires whenever walk-forward ran, regardless of the required-tests list.',
-    usedBy: ['forven.policy'],
+    usedBy: ['axiom.policy'],
   },
   {
     id: 'pipeline.robustness_thresholds.param_jitter_pass_rate_min',
@@ -1044,7 +1044,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'robustness_thresholds.param_jitter_pass_rate_min',
     description:
       'Fraction of parameter-jitter perturbations that must stay profitable to pass the gauntlet->paper gate. Clamped by the editable safety_floors.param_jitter_pass_rate_min floor (default 30%) in the Safety floors panel; fires whenever param-jitter ran, regardless of the required-tests list.',
-    usedBy: ['forven.policy'],
+    usedBy: ['axiom.policy'],
   },
 
   // Deflated Sharpe Ratio — optimizer selection-bias guard (observe-then-gate)
@@ -1059,7 +1059,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'robustness_thresholds.deflated_sharpe_gate_enabled',
     description:
       'When ON, reject strategies whose Deflated Sharpe Ratio (Sharpe corrected for optimizer selection bias / number of trials) is below the minimum. OFF by default — the DSR is always computed and shown on the Robustness tab so you can observe it before enabling the gate.',
-    usedBy: ['forven.policy'],
+    usedBy: ['axiom.policy'],
   },
   {
     id: 'pipeline.robustness_thresholds.min_deflated_sharpe',
@@ -1072,7 +1072,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'robustness_thresholds.min_deflated_sharpe',
     description:
       'Deflated Sharpe Ratio floor (a probability in 0-1; ~0.95 = conventional significance). Enforced only when the Deflated Sharpe gate is enabled.',
-    usedBy: ['forven.policy'],
+    usedBy: ['axiom.policy'],
   },
   // Parameter-jitter compute bounds (the heaviest robustness step: N full-window
   // backtests). These keep the sweep under the step timeout so it can't wedge the
@@ -1088,7 +1088,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'robustness_thresholds.param_jitter_max_iterations',
     description:
       'Hard cap on parameter-jitter reruns regardless of the requested count. Each rerun is a full backtest over the baseline window, so this bounds the total compute and prevents the sweep from overrunning the step timeout.',
-    usedBy: ['forven.routers.robustness'],
+    usedBy: ['axiom.routers.robustness'],
   },
   {
     id: 'pipeline.robustness_thresholds.param_jitter_max_bars',
@@ -1102,7 +1102,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'robustness_thresholds.param_jitter_max_bars',
     description:
       'Per-rerun bar cap for parameter-jitter reruns (~4380 = 6 months at 1h). Smaller than the other tests because jitter runs many reruns; still wide enough to capture the baseline trades. Lower it if param_jitter is slow; raise it for more window coverage.',
-    usedBy: ['forven.routers.robustness'],
+    usedBy: ['axiom.routers.robustness'],
   },
   {
     id: 'pipeline.robustness_thresholds.param_jitter_deadline_seconds',
@@ -1116,7 +1116,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'robustness_thresholds.param_jitter_deadline_seconds',
     description:
       'Wall-clock safety net for the parameter-jitter sweep. Once exceeded (and at least one rerun has completed), the verdict is computed from the completed reruns instead of overrunning the step timeout. Set 0 to disable.',
-    usedBy: ['forven.routers.robustness'],
+    usedBy: ['axiom.routers.robustness'],
   },
   {
     id: 'pipeline.gauntlet.async_result_max_age_minutes',
@@ -1130,7 +1130,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'gauntlet.async_result_max_age_minutes',
     description:
       'How long a gauntlet async result (e.g. an optimization job) may stay "running" before the step treats it as a zombie and re-submits. Prevents a stuck poll from wedging the workflow forever (the step heartbeat otherwise hides it from stale-step recovery).',
-    usedBy: ['forven.gauntlet.tasks'],
+    usedBy: ['axiom.gauntlet.tasks'],
   },
   {
     id: 'pipeline.gauntlet.gauntlet_enforce_win_rate',
@@ -1143,7 +1143,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'gauntlet.gauntlet_enforce_win_rate',
     description:
       'OFF by default: win-rate is not a quality signal (momentum/breakout strategies win ~30-40% and profit on payoff ratio), so a win-rate floor auto-rejects a legitimate family. Profit factor / OOS edge screen instead. Turn on only if you specifically want a win-rate floor.',
-    usedBy: ['forven.policy'],
+    usedBy: ['axiom.policy'],
   },
   {
     id: 'pipeline.robustness_thresholds.cost_stress_max_degradation_pct',
@@ -1157,7 +1157,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'robustness_thresholds.cost_stress_max_degradation_pct',
     description:
       'Max Sharpe degradation under 2x fees/slippage allowed at the paper->live gate. The edge must SURVIVE higher costs proportionally, not merely clear an absolute floor. Strict-live only.',
-    usedBy: ['forven.policy'],
+    usedBy: ['axiom.policy'],
   },
   {
     id: 'pipeline.paper_trading.live_strict_robustness_enabled',
@@ -1170,7 +1170,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'paper_trading.live_strict_robustness_enabled',
     description:
       'ON by default ("strict live"): enforce the full robustness battery (walk-forward degradation / absolute OOS Sharpe / OOS trades, Monte-Carlo percentile, cost-stress survival, regime consistency) at the paper->live capital gate. These are demoted to advisory at the gauntlet->paper gate ("achievable paper").',
-    usedBy: ['forven.policy'],
+    usedBy: ['axiom.policy'],
   },
   {
     id: 'pipeline.robustness_thresholds.wfa_min_fold_trades',
@@ -1184,7 +1184,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'robustness_thresholds.wfa_min_fold_trades',
     description:
       'Minimum OOS trades a walk-forward fold must have to count toward the fold pass-rate. Near-empty folds (e.g. a trend system sitting out a flat window) are excluded from both numerator and denominator so they cannot drag the pass-rate into a false reject.',
-    usedBy: ['forven.policy'],
+    usedBy: ['axiom.policy'],
   },
 
   // Paper trading gates
@@ -1199,7 +1199,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'paper_trading.min_paper_days',
     description: 'Minimum days a strategy must run in paper before it can promote to live.',
-    usedBy: ['forven.strategy_lifecycle', 'forven.api_domains.paper'],
+    usedBy: ['axiom.strategy_lifecycle', 'axiom.api_domains.paper'],
   },
   {
     id: 'pipeline.paper_trading.min_closed_trades',
@@ -1211,7 +1211,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'paper_trading.min_closed_trades',
     description: 'Closed paper trades required before a graduation decision.',
-    usedBy: ['forven.strategy_lifecycle', 'forven.api_domains.paper'],
+    usedBy: ['axiom.strategy_lifecycle', 'axiom.api_domains.paper'],
   },
   {
     id: 'pipeline.paper_trading.min_total_return_pct',
@@ -1225,7 +1225,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'paper_trading.min_total_return_pct',
     description: 'Minimum cumulative paper return before promotion is allowed.',
-    usedBy: ['forven.strategy_lifecycle', 'forven.api_domains.paper'],
+    usedBy: ['axiom.strategy_lifecycle', 'axiom.api_domains.paper'],
   },
   {
     id: 'pipeline.paper_trading.max_drawdown_pct',
@@ -1238,7 +1238,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'paper_trading.max_drawdown_pct',
     description: 'Drawdown ceiling during paper trading — exceeding it blocks promotion.',
-    usedBy: ['forven.strategy_lifecycle', 'forven.api_domains.paper'],
+    usedBy: ['axiom.strategy_lifecycle', 'axiom.api_domains.paper'],
   },
   {
     id: 'pipeline.paper_trading.min_profit_factor_live',
@@ -1250,7 +1250,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'paper_trading.min_profit_factor_live',
     description: 'Hard profit-factor floor (OOS preferred) a paper strategy must clear to graduate to live capital.',
-    usedBy: ['forven.policy', 'forven.strategy_lifecycle'],
+    usedBy: ['axiom.policy', 'axiom.strategy_lifecycle'],
   },
   {
     id: 'pipeline.paper_trading.min_paper_sharpe',
@@ -1263,7 +1263,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'paper_trading.min_paper_sharpe',
     description:
       'Forward-paper Sharpe (per-trade t-stat) the actual paper trades must show before live graduation — proves real forward edge, not just a positive return. Skipped for a zero-variance series. Set 0 to disable; raise toward ~1.6-2.0 before enabling real-money graduation.',
-    usedBy: ['forven.policy'],
+    usedBy: ['axiom.policy'],
   },
   {
     id: 'pipeline.paper_trading.min_profit_factor_paper',
@@ -1276,7 +1276,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'paper_trading.min_profit_factor_paper',
     description:
       'Profit factor the actual forward paper trades must show before live graduation (distinct from the historical/backtest PF floor). Set 0 to disable.',
-    usedBy: ['forven.policy'],
+    usedBy: ['axiom.policy'],
   },
   {
     id: 'pipeline.paper_trading.pf_position_reduction_threshold',
@@ -1288,7 +1288,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'paper_trading.pf_position_reduction_threshold',
     description: 'Profit factor below this (but above the live floor) still graduates, at 50% position sizing.',
-    usedBy: ['forven.policy', 'forven.strategy_lifecycle'],
+    usedBy: ['axiom.policy', 'axiom.strategy_lifecycle'],
   },
   {
     id: 'pipeline.paper_trading.max_oos_is_ratio',
@@ -1301,7 +1301,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'paper_trading.max_oos_is_ratio',
     description: 'Blocks live graduation when OOS Sharpe exceeds IS Sharpe by more than this ratio (a lucky/overfit OOS window).',
-    usedBy: ['forven.policy', 'forven.strategy_lifecycle'],
+    usedBy: ['axiom.policy', 'axiom.strategy_lifecycle'],
   },
 
   // Safety floors — absolute anti-bypass rails clamped onto the promotion gates.
@@ -1320,7 +1320,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'safety_floors.min_trades',
     description: 'Absolute minimum gauntlet trade count no preset/custom config can soften below at the gauntlet->paper gate.',
-    usedBy: ['forven.policy'],
+    usedBy: ['axiom.policy'],
   },
   {
     id: 'pipeline.safety_floors.min_robustness_score',
@@ -1332,7 +1332,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'safety_floors.min_robustness_score',
     description: 'Absolute robustness-score floor (0-100) clamped onto the gauntlet->paper gate. Default 0 = no extra rail beyond the gauntlet knob itself.',
-    usedBy: ['forven.policy'],
+    usedBy: ['axiom.policy'],
   },
   {
     id: 'pipeline.safety_floors.mc_max_dd_p95',
@@ -1344,7 +1344,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'safety_floors.mc_max_dd_p95',
     description: 'Ceiling (fraction 0-1) on the Monte-Carlo 95th-percentile drawdown at the gauntlet->paper gate. Tail DD can never be relaxed above this. 0.50 = 50%.',
-    usedBy: ['forven.policy'],
+    usedBy: ['axiom.policy'],
   },
   {
     id: 'pipeline.safety_floors.wfa_fold_pass_rate_min',
@@ -1356,7 +1356,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'safety_floors.wfa_fold_pass_rate_min',
     description: 'Absolute walk-forward fold pass-rate floor (fraction 0-1) clamped onto the gauntlet->paper gate. 0.20 = 20% of folds OOS-positive.',
-    usedBy: ['forven.policy'],
+    usedBy: ['axiom.policy'],
   },
   {
     id: 'pipeline.safety_floors.param_jitter_pass_rate_min',
@@ -1368,7 +1368,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'safety_floors.param_jitter_pass_rate_min',
     description: 'Absolute parameter-jitter pass-rate floor (fraction 0-1) clamped onto the gauntlet->paper gate. 0.30 = 30% of perturbations stay profitable.',
-    usedBy: ['forven.policy'],
+    usedBy: ['axiom.policy'],
   },
   {
     id: 'pipeline.safety_floors.live_min_closed_trades',
@@ -1380,7 +1380,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'safety_floors.live_min_closed_trades',
     description: 'REAL-MONEY rail: absolute minimum closed paper trades clamped onto the paper->live capital gate. No preset can graduate a strategy to live below this.',
-    usedBy: ['forven.policy'],
+    usedBy: ['axiom.policy'],
   },
   {
     id: 'pipeline.safety_floors.live_max_drawdown_pct',
@@ -1392,7 +1392,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'safety_floors.live_max_drawdown_pct',
     description: 'REAL-MONEY rail: drawdown ceiling (fraction 0-1) clamped onto the paper->live capital gate. 0.25 = 25%. The effective live gate is the stricter of this and the paper drawdown knob.',
-    usedBy: ['forven.policy'],
+    usedBy: ['axiom.policy'],
   },
 
   // Pipeline capacity
@@ -1410,7 +1410,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'paper_wip_cap_mode',
     description: 'Controls whether gauntlet winners can always enter paper, or stop at a fixed active paper count.',
-    usedBy: ['forven.lab_features', 'forven.strategy_lifecycle'],
+    usedBy: ['axiom.lab_features', 'axiom.strategy_lifecycle'],
   },
   {
     id: 'pipeline.paper_wip_cap',
@@ -1422,7 +1422,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'paper_wip_cap',
     description: 'Maximum active paper strategies when the paper lane is capped. Ignored while capacity mode is unlimited.',
-    usedBy: ['forven.lab_features', 'forven.strategy_lifecycle'],
+    usedBy: ['axiom.lab_features', 'axiom.strategy_lifecycle'],
   },
   {
     id: 'pipeline.graveyard_strategy_limit_mode',
@@ -1438,7 +1438,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'graveyard_strategy_limit_mode',
     description: 'Controls whether the Lab Manager loads every graveyard strategy or stops at a configured count.',
-    usedBy: ['forven.routers.strategies', 'frontend.routes.lab'],
+    usedBy: ['axiom.routers.strategies', 'frontend.routes.lab'],
   },
   {
     id: 'pipeline.graveyard_strategy_limit',
@@ -1450,7 +1450,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'graveyard_strategy_limit',
     description: 'Maximum graveyard strategies loaded when graveyard load mode is capped. Ignored when mode is unlimited.',
-    usedBy: ['forven.routers.strategies', 'frontend.routes.lab'],
+    usedBy: ['axiom.routers.strategies', 'frontend.routes.lab'],
   },
 
   // Live graduated
@@ -1465,7 +1465,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'live_graduated.decay_kill_switch_pct',
     description: 'Performance-decay threshold that automatically retires a live strategy.',
-    usedBy: ['forven.strategy_lifecycle', 'forven.health_monitor'],
+    usedBy: ['axiom.strategy_lifecycle', 'axiom.health_monitor'],
   },
 
   // Research (delegated to ResearchSettingsPanel — persisted via saveSection('research', {research_settings: ...}))
@@ -1479,7 +1479,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'research',
     backendPath: 'research_settings',
     description: 'Crucible cadence, ideation sources, and other research-panel configuration.',
-    usedBy: ['forven.api_core', 'forven.agents.tools_research', 'forven.api_domains.hypotheses'],
+    usedBy: ['axiom.api_core', 'axiom.agents.tools_research', 'axiom.api_domains.hypotheses'],
   },
 
   // -------------------- LAB: BACKTEST DEFAULTS --------------------
@@ -1493,7 +1493,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'backtesting-defaults',
     backendPath: 'backtest_symbol',
     description: 'Symbol used by ad-hoc Gauntlet runs when none is specified.',
-    usedBy: ['forven.api_core', 'forven.routers.backtesting', 'forven.strategies.backtest'],
+    usedBy: ['axiom.api_core', 'axiom.routers.backtesting', 'axiom.strategies.backtest'],
   },
   {
     id: 'backtesting-defaults.backtest_timeframe',
@@ -1514,7 +1514,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'backtesting-defaults',
     backendPath: 'backtest_timeframe',
     description: 'Candle timeframe used by ad-hoc Gauntlet runs when none is specified.',
-    usedBy: ['forven.api_core', 'forven.routers.backtesting', 'forven.strategies.backtest'],
+    usedBy: ['axiom.api_core', 'axiom.routers.backtesting', 'axiom.strategies.backtest'],
   },
   {
     id: 'backtesting-defaults.backtest_duration_days',
@@ -1530,9 +1530,9 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     description:
       'Default lookback window (in days, ending now) for ad-hoc / manual backtests, and the fallback any per-stage window below inherits when left at 0. Each pipeline stage can override this independently under "Per-stage backtest windows". (e.g. 1095 ≈ 3 years.)',
     usedBy: [
-      'forven.api_core',
-      'forven.routers.backtesting',
-      'forven.strategies.backtest',
+      'axiom.api_core',
+      'axiom.routers.backtesting',
+      'axiom.strategies.backtest',
     ],
   },
   {
@@ -1547,7 +1547,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'backtesting-defaults',
     backendPath: 'quick_screen_duration_days',
     description: 'Backtest window for the quick-screen step (the cheap pre-gauntlet triage). 0 = inherit the Default backtest window.',
-    usedBy: ['forven.gauntlet.tasks', 'forven.api_core'],
+    usedBy: ['axiom.gauntlet.tasks', 'axiom.api_core'],
   },
   {
     id: 'backtesting-defaults.timeframe_sweep_duration_days',
@@ -1561,7 +1561,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'backtesting-defaults',
     backendPath: 'timeframe_sweep_duration_days',
     description: 'Backtest window for the timeframe-sweep step (re-runs the strategy across candidate timeframes). 0 = inherit the Default backtest window.',
-    usedBy: ['forven.gauntlet.tasks', 'forven.api_core'],
+    usedBy: ['axiom.gauntlet.tasks', 'axiom.api_core'],
   },
   {
     id: 'backtesting-defaults.optimization_duration_days',
@@ -1575,7 +1575,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'backtesting-defaults',
     backendPath: 'optimization_duration_days',
     description: 'Backtest window for the parameter-optimization (grid-search) step. 0 = inherit the Default backtest window.',
-    usedBy: ['forven.gauntlet.tasks', 'forven.api_core'],
+    usedBy: ['axiom.gauntlet.tasks', 'axiom.api_core'],
   },
   {
     id: 'backtesting-defaults.confirmation_duration_days',
@@ -1589,7 +1589,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'backtesting-defaults',
     backendPath: 'confirmation_duration_days',
     description: 'Backtest window for the confirmation backtest (re-validates the optimized params). 0 = inherit the Default backtest window.',
-    usedBy: ['forven.gauntlet.tasks', 'forven.api_core'],
+    usedBy: ['axiom.gauntlet.tasks', 'axiom.api_core'],
   },
   {
     id: 'backtesting-defaults.walk_forward_duration_days',
@@ -1603,7 +1603,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'backtesting-defaults',
     backendPath: 'walk_forward_duration_days',
     description: 'Total backtest window for walk-forward analysis (split into folds). Often set longer so the out-of-sample folds span multiple regimes. 0 = inherit the Default backtest window.',
-    usedBy: ['forven.strategies.backtest', 'forven.api_core'],
+    usedBy: ['axiom.strategies.backtest', 'axiom.api_core'],
   },
   {
     id: 'backtesting-defaults.cost_stress_duration_days',
@@ -1617,7 +1617,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'backtesting-defaults',
     backendPath: 'cost_stress_duration_days',
     description: 'Backtest window for the cost-stress robustness rerun (capped at 50k bars on fine timeframes). 0 = inherit the Default backtest window.',
-    usedBy: ['forven.routers.robustness', 'forven.api_core'],
+    usedBy: ['axiom.routers.robustness', 'axiom.api_core'],
   },
   {
     id: 'backtesting-defaults.evolution_duration_days',
@@ -1631,7 +1631,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'backtesting-defaults',
     backendPath: 'evolution_duration_days',
     description: 'Backtest window for the autopilot evolution/crucible validation matrix (per-context, capped ~30k bars). 0 = inherit the Default backtest window.',
-    usedBy: ['forven.evolution', 'forven.api_core'],
+    usedBy: ['axiom.evolution', 'axiom.api_core'],
   },
   {
     id: 'backtesting-defaults.rolling_backtest_days',
@@ -1644,7 +1644,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'backtesting-defaults',
     backendPath: 'rolling_backtest_days',
     description: 'Window size used by continuous rolling health Gauntlet runs.',
-    usedBy: ['forven.api_core', 'forven.health_monitor'],
+    usedBy: ['axiom.api_core', 'axiom.health_monitor'],
   },
   {
     id: 'backtesting-defaults.backtest_fee_bps',
@@ -1657,7 +1657,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'backtesting-defaults',
     backendPath: 'backtest_fee_bps',
     description: 'Per-side fee (in basis points) applied to simulated fills.',
-    usedBy: ['forven.api_core', 'forven.strategies.backtest', 'forven.simulation'],
+    usedBy: ['axiom.api_core', 'axiom.strategies.backtest', 'axiom.simulation'],
   },
   {
     id: 'backtesting-defaults.backtest_slippage_bps',
@@ -1670,7 +1670,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'backtesting-defaults',
     backendPath: 'backtest_slippage_bps',
     description: 'Slippage (in basis points) applied to simulated fills.',
-    usedBy: ['forven.api_core', 'forven.strategies.backtest', 'forven.simulation'],
+    usedBy: ['axiom.api_core', 'axiom.strategies.backtest', 'axiom.simulation'],
   },
   {
     id: 'backtesting-defaults.backtest_include_funding',
@@ -1682,7 +1682,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'backtesting-defaults',
     backendPath: 'backtest_include_funding',
     description: 'Deduct cumulative perp funding from simulated PnL and hold strategies with incomplete funding data out of promotion.',
-    usedBy: ['forven.api_core', 'forven.strategies.backtest', 'forven.policy'],
+    usedBy: ['axiom.api_core', 'axiom.strategies.backtest', 'axiom.policy'],
   },
 
   // Walk-forward defaults (saved via same 'backtesting-defaults' section)
@@ -1696,7 +1696,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'backtesting-defaults',
     backendPath: 'walkforward_folds',
     description: 'Number of train/test folds used by the walk-forward runner.',
-    usedBy: ['forven.api_core', 'forven.routers.backtesting'],
+    usedBy: ['axiom.api_core', 'axiom.routers.backtesting'],
   },
   {
     id: 'backtesting-defaults.walkforward_train_ratio',
@@ -1708,14 +1708,14 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'backtesting-defaults',
     backendPath: 'walkforward_train_ratio',
     description: 'Fraction of each fold used for training (remainder is test).',
-    usedBy: ['forven.api_core', 'forven.routers.backtesting'],
+    usedBy: ['axiom.api_core', 'axiom.routers.backtesting'],
   },
 
   // -------------------- AGENTS --------------------
   // Model policy (agent_model_keys), personas, per-agent documents, and
   // scheduler jobs are roster-keyed and rendered by SettingsAgents.svelte
-  // against /forven/agents, /forven/agents/model-options, and
-  // /forven/scheduler — NOT via this flat manifest.
+  // against /axiom/agents, /axiom/agents/model-options, and
+  // /axiom/scheduler — NOT via this flat manifest.
 
   // -------------------- NOTIFICATIONS --------------------
   {
@@ -1728,7 +1728,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'notifications',
     backendPath: 'discord_bot_token',
     description: 'Main Discord bot token used by the brain to post notifications.',
-    usedBy: ['forven.api_core', 'forven.bot'],
+    usedBy: ['axiom.api_core', 'axiom.bot'],
   },
   {
     id: 'notifications.discord_webhook_url',
@@ -1740,7 +1740,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'notifications',
     backendPath: 'discord_webhook_url',
     description: 'Webhook URL that receives notifications when no bot is connected.',
-    usedBy: ['forven.api_core', 'forven.bot'],
+    usedBy: ['axiom.api_core', 'axiom.bot'],
   },
   {
     id: 'notifications.notification_level',
@@ -1756,7 +1756,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'notifications',
     backendPath: 'notification_level',
     description: 'Coarse delivery policy that suppresses or enables channels of notifications.',
-    usedBy: ['forven.api_core', 'forven.bot'],
+    usedBy: ['axiom.api_core', 'axiom.bot'],
   },
   {
     id: 'notifications.notify_on_entry',
@@ -1768,7 +1768,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'notifications',
     backendPath: 'notify_on_entry',
     description: 'Send a notification when a new position opens.',
-    usedBy: ['forven.api_core', 'forven.bot'],
+    usedBy: ['axiom.api_core', 'axiom.bot'],
   },
   {
     id: 'notifications.notify_on_exit',
@@ -1780,7 +1780,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'notifications',
     backendPath: 'notify_on_exit',
     description: 'Send a notification when a position closes.',
-    usedBy: ['forven.api_core', 'forven.bot'],
+    usedBy: ['axiom.api_core', 'axiom.bot'],
   },
   {
     id: 'notifications.notify_daily_summary',
@@ -1792,7 +1792,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'notifications',
     backendPath: 'notify_daily_summary',
     description: 'Send a once-per-day P&L and activity digest.',
-    usedBy: ['forven.api_core', 'forven.bot'],
+    usedBy: ['axiom.api_core', 'axiom.bot'],
   },
   {
     id: 'notifications.notify_health_reports',
@@ -1804,7 +1804,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'notifications',
     backendPath: 'notify_health_reports',
     description: 'Send strategy health and degradation reports.',
-    usedBy: ['forven.api_core', 'forven.health_monitor'],
+    usedBy: ['axiom.api_core', 'axiom.health_monitor'],
   },
   {
     id: 'notifications.notify_errors',
@@ -1816,7 +1816,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'notifications',
     backendPath: 'notify_errors',
     description: 'Forward runtime errors and warnings to the notification channel.',
-    usedBy: ['forven.api_core', 'forven.bot'],
+    usedBy: ['axiom.api_core', 'axiom.bot'],
   },
 
   // -------------------- SYSTEM: BOT OPERATIONS --------------------
@@ -1832,7 +1832,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'scanner_execution_enabled',
     description: 'Allow the scanner loop to place live orders when signals fire.',
-    usedBy: ['forven.scanner', 'forven.runtime_worker'],
+    usedBy: ['axiom.scanner', 'axiom.runtime_worker'],
     advanced: true,
   },
   {
@@ -1845,7 +1845,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'execution_fast_path_enabled',
     description: 'Skip the slow in-process brain path and execute signals synchronously.',
-    usedBy: ['forven.runtime_worker', 'forven.scanner'],
+    usedBy: ['axiom.runtime_worker', 'axiom.scanner'],
     advanced: true,
   },
   {
@@ -1858,7 +1858,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'throughput_auto_scheduler_control',
     description: 'Let the throughput manager adjust scheduler cadences automatically.',
-    usedBy: ['forven.scheduler', 'forven.control_plane.ops'],
+    usedBy: ['axiom.scheduler', 'axiom.control_plane.ops'],
     advanced: true,
   },
   {
@@ -1871,7 +1871,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'adaptive_pipeline_throughput_enabled',
     description: 'Scale pipeline throughput up or down based on saturation signals.',
-    usedBy: ['forven.strategy_lifecycle', 'forven.control_plane.ops'],
+    usedBy: ['axiom.strategy_lifecycle', 'axiom.control_plane.ops'],
     advanced: true,
   },
   {
@@ -1885,7 +1885,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'pipeline_target_clear_hours',
     description: 'How quickly the adaptive controller aims to drain the pipeline backlog.',
-    usedBy: ['forven.strategy_lifecycle', 'forven.control_plane.ops'],
+    usedBy: ['axiom.strategy_lifecycle', 'axiom.control_plane.ops'],
     advanced: true,
   },
   {
@@ -1899,7 +1899,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'ideation_interval_minutes',
     description: 'Minutes between ideation agent runs.',
-    usedBy: ['forven.scheduler', 'forven.agents.runner'],
+    usedBy: ['axiom.scheduler', 'axiom.agents.runner'],
     advanced: true,
   },
   {
@@ -1913,7 +1913,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'coding_interval_minutes',
     description: 'Minutes between coding-agent runs that produce new strategy code.',
-    usedBy: ['forven.scheduler', 'forven.agents.runner'],
+    usedBy: ['axiom.scheduler', 'axiom.agents.runner'],
     advanced: true,
   },
   {
@@ -1927,7 +1927,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'testing_interval_minutes',
     description: 'Minutes between testing-agent passes.',
-    usedBy: ['forven.scheduler', 'forven.agents.runner'],
+    usedBy: ['axiom.scheduler', 'axiom.agents.runner'],
     advanced: true,
   },
   {
@@ -1941,7 +1941,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'graduation_interval_minutes',
     description: 'Minutes between graduation-agent evaluations of candidate strategies.',
-    usedBy: ['forven.scheduler', 'forven.strategy_lifecycle'],
+    usedBy: ['axiom.scheduler', 'axiom.strategy_lifecycle'],
     advanced: true,
   },
 
@@ -1956,7 +1956,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'backtest_matrix_workers',
     description: 'Worker count used by the backtest matrix runner.',
-    usedBy: ['forven.strategies.backtest', 'forven.runtime_worker'],
+    usedBy: ['axiom.strategies.backtest', 'axiom.runtime_worker'],
     advanced: true,
   },
   {
@@ -1969,7 +1969,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'pipeline_saturation_threshold',
     description: 'Queue depth at which adaptive throughput begins throttling new work.',
-    usedBy: ['forven.strategy_lifecycle', 'forven.control_plane.ops'],
+    usedBy: ['axiom.strategy_lifecycle', 'axiom.control_plane.ops'],
     advanced: true,
   },
   {
@@ -1982,7 +1982,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'pipeline_resume_threshold',
     description: 'Queue depth at which throttling is released and new work resumes.',
-    usedBy: ['forven.strategy_lifecycle', 'forven.control_plane.ops'],
+    usedBy: ['axiom.strategy_lifecycle', 'axiom.control_plane.ops'],
     advanced: true,
   },
   {
@@ -1996,7 +1996,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'scanner_signal_interval_minutes',
     description: 'Minutes between scanner signal-generation passes.',
-    usedBy: ['forven.scanner', 'forven.scheduler'],
+    usedBy: ['axiom.scanner', 'axiom.scheduler'],
     advanced: true,
   },
   {
@@ -2010,7 +2010,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'scanner_execution_interval_minutes',
     description: 'Minutes between scanner execution passes (placing orders on signals).',
-    usedBy: ['forven.scanner', 'forven.scheduler'],
+    usedBy: ['axiom.scanner', 'axiom.scheduler'],
     advanced: true,
   },
   {
@@ -2023,7 +2023,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'scanner_allow_direct_market_fetch',
     description: 'Let the scanner bypass the cache and hit the exchange directly when stale.',
-    usedBy: ['forven.scanner', 'forven.market_data'],
+    usedBy: ['axiom.scanner', 'axiom.market_data'],
     advanced: true,
   },
   {
@@ -2037,7 +2037,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'daemon_candle_cache_refresh_seconds',
     description: 'How often the daemon refreshes the shared candle cache.',
-    usedBy: ['forven.daemon', 'forven.market_data_collector'],
+    usedBy: ['axiom.daemon', 'axiom.market_data_collector'],
     advanced: true,
   },
   {
@@ -2050,7 +2050,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'pipeline_assignments_per_cycle',
     description: 'Max strategies the pipeline assigns to workers per dispatch cycle.',
-    usedBy: ['forven.strategy_lifecycle', 'forven.runtime_worker'],
+    usedBy: ['axiom.strategy_lifecycle', 'axiom.runtime_worker'],
     advanced: true,
   },
   {
@@ -2063,7 +2063,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'pipeline_drain_mode',
     description: 'Drain in-flight work before accepting new assignments during pressure.',
-    usedBy: ['forven.strategy_lifecycle', 'forven.runtime_worker'],
+    usedBy: ['axiom.strategy_lifecycle', 'axiom.runtime_worker'],
     advanced: true,
   },
   {
@@ -2077,7 +2077,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'pipeline_drain_max_seconds',
     description: 'Hard ceiling on how long drain mode blocks new assignments.',
-    usedBy: ['forven.strategy_lifecycle', 'forven.runtime_worker'],
+    usedBy: ['axiom.strategy_lifecycle', 'axiom.runtime_worker'],
     advanced: true,
   },
   {
@@ -2091,7 +2091,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'task_stale_recovery_minutes',
     description: 'Minutes after which a running task is declared stale and recovered.',
-    usedBy: ['forven.phantom_recovery', 'forven.runtime_worker'],
+    usedBy: ['axiom.phantom_recovery', 'axiom.runtime_worker'],
     advanced: true,
   },
   {
@@ -2104,7 +2104,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'pipeline_gate_failure_archive_attempts',
     description: 'Consecutive gate failures before a strategy is auto-archived.',
-    usedBy: ['forven.strategy_lifecycle', 'forven.api_domains.tasks'],
+    usedBy: ['axiom.strategy_lifecycle', 'axiom.api_domains.tasks'],
     advanced: true,
   },
   {
@@ -2117,7 +2117,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'agent_task_claim_limit',
     description: 'Max agent tasks a single worker may claim per cycle.',
-    usedBy: ['forven.agents.runner', 'forven.api_domains.tasks'],
+    usedBy: ['axiom.agents.runner', 'axiom.api_domains.tasks'],
     advanced: true,
   },
   {
@@ -2130,7 +2130,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'brain_task_claim_limit',
     description: 'Max brain tasks a single worker may claim per cycle.',
-    usedBy: ['forven.brain', 'forven.api_domains.tasks'],
+    usedBy: ['axiom.brain', 'axiom.api_domains.tasks'],
     advanced: true,
   },
   {
@@ -2143,7 +2143,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'code_strategy_requires_approval',
     description: 'Require a human approval before a generated strategy enters the pipeline.',
-    usedBy: ['forven.control_plane.approvals', 'forven.strategy_lifecycle'],
+    usedBy: ['axiom.control_plane.approvals', 'axiom.strategy_lifecycle'],
     advanced: true,
   },
   {
@@ -2156,7 +2156,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'auto_approve_dethrone',
     description: 'When a challenger materially beats an incumbent holding a capital slot, auto-apply the dethrone so the slot frees (reversible: the incumbent is demoted paper→gauntlet). Off requires a human to approve each dethrone.',
-    usedBy: ['forven.policy'],
+    usedBy: ['axiom.policy'],
     advanced: true,
   },
   {
@@ -2169,7 +2169,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'canonical_auto_deploy_enabled',
     description: 'When a hypothesis graduates, enqueue its per-cell-best (canonical) winner into the gauntlet paper-promotion gate (the robustness floor still applies). Off keeps graduation a label only.',
-    usedBy: ['forven.hypothesis_graduation'],
+    usedBy: ['axiom.hypothesis_graduation'],
     advanced: true,
   },
   {
@@ -2182,7 +2182,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'paper_slot_competition_enabled',
     description: 'On: each symbol/timeframe slot holds one strategy — challengers must beat and dethrone the incumbent, and a paper count cap applies. Off (default): every strategy that passes the gauntlet is promoted to paper, no per-slot competition, no cap.',
-    usedBy: ['forven.policy', 'forven.brain'],
+    usedBy: ['axiom.policy', 'axiom.brain'],
     advanced: true,
   },
   {
@@ -2195,7 +2195,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'brain_queue_max_pending',
     description: 'Soft cap on pending brain-cycle dispatches before the scheduler prunes (generic pings first; routine/operator dispatches preserved; a hard ceiling backstops).',
-    usedBy: ['forven.scheduler'],
+    usedBy: ['axiom.scheduler'],
     advanced: true,
   },
 
@@ -2210,7 +2210,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'remote_engine_enabled',
     description: 'Offload heavy backtests to a remote engine process.',
-    usedBy: ['forven.routers.backtesting', 'forven.api_core'],
+    usedBy: ['axiom.routers.backtesting', 'axiom.api_core'],
   },
   {
     id: 'bot-operations.remote_engine_url',
@@ -2222,7 +2222,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'remote_engine_url',
     description: 'Base URL of the remote engine service.',
-    usedBy: ['forven.routers.backtesting', 'forven.api_core'],
+    usedBy: ['axiom.routers.backtesting', 'axiom.api_core'],
   },
   {
     id: 'bot-operations.remote_engine_data_root',
@@ -2234,7 +2234,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'bot-operations',
     backendPath: 'remote_engine_data_root',
     description: 'Shared data directory the remote engine reads market data from.',
-    usedBy: ['forven.routers.backtesting', 'forven.api_core'],
+    usedBy: ['axiom.routers.backtesting', 'axiom.api_core'],
   },
 
   // Data Engine (system)
@@ -2248,7 +2248,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'data-engine',
     backendPath: 'data_engine_settings.enabled',
     description: 'Route compatible data reads and collectors through the new DataHub path.',
-    usedBy: ['forven.data', 'forven.data_manager', 'forven.dataeng.settings'],
+    usedBy: ['axiom.data', 'axiom.data_manager', 'axiom.dataeng.settings'],
   },
   {
     id: 'data-engine.enabled_exchanges',
@@ -2261,7 +2261,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'data-engine',
     backendPath: 'data_engine_settings.enabled_exchanges',
     description: 'Exchange adapters registered by the Data Engine source registry.',
-    usedBy: ['forven.dataeng.registry', 'forven.dataeng.ccxt_source'],
+    usedBy: ['axiom.dataeng.registry', 'axiom.dataeng.ccxt_source'],
   },
   {
     id: 'data-engine.source_priority_candles',
@@ -2274,7 +2274,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'data-engine',
     backendPath: 'data_engine_settings.source_priority.candles',
     description: 'Ordered source preference for OHLCV candle reads.',
-    usedBy: ['forven.dataeng.registry', 'forven.dataeng.validation'],
+    usedBy: ['axiom.dataeng.registry', 'axiom.dataeng.validation'],
   },
   {
     id: 'data-engine.source_priority_funding',
@@ -2287,7 +2287,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'data-engine',
     backendPath: 'data_engine_settings.source_priority.funding',
     description: 'Ordered source preference for funding-rate data.',
-    usedBy: ['forven.dataeng.registry', 'forven.data_manager'],
+    usedBy: ['axiom.dataeng.registry', 'axiom.data_manager'],
   },
   {
     id: 'data-engine.source_priority_oi',
@@ -2300,7 +2300,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'data-engine',
     backendPath: 'data_engine_settings.source_priority.oi',
     description: 'Ordered source preference for open-interest data.',
-    usedBy: ['forven.dataeng.registry', 'forven.data_manager'],
+    usedBy: ['axiom.dataeng.registry', 'axiom.data_manager'],
   },
   {
     id: 'data-engine.point_in_time_mode',
@@ -2316,7 +2316,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'data-engine',
     backendPath: 'data_engine_settings.point_in_time_mode',
     description: 'Reproducible data reads: "latest" uses current values; "as-of pin" reconstructs the values in force at the pinned timestamp below for every backtest.',
-    usedBy: ['forven.dataeng.settings', 'forven.dataeng.hub', 'forven.strategies.backtest'],
+    usedBy: ['axiom.dataeng.settings', 'axiom.dataeng.hub', 'axiom.strategies.backtest'],
   },
   {
     id: 'data-engine.point_in_time_as_of',
@@ -2328,7 +2328,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'data-engine',
     backendPath: 'data_engine_settings.point_in_time_as_of',
     description: 'ISO-8601 timestamp (e.g. 2026-03-01T12:00:00Z) used only when point-in-time mode is "as-of pin". Backtests then read the data as it was known at this time; live reads are unaffected.',
-    usedBy: ['forven.strategies.backtest', 'forven.dataeng.settings'],
+    usedBy: ['axiom.strategies.backtest', 'axiom.dataeng.settings'],
   },
   {
     id: 'data-engine.auto_catchup_enabled',
@@ -2341,7 +2341,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'data_engine_settings.auto_catchup_enabled',
     description:
       'Run a background job every 10 min that drains the backfill plan, keeping the whole catalog current automatically (not just the active keep-alive set). Turn off to only catch up manually.',
-    usedBy: ['forven.scheduler', 'forven.api_domains.data'],
+    usedBy: ['axiom.scheduler', 'axiom.api_domains.data'],
   },
   {
     id: 'data-engine.auto_catchup_batch',
@@ -2355,14 +2355,14 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'data_engine_settings.auto_catchup_batch',
     description:
       'Max candle series the auto catch-up refreshes per 10-min run. Higher drains a backlog faster but makes more exchange API calls.',
-    usedBy: ['forven.scheduler', 'forven.api_domains.data'],
+    usedBy: ['axiom.scheduler', 'axiom.api_domains.data'],
   },
   {
     id: 'data-engine.onchain_provider',
     label: 'On-chain provider',
     default: '',
     type: 'select',
-    // Only adapters implemented in forven.dataeng.onchain — anything else is
+    // Only adapters implemented in axiom.dataeng.onchain — anything else is
     // rejected at fetch time, so free text here just deferred the error.
     options: [
       { value: '', label: 'Disabled' },
@@ -2373,7 +2373,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'data-engine',
     backendPath: 'data_engine_settings.onchain_provider',
     description: 'On-chain data provider adapter. Requires the API key below when enabled.',
-    usedBy: ['forven.dataeng.onchain', 'forven.dataeng.settings'],
+    usedBy: ['axiom.dataeng.onchain', 'axiom.dataeng.settings'],
   },
   {
     id: 'data-engine.onchain_api_key',
@@ -2385,7 +2385,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'data-engine',
     backendPath: 'data_engine_settings.onchain_api_key',
     description: 'API key used by the optional on-chain provider adapter.',
-    usedBy: ['forven.dataeng.onchain', 'forven.dataeng.settings'],
+    usedBy: ['axiom.dataeng.onchain', 'axiom.dataeng.settings'],
   },
   {
     id: 'data-engine.source_reconciliation_enabled',
@@ -2398,7 +2398,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'data_engine_settings.source_reconciliation.enabled',
     description:
       'Block promotion into paper/live when the backtest price source diverges from the live trade venue beyond the threshold below. Divergence is pre-computed out-of-band by the source-reconciliation job.',
-    usedBy: ['forven.policy', 'forven.source_reconciliation'],
+    usedBy: ['axiom.policy', 'axiom.source_reconciliation'],
   },
   {
     id: 'data-engine.source_reconciliation_max_divergence_pct',
@@ -2412,7 +2412,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'data_engine_settings.source_reconciliation.max_divergence_pct',
     description:
       'Worst-bar close-price divergence (backtest source vs live venue) tolerated before the reconciliation gate refuses promotion.',
-    usedBy: ['forven.policy', 'forven.source_reconciliation'],
+    usedBy: ['axiom.policy', 'axiom.source_reconciliation'],
   },
   {
     id: 'data-engine.source_reconciliation_block_when_missing',
@@ -2425,7 +2425,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendPath: 'data_engine_settings.source_reconciliation.block_when_missing',
     description:
       'When on, a strategy with no (or stale) computed divergence is held out of paper/live instead of being allowed through. Off keeps the funnel fail-open.',
-    usedBy: ['forven.policy', 'forven.source_reconciliation'],
+    usedBy: ['axiom.policy', 'axiom.source_reconciliation'],
   },
 
   // -------------------- SYSTEM: API KEYS --------------------
@@ -2439,7 +2439,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'api-keys',
     backendPath: 'polygon',
     description: 'API key for Polygon.io market data.',
-    usedBy: ['forven.polygon_client', 'forven.data', 'forven.api_core'],
+    usedBy: ['axiom.polygon_client', 'axiom.data', 'axiom.api_core'],
   },
 
   // -------------------- SYSTEM: TELEMETRY --------------------
@@ -2447,7 +2447,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
   // added here as the backend exposes them.
 
   // -------------------- SYSTEM: DATABASE MAINTENANCE --------------------
-  // These live in the pipeline settings payload (forven:pipeline:settings) and
+  // These live in the pipeline settings payload (axiom:pipeline:settings) and
   // round-trip via PUT /api/pipeline/settings (backendSection 'pipeline'). A
   // retention value of 0 disables pruning for that table.
   {
@@ -2461,7 +2461,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'retention_backtest_trash_days',
     description: 'Days to keep trashed/deleted backtest results before they are hard-deleted. 0 disables pruning.',
-    usedBy: ['forven.maintenance', 'forven.api_core'],
+    usedBy: ['axiom.maintenance', 'axiom.api_core'],
   },
   {
     id: 'pipeline.retention_activity_log_days',
@@ -2474,7 +2474,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'retention_activity_log_days',
     description: 'Days to keep activity_log rows before pruning. 0 disables pruning.',
-    usedBy: ['forven.maintenance', 'forven.api_core'],
+    usedBy: ['axiom.maintenance', 'axiom.api_core'],
   },
   {
     id: 'pipeline.retention_scanner_results_days',
@@ -2487,7 +2487,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'retention_scanner_results_days',
     description: 'Days to keep scanner_signal_results rows before pruning. 0 disables pruning.',
-    usedBy: ['forven.maintenance', 'forven.api_core'],
+    usedBy: ['axiom.maintenance', 'axiom.api_core'],
   },
   {
     id: 'pipeline.retention_gate_rejections_days',
@@ -2500,7 +2500,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'retention_gate_rejections_days',
     description: 'Days to keep gate_rejections rows before pruning. 0 disables pruning.',
-    usedBy: ['forven.maintenance', 'forven.api_core'],
+    usedBy: ['axiom.maintenance', 'axiom.api_core'],
   },
   {
     id: 'pipeline.maintenance_vacuum_enabled',
@@ -2512,7 +2512,7 @@ export const SETTINGS_MANIFEST: SettingsEntry[] = [
     backendSection: 'pipeline',
     backendPath: 'maintenance_vacuum_enabled',
     description: 'Run VACUUM during the daily DB maintenance job to reclaim disk space. Heavy operation — off by default.',
-    usedBy: ['forven.maintenance', 'forven.api_core'],
+    usedBy: ['axiom.maintenance', 'axiom.api_core'],
   },
 
   // -------------------- DANGER --------------------

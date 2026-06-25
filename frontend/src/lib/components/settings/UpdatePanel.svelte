@@ -45,7 +45,7 @@
 		<div class="min-w-0">
 			<h3 class="text-sm font-semibold text-zinc-100">Software updates</h3>
 			<p class="text-[11px] text-zinc-400 mt-0.5">
-				Fast-forward Forven to the latest code on
+				Fast-forward Axiom to the latest code on
 				<span class="text-zinc-300">{status?.target_remote ?? 'origin'}/{status?.target_branch ?? 'main'}</span>.
 				Applying restarts the backend.
 			</p>

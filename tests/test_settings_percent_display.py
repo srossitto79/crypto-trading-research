@@ -1,4 +1,4 @@
-"""Settings UI percent contract: ratio thresholds display as whole percent.
+﻿"""Settings UI percent contract: ratio thresholds display as whole percent.
 
 The policy config canonically stores drawdown-style thresholds as fractions
 (0.30); the settings page presents them with a "%" unit. The conversion to
@@ -7,7 +7,7 @@ tests pin that contract so a stored 0.5 can never again render as "0.5 %"
 while meaning 50%.
 """
 
-from forven.policy import (
+from axiom.policy import (
     _UI_PERCENT_THRESHOLD_PATHS,
     _coerce_ratio_threshold,
     pipeline_thresholds_for_display,

@@ -1,6 +1,6 @@
 # Hypothesis-First Hardening Checklist
 
-Use this checklist against the live `.forven` state after startup, after at least one fresh research cycle, and after at least one restart.
+Use this checklist against the live `.axiom` state after startup, after at least one fresh research cycle, and after at least one restart.
 
 Each item should be marked as one of:
 - `PASS`

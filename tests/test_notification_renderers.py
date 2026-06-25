@@ -1,5 +1,5 @@
-from forven.bot import _render_operational_discord_reply
-from forven.notification_renderers import render_discord_message, summarize_discord_text
+﻿from axiom.bot import _render_operational_discord_reply
+from axiom.notification_renderers import render_discord_message, summarize_discord_text
 
 
 SAMPLE_POST_MORTEM = """My Findings
@@ -24,7 +24,7 @@ What would you like me to do?
 Approve one of the spread_arbitrage fix requests so validation can proceed?
 Something else?
 
-\u2014 Forven"""
+\u2014 Axiom"""
 
 
 def test_summarize_discord_text_keeps_high_signal_lines():

@@ -1,7 +1,7 @@
-import json
+﻿import json
 
-from forven.db import get_db
-from forven.hypotheses import create_hypothesis
+from axiom.db import get_db
+from axiom.hypotheses import create_hypothesis
 
 
 def _make_crucible(
@@ -172,8 +172,8 @@ def _make_planner_task(
         )
 
 
-def test_empty_fresh_install_plans_one_propose_crucible_action(forven_db):
-    from forven.crucible_planner import plan_next_actions
+def test_empty_fresh_install_plans_one_propose_crucible_action(AXIOM_db):
+    from axiom.crucible_planner import plan_next_actions
 
     actions = plan_next_actions(limit=3)
 
@@ -185,8 +185,8 @@ def test_empty_fresh_install_plans_one_propose_crucible_action(forven_db):
     assert action.priority == -2
 
 
-def test_researching_crucible_without_strategies_routes_to_candidate_development(forven_db):
-    from forven.crucible_planner import plan_next_actions
+def test_researching_crucible_without_strategies_routes_to_candidate_development(AXIOM_db):
+    from axiom.crucible_planner import plan_next_actions
 
     crucible = _make_crucible("researching")
 
@@ -203,11 +203,11 @@ def test_researching_crucible_without_strategies_routes_to_candidate_development
     assert action.input_data["hypothesis_id"] == crucible["id"]
 
 
-def test_planner_defers_develop_candidate_when_one_is_in_flight(forven_db):
+def test_planner_defers_develop_candidate_when_one_is_in_flight(AXIOM_db):
     """Single-owner dedup: when a develop_candidate is already in flight for the
     crucible (e.g. dispatched by the hypothesis_promotion_loop, which keys tasks
     on the same hypothesis_id), the planner must NOT emit a competing one."""
-    from forven.crucible_planner import plan_next_actions
+    from axiom.crucible_planner import plan_next_actions
 
     crucible = _make_crucible("researching")
     # Simulate the promotion loop already developing a candidate for this thesis.
@@ -223,8 +223,8 @@ def test_planner_defers_develop_candidate_when_one_is_in_flight(forven_db):
     assert competing == [], "planner must defer to the in-flight develop_candidate"
 
 
-def test_exhausted_researching_crucible_does_not_consume_planner_slot(forven_db):
-    from forven.crucible_planner import plan_next_actions
+def test_exhausted_researching_crucible_does_not_consume_planner_slot(AXIOM_db):
+    from axiom.crucible_planner import plan_next_actions
 
     exhausted = _make_crucible("researching")
     eligible = _make_crucible("researching")
@@ -238,8 +238,8 @@ def test_exhausted_researching_crucible_does_not_consume_planner_slot(forven_db)
     assert actions[0].crucible_id == eligible["id"]
 
 
-def test_all_researching_crucibles_spawn_exhausted_proposes_replacement(forven_db):
-    from forven.crucible_planner import plan_next_actions
+def test_all_researching_crucibles_spawn_exhausted_proposes_replacement(AXIOM_db):
+    from axiom.crucible_planner import plan_next_actions
 
     exhausted = _make_crucible("researching")
     for index in range(8):
@@ -252,8 +252,8 @@ def test_all_researching_crucibles_spawn_exhausted_proposes_replacement(forven_d
     assert actions[0].crucible_id is None
 
 
-def test_settled_research_pool_proposes_replacement_when_no_busy_work(forven_db):
-    from forven.crucible_planner import plan_next_actions
+def test_settled_research_pool_proposes_replacement_when_no_busy_work(AXIOM_db):
+    from axiom.crucible_planner import plan_next_actions
 
     exhausted = _make_crucible("researching")
     for index in range(8):
@@ -269,8 +269,8 @@ def test_settled_research_pool_proposes_replacement_when_no_busy_work(forven_db)
     assert actions[0].crucible_id is None
 
 
-def test_busy_strategy_does_not_block_replenishment_when_pool_is_exhausted(forven_db):
-    from forven.crucible_planner import plan_next_actions
+def test_busy_strategy_does_not_block_replenishment_when_pool_is_exhausted(AXIOM_db):
+    from axiom.crucible_planner import plan_next_actions
 
     exhausted = _make_crucible("researching")
     for index in range(8):
@@ -286,8 +286,8 @@ def test_busy_strategy_does_not_block_replenishment_when_pool_is_exhausted(forve
     assert actions[0].crucible_id is None
 
 
-def test_active_proposed_crucible_blocks_extra_replenishment(forven_db):
-    from forven.crucible_planner import plan_next_actions
+def test_active_proposed_crucible_blocks_extra_replenishment(AXIOM_db):
+    from axiom.crucible_planner import plan_next_actions
 
     exhausted = _make_crucible("researching")
     for index in range(8):
@@ -300,8 +300,8 @@ def test_active_proposed_crucible_blocks_extra_replenishment(forven_db):
     assert actions == []
 
 
-def test_backtest_failed_strategy_does_not_block_new_candidate(forven_db):
-    from forven.crucible_planner import plan_next_actions
+def test_backtest_failed_strategy_does_not_block_new_candidate(AXIOM_db):
+    from axiom.crucible_planner import plan_next_actions
 
     crucible = _make_crucible("researching")
     _make_strategy_with_stage(crucible["id"], "S-BACKTEST-FAILED", "backtest_failed")
@@ -313,8 +313,8 @@ def test_backtest_failed_strategy_does_not_block_new_candidate(forven_db):
     assert actions[0].crucible_id == crucible["id"]
 
 
-def test_graduated_protected_proven_crucible_expands_instead_of_proposing(forven_db):
-    from forven.crucible_planner import plan_next_actions
+def test_graduated_protected_proven_crucible_expands_instead_of_proposing(AXIOM_db):
+    from axiom.crucible_planner import plan_next_actions
 
     crucible = _make_crucible(
         "proven",
@@ -331,8 +331,8 @@ def test_graduated_protected_proven_crucible_expands_instead_of_proposing(forven
     assert action.agent_id == "strategy-developer"
 
 
-def test_protected_proven_crucible_with_prior_completed_expansion_does_not_expand_again(forven_db):
-    from forven.crucible_planner import plan_next_actions
+def test_protected_proven_crucible_with_prior_completed_expansion_does_not_expand_again(AXIOM_db):
+    from axiom.crucible_planner import plan_next_actions
 
     crucible = _make_crucible(
         "proven",
@@ -344,8 +344,8 @@ def test_protected_proven_crucible_with_prior_completed_expansion_does_not_expan
     assert plan_next_actions(limit=3) == []
 
 
-def test_protected_proven_crucible_with_prior_cancelled_expansion_does_not_expand_again(forven_db):
-    from forven.crucible_planner import plan_next_actions
+def test_protected_proven_crucible_with_prior_cancelled_expansion_does_not_expand_again(AXIOM_db):
+    from axiom.crucible_planner import plan_next_actions
 
     crucible = _make_crucible(
         "proven",
@@ -357,8 +357,8 @@ def test_protected_proven_crucible_with_prior_cancelled_expansion_does_not_expan
     assert plan_next_actions(limit=3) == []
 
 
-def test_protected_proven_crucible_without_prior_expansion_gets_first_expansion(forven_db):
-    from forven.crucible_planner import plan_next_actions
+def test_protected_proven_crucible_without_prior_expansion_gets_first_expansion(AXIOM_db):
+    from axiom.crucible_planner import plan_next_actions
 
     crucible = _make_crucible(
         "proven",
@@ -373,8 +373,8 @@ def test_protected_proven_crucible_without_prior_expansion_gets_first_expansion(
     assert actions[0].crucible_id == crucible["id"]
 
 
-def test_proposed_active_crucible_routes_to_refinement(forven_db):
-    from forven.crucible_planner import plan_next_actions
+def test_proposed_active_crucible_routes_to_refinement(AXIOM_db):
+    from axiom.crucible_planner import plan_next_actions
 
     crucible = _make_crucible("proposed")
 
@@ -390,8 +390,8 @@ def test_proposed_active_crucible_routes_to_refinement(forven_db):
     assert action.priority == 4
 
 
-def test_proposed_crucible_with_completed_refinement_routes_to_candidate_development(forven_db):
-    from forven.crucible_planner import plan_next_actions
+def test_proposed_crucible_with_completed_refinement_routes_to_candidate_development(AXIOM_db):
+    from axiom.crucible_planner import plan_next_actions
 
     crucible = _make_crucible("proposed")
     _make_planner_task(crucible["id"], "refine_crucible", "done", durable_refine=True)
@@ -412,8 +412,8 @@ def test_proposed_crucible_with_completed_refinement_routes_to_candidate_develop
     assert row["status"] == "researching"
 
 
-def test_proposed_crucible_with_narrative_only_refinement_retries_refinement(forven_db):
-    from forven.crucible_planner import plan_next_actions
+def test_proposed_crucible_with_narrative_only_refinement_retries_refinement(AXIOM_db):
+    from axiom.crucible_planner import plan_next_actions
 
     crucible = _make_crucible("proposed")
     _make_planner_task(crucible["id"], "refine_crucible", "done")
@@ -431,8 +431,8 @@ def test_proposed_crucible_with_narrative_only_refinement_retries_refinement(for
     assert row["status"] == "proposed"
 
 
-def test_proposed_crucible_with_expired_refinements_retries_refinement(forven_db):
-    from forven.crucible_planner import plan_next_actions
+def test_proposed_crucible_with_expired_refinements_retries_refinement(AXIOM_db):
+    from axiom.crucible_planner import plan_next_actions
 
     crucible = _make_crucible("proposed")
     for _ in range(3):
@@ -450,8 +450,8 @@ def test_proposed_crucible_with_expired_refinements_retries_refinement(forven_db
     assert actions[0].crucible_id == crucible["id"]
 
 
-def test_preempted_refinement_does_not_poison_crucible_action(forven_db):
-    from forven.crucible_planner import plan_next_actions
+def test_preempted_refinement_does_not_poison_crucible_action(AXIOM_db):
+    from axiom.crucible_planner import plan_next_actions
 
     crucible = _make_crucible("proposed")
     for _ in range(3):
@@ -469,8 +469,8 @@ def test_preempted_refinement_does_not_poison_crucible_action(forven_db):
     assert actions[0].crucible_id == crucible["id"]
 
 
-def test_researching_crucible_with_untested_strategy_routes_to_backtest(forven_db):
-    from forven.crucible_planner import plan_next_actions
+def test_researching_crucible_with_untested_strategy_routes_to_backtest(AXIOM_db):
+    from axiom.crucible_planner import plan_next_actions
 
     crucible = _make_crucible("researching")
     strategy_id = _make_strategy(crucible["id"])
@@ -486,8 +486,8 @@ def test_researching_crucible_with_untested_strategy_routes_to_backtest(forven_d
     assert action.input_data["strategy_id"] == strategy_id
 
 
-def test_mismatched_strategy_lineage_does_not_satisfy_crucible_candidate_need(forven_db):
-    from forven.crucible_planner import plan_next_actions
+def test_mismatched_strategy_lineage_does_not_satisfy_crucible_candidate_need(AXIOM_db):
+    from axiom.crucible_planner import plan_next_actions
 
     parent = _make_crucible("researching")
     child = _make_crucible("researching")
@@ -509,8 +509,8 @@ def test_mismatched_strategy_lineage_does_not_satisfy_crucible_candidate_need(fo
     assert actions[0].crucible_id == parent["id"]
 
 
-def test_open_matching_action_dedupes_pending_task(forven_db):
-    from forven.crucible_planner import plan_next_actions
+def test_open_matching_action_dedupes_pending_task(AXIOM_db):
+    from axiom.crucible_planner import plan_next_actions
 
     crucible = _make_crucible("researching")
     with get_db() as conn:
@@ -538,8 +538,8 @@ def test_open_matching_action_dedupes_pending_task(forven_db):
     assert plan_next_actions(limit=3) == []
 
 
-def test_open_matching_action_dedupes_running_task(forven_db):
-    from forven.crucible_planner import plan_next_actions
+def test_open_matching_action_dedupes_running_task(AXIOM_db):
+    from axiom.crucible_planner import plan_next_actions
 
     crucible = _make_crucible("researching")
     with get_db() as conn:
@@ -567,8 +567,8 @@ def test_open_matching_action_dedupes_running_task(forven_db):
     assert plan_next_actions(limit=3) == []
 
 
-def test_run_cycle_assigns_planned_task_with_crucible_planner_input(forven_db):
-    from forven.crucible_planner import run_crucible_planner_cycle
+def test_run_cycle_assigns_planned_task_with_crucible_planner_input(AXIOM_db):
+    from axiom.crucible_planner import run_crucible_planner_cycle
 
     crucible = _make_crucible("researching")
 
@@ -616,12 +616,12 @@ def _seed_in_flight_strategy_dev_tasks(count: int, *, crucible_id: str = "other-
             )
 
 
-def test_planner_defers_strategy_developer_action_when_in_flight_cap_reached(forven_db):
+def test_planner_defers_strategy_developer_action_when_in_flight_cap_reached(AXIOM_db):
     """The planner shares the strategy-developer in-flight budget with the
     hypothesis-promotion loop: when the pool is full it plans the action but
     defers dispatch instead of piling on past the cap."""
-    from forven.crucible_planner import run_crucible_planner_cycle
-    from forven.hypothesis_promotion import MAX_IN_FLIGHT_DEFAULT
+    from axiom.crucible_planner import run_crucible_planner_cycle
+    from axiom.hypothesis_promotion import MAX_IN_FLIGHT_DEFAULT
 
     _make_crucible("researching")  # wants a develop_candidate (strategy-developer)
     _seed_in_flight_strategy_dev_tasks(MAX_IN_FLIGHT_DEFAULT)
@@ -641,11 +641,11 @@ def test_planner_defers_strategy_developer_action_when_in_flight_cap_reached(for
     assert n == MAX_IN_FLIGHT_DEFAULT
 
 
-def test_planner_backtest_action_not_blocked_by_strategy_developer_cap(forven_db):
+def test_planner_backtest_action_not_blocked_by_strategy_developer_cap(AXIOM_db):
     """run_backtest targets the simulation-agent pool, so the strategy-developer
     in-flight cap must not defer it even when that pool is full."""
-    from forven.crucible_planner import run_crucible_planner_cycle
-    from forven.hypothesis_promotion import MAX_IN_FLIGHT_DEFAULT
+    from axiom.crucible_planner import run_crucible_planner_cycle
+    from axiom.hypothesis_promotion import MAX_IN_FLIGHT_DEFAULT
 
     crucible = _make_crucible("researching")
     _make_strategy(crucible["id"])  # untested strategy -> routes to run_backtest
@@ -665,8 +665,8 @@ def test_planner_backtest_action_not_blocked_by_strategy_developer_cap(forven_db
     assert row["type"] == "backtest"
 
 
-def test_candidate_action_open_treats_develop_and_expand_as_one_family(forven_db):
-    from forven.crucible_planner import CrucibleTaskIndex
+def test_candidate_action_open_treats_develop_and_expand_as_one_family(AXIOM_db):
+    from axiom.crucible_planner import CrucibleTaskIndex
 
     # Only an expand_viable_crucible task is open...
     _make_planner_task("H-FAM", "expand_viable_crucible", "pending")
@@ -678,13 +678,13 @@ def test_candidate_action_open_treats_develop_and_expand_as_one_family(forven_db
     assert index.candidate_action_open("H-OTHER") is False
 
 
-def test_parked_researching_crucible_is_archived_and_does_not_suppress_replenishment(forven_db):
+def test_parked_researching_crucible_is_archived_and_does_not_suppress_replenishment(AXIOM_db):
     """Audit B-14: a researching crucible with 0 live strategies whose
     develop_candidate retries are exhausted is permanently unplannable. It must
     (a) stop counting as actionable so pool replenishment isn't silently
     suppressed, and (b) have its active-pool slot freed with an attributable
     archive_reason instead of lingering as a zombie no drain covers."""
-    from forven.crucible_planner import plan_next_actions
+    from axiom.crucible_planner import plan_next_actions
 
     parked = _make_crucible("researching")
     for _ in range(3):
@@ -704,11 +704,11 @@ def test_parked_researching_crucible_is_archived_and_does_not_suppress_replenish
     assert row["archive_reason"] == "develop_retries_exhausted"
 
 
-def test_parked_protected_crucible_is_never_auto_archived(forven_db):
+def test_parked_protected_crucible_is_never_auto_archived(AXIOM_db):
     """Protected/contested theses must not be auto-archived by a background
     planning pass (that would spam dethrone approvals); they still stop
     suppressing replenishment."""
-    from forven.crucible_planner import plan_next_actions
+    from axiom.crucible_planner import plan_next_actions
 
     parked = _make_crucible("researching", protection_status="protected")
     for _ in range(3):
@@ -725,9 +725,9 @@ def test_parked_protected_crucible_is_never_auto_archived(forven_db):
     assert row["manager_state"] == "active"
 
 
-def test_researching_crucible_below_retry_cap_is_not_archived(forven_db):
+def test_researching_crucible_below_retry_cap_is_not_archived(AXIOM_db):
     """Two failures < cap: the crucible is still actionable (develop again)."""
-    from forven.crucible_planner import plan_next_actions
+    from axiom.crucible_planner import plan_next_actions
 
     crucible = _make_crucible("researching")
     for _ in range(2):
@@ -746,8 +746,8 @@ def test_researching_crucible_below_retry_cap_is_not_archived(forven_db):
     assert row["manager_state"] == "active"
 
 
-def test_proven_crucible_defers_to_open_develop_candidate(forven_db):
-    from forven.crucible_planner import plan_next_actions
+def test_proven_crucible_defers_to_open_develop_candidate(AXIOM_db):
+    from axiom.crucible_planner import plan_next_actions
 
     crucible = _make_crucible(status="proven", protection_status="protected")
     # An in-flight develop_candidate (e.g. from the promotion loop) should make

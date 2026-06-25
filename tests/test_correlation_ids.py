@@ -1,11 +1,11 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import logging
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from forven.correlation import (
+from axiom.correlation import (
     REQUEST_ID_HEADER,
     CorrelationIdMiddleware,
     RequestIdLogFilter,
@@ -55,7 +55,7 @@ def test_correlation_contextvar_resets_between_requests():
 def test_log_filter_injects_request_id_attribute(capsys):
     handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter("[%(request_id)s] %(message)s"))
-    logger = logging.getLogger("forven.test.correlation")
+    logger = logging.getLogger("axiom.test.correlation")
     logger.handlers = [handler]
     logger.addFilter(RequestIdLogFilter())
     logger.setLevel(logging.INFO)

@@ -10,7 +10,7 @@
 		getResult,
 		getResultChartContext,
 		getStrategyContainer,
-		promoteForvenStrategy,
+		promoteAxiomStrategy,
 		submitBacktest,
 		submitOptimization,
 		type BacktestResult,
@@ -2120,7 +2120,7 @@
 		const target = nextPipelineStage;
 		promoting = true;
 		try {
-			await promoteForvenStrategy(strategyId, target.key, {
+			await promoteAxiomStrategy(strategyId, target.key, {
 				fromStatus: currentLifecycleStage,
 				reason: promoteReason.trim() || (override ? 'Operator gate override' : 'Manual promotion from configuration tab'),
 				force: true,
@@ -2149,7 +2149,7 @@
 		if (typeof window !== 'undefined' && !window.confirm(`Archive strategy ${strategyId}?`)) return;
 		promoting = true;
 		try {
-			await promoteForvenStrategy(strategyId, 'archived', {
+			await promoteAxiomStrategy(strategyId, 'archived', {
 				fromStatus: currentLifecycleStage,
 				reason: 'Archived from configuration tab',
 				force: true,

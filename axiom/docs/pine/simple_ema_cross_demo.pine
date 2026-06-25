@@ -1,0 +1,95 @@
+// ============================================================================
+// Simple EMA(20)/EMA(50) Cross — TradingView clone of Axiom S01508
+// ============================================================================
+// Purpose: cross-validate Axiom backtest math against TradingView.
+//
+// Axiom side
+//   strategy_id : S01508  (simple_ema_cross_demo)
+//   dataset     : BTC/USDT-1h  (binance)
+//   window      : 2025-04-19 17:00 UTC  →  2026-04-19 16:00 UTC  (8760 bars)
+//   leverage    : 1x
+//   fee model   : ~11 bps round-trip (5.5 bps per side) inferred from trades
+//   entry       : ta.crossover(ema_fast, ema_slow)   on bar close
+//   exit        : ta.crossunder(ema_fast, ema_slow)  on bar close
+//
+// How to use
+//   1. Open BINANCE:BTCUSDT on the 1H chart in TradingView.
+//   2. Paste this script into the Pine Editor and Add to Chart.
+//   3. Open the Strategy Tester panel. The script auto-restricts trades to
+//      the Axiom window, so TradingView's totals should line up with
+//      Axiom's combined (IS + OOS) figures below.
+//
+// Expected Axiom numbers (leverage=1x, long-only, single-side)
+//                        trades   win_rate   return_pct   profit_factor   max_dd
+//   In-sample (8.4m)       59       0.237      -0.188         0.686       0.268
+//   Out-of-sample (3.6m)   21       0.333      +0.012         1.087       0.139
+//   Combined (~1y)         80         —            —          0.793         —
+//
+// Math note
+//   pandas  close.ewm(span=L, adjust=False).mean()
+//   Pine    ta.ema(close, L)
+//   are mathematically identical: EMA_t = α·src + (1−α)·EMA_{t−1},  α = 2/(L+1),
+//   with EMA seeded from the first observation. Expect a handful of trades
+//   of difference across the full year strictly from warmup/boundary effects.
+// ============================================================================
+
+//@version=6
+strategy(
+     title              = "Axiom S01508 — Simple EMA20/50 Cross",
+     shorttitle         = "S01508",
+     overlay            = true,
+     pyramiding         = 0,
+     initial_capital    = 10000,
+     default_qty_type   = strategy.percent_of_equity,
+     default_qty_value  = 100,
+     commission_type    = strategy.commission.percent,
+     commission_value   = 0.055,
+     slippage           = 0,
+     calc_on_every_tick = false,
+     process_orders_on_close = true)
+
+// ---- Inputs ----------------------------------------------------------------
+ema_fast_len = input.int(20, "EMA fast length",  minval = 2, group = "Signal")
+ema_slow_len = input.int(50, "EMA slow length",  minval = 3, group = "Signal")
+
+use_window   = input.bool(true,  "Restrict to Axiom window",  group = "Date range")
+// Hardcoded epoch ms (const int — Pine v6 requires this for input.time defval):
+//   1745082000000 = 2025-04-19 17:00:00 UTC
+//   1776614400000 = 2026-04-19 16:00:00 UTC
+start_ts     = input.time(1745082000000, "Window start (UTC)", group = "Date range")
+end_ts       = input.time(1776614400000, "Window end (UTC)",   group = "Date range")
+
+// ---- Indicators ------------------------------------------------------------
+ema_fast = ta.ema(close, ema_fast_len)
+ema_slow = ta.ema(close, ema_slow_len)
+
+plot(ema_fast, "EMA fast", color = color.new(color.orange, 0))
+plot(ema_slow, "EMA slow", color = color.new(color.blue,   0))
+
+// ---- Window gate -----------------------------------------------------------
+in_window = not use_window or (time >= start_ts and time <= end_ts)
+
+// ---- Signals ---------------------------------------------------------------
+cross_up   = ta.crossover(ema_fast,  ema_slow)
+cross_down = ta.crossunder(ema_fast, ema_slow)
+
+if in_window and cross_up
+    strategy.entry("Long", strategy.long)
+
+if cross_down
+    strategy.close("Long")
+
+// Force-flat at window end so totals are directly comparable to Axiom.
+if use_window and (time > end_ts)
+    strategy.close_all()
+
+// ---- Visuals ---------------------------------------------------------------
+plotshape(cross_up   and in_window, title = "Long entry",
+     style = shape.triangleup,   location = location.belowbar,
+     color = color.new(color.green, 0), size = size.tiny)
+
+plotshape(cross_down, title = "Long exit",
+     style = shape.triangledown, location = location.abovebar,
+     color = color.new(color.red, 0),   size = size.tiny)
+
+bgcolor(in_window ? color.new(color.blue, 92) : na, title = "In-window shading")

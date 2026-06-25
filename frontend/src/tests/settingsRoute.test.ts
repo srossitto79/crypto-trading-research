@@ -5,7 +5,7 @@ import { clearDirty, originalValues, pendingValues } from '../lib/settings/dirty
 
 const apiMocks = vi.hoisted(() => ({
 	getSettings: vi.fn(),
-	getForvenDashboard: vi.fn(),
+	getAxiomDashboard: vi.fn(),
 	getSettingsAuditLog: vi.fn(),
 	updateSettingsSection: vi.fn(),
 }));
@@ -40,7 +40,7 @@ beforeEach(() => {
 		risk: {},
 		pipeline: {},
 	});
-	apiMocks.getForvenDashboard.mockResolvedValue({});
+	apiMocks.getAxiomDashboard.mockResolvedValue({});
 	apiMocks.getSettingsAuditLog.mockResolvedValue([]);
 	apiMocks.updateSettingsSection.mockResolvedValue({ status: 'ok' });
 	if (typeof window !== 'undefined') {

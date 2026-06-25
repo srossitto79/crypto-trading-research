@@ -1,13 +1,13 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { mount, unmount } from 'svelte';
 
-const { getForvenAuthProvidersMock, updateSettingsSectionMock } = vi.hoisted(() => ({
-	getForvenAuthProvidersMock: vi.fn(),
+const { getAxiomAuthProvidersMock, updateSettingsSectionMock } = vi.hoisted(() => ({
+	getAxiomAuthProvidersMock: vi.fn(),
 	updateSettingsSectionMock: vi.fn(),
 }));
 
 vi.mock('$lib/api', () => ({
-	getForvenAuthProviders: getForvenAuthProvidersMock,
+	getAxiomAuthProviders: getAxiomAuthProvidersMock,
 	updateSettingsSection: updateSettingsSectionMock,
 }));
 
@@ -23,9 +23,9 @@ afterEach(() => {
 });
 
 beforeEach(() => {
-	getForvenAuthProvidersMock.mockReset();
+	getAxiomAuthProvidersMock.mockReset();
 	updateSettingsSectionMock.mockReset();
-	getForvenAuthProvidersMock.mockResolvedValue([]);
+	getAxiomAuthProvidersMock.mockResolvedValue([]);
 	updateSettingsSectionMock.mockResolvedValue({});
 	wizardOpen.set(true);
 	wizardStep.set(0);

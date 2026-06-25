@@ -1,8 +1,8 @@
-import json
+﻿import json
 import logging
 from uuid import uuid4
-from forven.db import init_db, get_db
-from forven.strategies.backtest import backtest_strategy
+from axiom.db import init_db, get_db
+from axiom.strategies.backtest import backtest_strategy
 
 logging.basicConfig(level=logging.INFO)
 

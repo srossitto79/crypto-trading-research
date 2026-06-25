@@ -1,4 +1,4 @@
-"""Tests for GET /api/data/coverage endpoint."""
+﻿"""Tests for GET /api/data/coverage endpoint."""
 from __future__ import annotations
 
 import time
@@ -9,13 +9,13 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from forven.api_domains.data import get_coverage
-from forven.data_manager import _save_stream_parquet
+from axiom.api_domains.data import get_coverage
+from axiom.data_manager import _save_stream_parquet
 
 
 def _build_data_client() -> TestClient:
     """Build a TestClient that mounts the data router only."""
-    from forven.routers.data import router as data_router
+    from axiom.routers.data import router as data_router
     app = FastAPI()
     app.include_router(data_router)
     return TestClient(app)
@@ -50,9 +50,9 @@ def test_get_coverage_returns_ohlcv_rows(tmp_path):
     ohlcv_dir.mkdir(parents=True)
     _make_ohlcv(5).to_parquet(ohlcv_dir / "1h.parquet")
 
-    with patch("forven.data.DATA_DIR", tmp_path / "ohlcv"):
-        with patch("forven.data_manager.FUNDING_DIR", tmp_path / "funding"):
-            with patch("forven.data_manager.OI_DIR", tmp_path / "oi"):
+    with patch("axiom.data.DATA_DIR", tmp_path / "ohlcv"):
+        with patch("axiom.data_manager.FUNDING_DIR", tmp_path / "funding"):
+            with patch("axiom.data_manager.OI_DIR", tmp_path / "oi"):
                 result = get_coverage()
 
     assert "BTC-USDT" in result
@@ -75,9 +75,9 @@ def test_get_coverage_includes_funding_and_oi(tmp_path):
     oi_path = tmp_path / "oi" / "ETH-USDT" / "1h.parquet"
     _save_stream_parquet(_make_oi(3), oi_path, "oi", "ETH-USDT")
 
-    with patch("forven.data.DATA_DIR", tmp_path / "ohlcv"):
-        with patch("forven.data_manager.FUNDING_DIR", tmp_path / "funding"):
-            with patch("forven.data_manager.OI_DIR", tmp_path / "oi"):
+    with patch("axiom.data.DATA_DIR", tmp_path / "ohlcv"):
+        with patch("axiom.data_manager.FUNDING_DIR", tmp_path / "funding"):
+            with patch("axiom.data_manager.OI_DIR", tmp_path / "oi"):
                 result = get_coverage()
 
     assert "funding" in result["ETH-USDT"]
@@ -92,9 +92,9 @@ def test_get_coverage_omits_missing_streams(tmp_path):
     ohlcv_dir.mkdir(parents=True)
     _make_ohlcv(5).to_parquet(ohlcv_dir / "1h.parquet")
 
-    with patch("forven.data.DATA_DIR", tmp_path / "ohlcv"):
-        with patch("forven.data_manager.FUNDING_DIR", tmp_path / "funding"):
-            with patch("forven.data_manager.OI_DIR", tmp_path / "oi"):
+    with patch("axiom.data.DATA_DIR", tmp_path / "ohlcv"):
+        with patch("axiom.data_manager.FUNDING_DIR", tmp_path / "funding"):
+            with patch("axiom.data_manager.OI_DIR", tmp_path / "oi"):
                 result = get_coverage()
 
     assert "SOL-USDT" in result
@@ -114,7 +114,7 @@ def test_get_coverage_omits_missing_streams(tmp_path):
 
 
 def _reset_coverage_cache():
-    import forven.data as fd
+    import axiom.data as fd
     with fd._coverage_cache_lock:
         fd._coverage_cache.clear()
 
@@ -126,9 +126,9 @@ def test_get_coverage_reports_precise_last_bar(tmp_path):
     _make_ohlcv(5).to_parquet(ohlcv_dir / "1h.parquet")  # 5 hourly bars from 2020-01-01 00:00
 
     _reset_coverage_cache()
-    with patch("forven.data.DATA_DIR", tmp_path / "ohlcv"):
-        with patch("forven.data_manager.FUNDING_DIR", tmp_path / "funding"):
-            with patch("forven.data_manager.OI_DIR", tmp_path / "oi"):
+    with patch("axiom.data.DATA_DIR", tmp_path / "ohlcv"):
+        with patch("axiom.data_manager.FUNDING_DIR", tmp_path / "funding"):
+            with patch("axiom.data_manager.OI_DIR", tmp_path / "oi"):
                 result = get_coverage()
 
     entry = result["BTC-USDT"]["ohlcv/1h"]
@@ -145,9 +145,9 @@ def test_get_coverage_omits_empty_parquet(tmp_path):
     _make_ohlcv(0).to_parquet(ohlcv_dir / "1d.parquet")  # empty series
 
     _reset_coverage_cache()
-    with patch("forven.data.DATA_DIR", tmp_path / "ohlcv"):
-        with patch("forven.data_manager.FUNDING_DIR", tmp_path / "funding"):
-            with patch("forven.data_manager.OI_DIR", tmp_path / "oi"):
+    with patch("axiom.data.DATA_DIR", tmp_path / "ohlcv"):
+        with patch("axiom.data_manager.FUNDING_DIR", tmp_path / "funding"):
+            with patch("axiom.data_manager.OI_DIR", tmp_path / "oi"):
                 result = get_coverage()
 
     assert "ohlcv/1h" in result["BTC-USDT"]
@@ -156,7 +156,7 @@ def test_get_coverage_omits_empty_parquet(tmp_path):
 
 def test_coverage_entry_uses_mtime_cache(tmp_path):
     """An unchanged parquet is served from cache without re-reading the file."""
-    import forven.data as fd
+    import axiom.data as fd
 
     path = tmp_path / "ohlcv" / "BTC-USDT" / "1h.parquet"
     path.parent.mkdir(parents=True)
@@ -167,14 +167,14 @@ def test_coverage_entry_uses_mtime_cache(tmp_path):
     assert first["rows"] == 5
 
     # A cache hit must not touch pyarrow/pandas readers at all.
-    with patch("forven.data.pq.read_metadata", side_effect=AssertionError("re-read on cache hit")):
+    with patch("axiom.data.pq.read_metadata", side_effect=AssertionError("re-read on cache hit")):
         cached = fd.coverage_entry(path)
     assert cached == first
 
 
 def test_coverage_entry_invalidates_on_file_change(tmp_path):
     """Rewriting the parquet (new mtime/size) refreshes the cached entry."""
-    import forven.data as fd
+    import axiom.data as fd
 
     path = tmp_path / "ohlcv" / "BTC-USDT" / "1h.parquet"
     path.parent.mkdir(parents=True)
@@ -190,7 +190,7 @@ def test_coverage_entry_invalidates_on_file_change(tmp_path):
 
 def test_get_coverage_prunes_deleted_series_from_cache(tmp_path):
     """A removed parquet's cache entry is evicted on the next coverage sweep."""
-    import forven.data as fd
+    import axiom.data as fd
 
     sym_dir = tmp_path / "ohlcv" / "BTC-USDT"
     sym_dir.mkdir(parents=True)
@@ -200,9 +200,9 @@ def test_get_coverage_prunes_deleted_series_from_cache(tmp_path):
     _make_ohlcv(5).to_parquet(drop)
 
     _reset_coverage_cache()
-    with patch("forven.data.DATA_DIR", tmp_path / "ohlcv"):
-        with patch("forven.data_manager.FUNDING_DIR", tmp_path / "funding"):
-            with patch("forven.data_manager.OI_DIR", tmp_path / "oi"):
+    with patch("axiom.data.DATA_DIR", tmp_path / "ohlcv"):
+        with patch("axiom.data_manager.FUNDING_DIR", tmp_path / "funding"):
+            with patch("axiom.data_manager.OI_DIR", tmp_path / "oi"):
                 get_coverage()
                 assert str(drop) in fd._coverage_cache
 
@@ -219,7 +219,7 @@ def test_coverage_entry_falls_back_without_statistics(tmp_path):
     import pyarrow as pa
     import pyarrow.parquet as pq
 
-    import forven.data as fd
+    import axiom.data as fd
 
     path = tmp_path / "ohlcv" / "NOSTATS" / "1h.parquet"
     path.parent.mkdir(parents=True)
@@ -237,7 +237,7 @@ def test_coverage_entry_falls_back_without_statistics(tmp_path):
 
 
 def _reset_data_manager_stats():
-    from forven.data_manager import _stats, _stats_lock
+    from axiom.data_manager import _stats, _stats_lock
     with _stats_lock:
         _stats.clear()
 
@@ -254,7 +254,7 @@ def test_data_health_endpoint_returns_per_stream_freshness(client):
 
 
 def test_data_health_reflects_recent_collection(client, monkeypatch):
-    from forven.data_manager import data_manager
+    from axiom.data_manager import data_manager
     _reset_data_manager_stats()
     monkeypatch.setattr(data_manager, "get_active_symbols", lambda: set())
     data_manager.collect_funding()

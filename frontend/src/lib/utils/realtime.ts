@@ -1,6 +1,6 @@
 import { createPoller, type Poller } from '$lib/utils/polling';
 import { get } from 'svelte/store';
-import { forvenWsConnected } from '$lib/stores/forvenWebSocket';
+import { axiomWsConnected } from '$lib/stores/axiomWebSocket';
 
 export interface RealtimeRefreshOptions {
 	fallbackMs: number;
@@ -103,7 +103,7 @@ export function createRealtimeRefresh(
 			startFallbackPollerIfNeeded();
 			return;
 		}
-		const wsConnected = get(forvenWsConnected);
+		const wsConnected = get(axiomWsConnected);
 		if (wsConnected) {
 			stopFallbackPoller();
 		} else {
@@ -117,12 +117,12 @@ export function createRealtimeRefresh(
 
 		if (typeof window !== 'undefined' && !wsEventHandler) {
 			wsEventHandler = handleWsEvent;
-			window.addEventListener('forven:event', wsEventHandler);
+			window.addEventListener('axiom:event', wsEventHandler);
 		}
 
 		if (typeof window !== 'undefined' && listenReconnect && !reconnectHandler) {
 			reconnectHandler = () => scheduleRefresh();
-			window.addEventListener('forven:reconnected', reconnectHandler);
+			window.addEventListener('axiom:reconnected', reconnectHandler);
 		}
 
 		if (typeof window !== 'undefined' && !wsConnectedHandler) {
@@ -130,12 +130,12 @@ export function createRealtimeRefresh(
 				syncFallbackPoller();
 				scheduleRefresh();
 			};
-			window.addEventListener('forven:connected', wsConnectedHandler);
+			window.addEventListener('axiom:connected', wsConnectedHandler);
 		}
 
 		if (typeof window !== 'undefined' && !wsDisconnectedHandler) {
 			wsDisconnectedHandler = () => syncFallbackPoller();
-			window.addEventListener('forven:disconnected', wsDisconnectedHandler);
+			window.addEventListener('axiom:disconnected', wsDisconnectedHandler);
 		}
 
 		if (typeof document !== 'undefined' && !visibilityHandler) {
@@ -157,22 +157,22 @@ export function createRealtimeRefresh(
 		refreshInFlight = false;
 
 		if (typeof window !== 'undefined' && wsEventHandler) {
-			window.removeEventListener('forven:event', wsEventHandler);
+			window.removeEventListener('axiom:event', wsEventHandler);
 			wsEventHandler = null;
 		}
 
 		if (typeof window !== 'undefined' && reconnectHandler) {
-			window.removeEventListener('forven:reconnected', reconnectHandler);
+			window.removeEventListener('axiom:reconnected', reconnectHandler);
 			reconnectHandler = null;
 		}
 
 		if (typeof window !== 'undefined' && wsConnectedHandler) {
-			window.removeEventListener('forven:connected', wsConnectedHandler);
+			window.removeEventListener('axiom:connected', wsConnectedHandler);
 			wsConnectedHandler = null;
 		}
 
 		if (typeof window !== 'undefined' && wsDisconnectedHandler) {
-			window.removeEventListener('forven:disconnected', wsDisconnectedHandler);
+			window.removeEventListener('axiom:disconnected', wsDisconnectedHandler);
 			wsDisconnectedHandler = null;
 		}
 

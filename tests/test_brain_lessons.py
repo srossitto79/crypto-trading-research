@@ -1,23 +1,23 @@
-"""P3-T06 — brain_lessons CRUD + FTS5 search."""
+﻿"""P3-T06 — brain_lessons CRUD + FTS5 search."""
 from __future__ import annotations
 
 import tempfile
 
 import pytest
 
-from forven import db as forven_db
-from forven import brain_lessons as bl
+from axiom import db as AXIOM_db
+from axiom import brain_lessons as bl
 
 
 @pytest.fixture
 def env(tmp_path, monkeypatch):
     db_dir = tempfile.mkdtemp()
-    monkeypatch.setenv("FORVEN_HOME", db_dir)
-    if hasattr(forven_db, "_DB_PATH"):
-        forven_db._DB_PATH = None  # type: ignore[attr-defined]
-    if hasattr(forven_db, "_init_db_done"):
-        forven_db._init_db_done = False  # type: ignore[attr-defined]
-    forven_db.init_db()
+    monkeypatch.setenv("AXIOM_HOME", db_dir)
+    if hasattr(AXIOM_db, "_DB_PATH"):
+        AXIOM_db._DB_PATH = None  # type: ignore[attr-defined]
+    if hasattr(AXIOM_db, "_init_db_done"):
+        AXIOM_db._init_db_done = False  # type: ignore[attr-defined]
+    AXIOM_db.init_db()
     yield {"db_dir": db_dir}
 
 

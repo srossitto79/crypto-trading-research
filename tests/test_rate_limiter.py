@@ -1,11 +1,11 @@
-"""Tests for rate limiter utility."""
+﻿"""Tests for rate limiter utility."""
 
 from __future__ import annotations
 
 import time
 import threading
 
-from forven.rate_limiter import RateLimiter
+from axiom.rate_limiter import RateLimiter
 
 
 def test_rate_limiter_basic():

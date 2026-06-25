@@ -1,4 +1,4 @@
-"""Bulk download historical stock OHLCV data from Polygon.io.
+﻿"""Bulk download historical stock OHLCV data from Polygon.io.
 
 Usage:
     python scripts/polygon_bulk_download.py
@@ -29,8 +29,8 @@ CALLS_PER_MINUTE = 15  # Starter tier allows 100/min; stay conservative
 
 
 def main():
-    from forven.data import _fetch_ohlcv_polygon, load_parquet
-    from forven.polygon_client import PolygonClient
+    from axiom.data import _fetch_ohlcv_polygon, load_parquet
+    from axiom.polygon_client import PolygonClient
 
     # Verify API key works before starting
     try:

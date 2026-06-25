@@ -1,4 +1,4 @@
-"""Phase 4 / P4-T05 — tool_registry permission-set MCP grants.
+﻿"""Phase 4 / P4-T05 — tool_registry permission-set MCP grants.
 
 Confirms `_permission_subjects(agent_id)` reflects grants in
 ``agent_mcp_grants`` so that tools with permissions ``{"mcp:<server>"}``
@@ -12,13 +12,13 @@ those agents have other tokens (role:*, etc.).
 
 from __future__ import annotations
 
-from forven.agents.tool_registry import (
+from axiom.agents.tool_registry import (
     _REGISTRY,
     ToolDef,
     _permission_subjects,
     get_tools_for_agent,
 )
-from forven.db import get_db, init_db
+from axiom.db import get_db, init_db
 
 
 def _make_agent(agent_id: str, name: str = "Test", role: str = "data-scientist") -> None:

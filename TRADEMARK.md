@@ -1,8 +1,12 @@
 # Trademark Policy
 
-"**Forven**" and the Forven logo are **unregistered (common-law) trademarks** of Judder.
+"**Axiom**" is the project name of this fork. "**Forven**" and the Forven logo
+are **unregistered (common-law) trademarks** of Judder.
 
-The AGPL-3.0 license (see [`LICENSE`](LICENSE)) governs Forven's **source code**. It does **not** grant any right to use the **"Forven" name or logo** — trademark rights are separate from copyright, and AGPL-3.0 section 7(e) expressly permits this reservation.
+The AGPL-3.0 license (see [`LICENSE`](LICENSE)) governs Axiom's **source code**.
+It does **not** grant any right to use the **"Forven" name or logo** — trademark
+rights are separate from copyright, and AGPL-3.0 section 7(e) expressly permits
+this reservation.
 
 ## What you may do
 
@@ -17,3 +21,4 @@ The AGPL-3.0 license (see [`LICENSE`](LICENSE)) governs Forven's **source code**
 If you distribute a modified version, please **give it a different name** so users are not confused about what they are running.
 
 Questions about trademark use: **judder@forven.app**.
+Questions about this fork: **srossitto79@gmail.com**.

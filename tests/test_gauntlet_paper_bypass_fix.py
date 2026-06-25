@@ -1,4 +1,4 @@
-"""Editable safety-floor contract for the gauntlet->paper gate (rewritten 2026-06-24).
+﻿"""Editable safety-floor contract for the gauntlet->paper gate (rewritten 2026-06-24).
 
 History: these tests originally locked an IMMUTABLE floor design (_PAPER_GATE_FLOORS) so
 a relaxed/narrowed config could never soften the ->paper gate below fixed defaults. That
@@ -22,9 +22,9 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-import forven.policy as policy
-from forven.db import get_db
-from forven.policy import (
+import axiom.policy as policy
+from axiom.db import get_db
+from axiom.policy import (
     DEFAULT_PIPELINE_CONFIG,
     _PAPER_GATE_FLOORS,
     _evaluate_gauntlet_gate,
@@ -148,7 +148,7 @@ def test_named_preset_wins_over_materialized_knobs():
 # Robustness floor — default permissive, operator-editable
 # ---------------------------------------------------------------------------
 
-def test_robustness_floor_default_permissive(forven_db, monkeypatch):
+def test_robustness_floor_default_permissive(AXIOM_db, monkeypatch):
     # Relaxed gauntlet threshold + default (0) floor: a low robustness now reaches paper.
     _stub_prereqs(monkeypatch, {})
     cfg = _cfg(required_tests=[], min_robustness_score=0)
@@ -160,7 +160,7 @@ def test_robustness_floor_default_permissive(forven_db, monkeypatch):
     assert passed, msg
 
 
-def test_robustness_floor_operator_reenforced(forven_db, monkeypatch):
+def test_robustness_floor_operator_reenforced(AXIOM_db, monkeypatch):
     # Operator RAISES the safety floor to 50 — the relaxed gauntlet threshold is clamped
     # up and a robustness=10 strategy is rejected at 50.
     _stub_prereqs(monkeypatch, {})
@@ -179,7 +179,7 @@ def test_robustness_floor_operator_reenforced(forven_db, monkeypatch):
 # Monte-Carlo tail-DD ceiling — default 0.50, operator-editable
 # ---------------------------------------------------------------------------
 
-def test_mc_dd_ceiling_default(forven_db, monkeypatch):
+def test_mc_dd_ceiling_default(AXIOM_db, monkeypatch):
     # Default ceiling 0.50: a 0.55 tail DD is rejected at 50% even if the operator
     # relaxes the gauntlet knob to 0.99 (the floor clamps it back down).
     _stub_prereqs(monkeypatch, {"monte_carlo": {"max_dd_p95": 0.55, "n_trades": 60}})
@@ -192,7 +192,7 @@ def test_mc_dd_ceiling_default(forven_db, monkeypatch):
     assert "50%" in msg  # clamped to the 0.50 default ceiling, not 99%
 
 
-def test_mc_dd_ceiling_operator_tightened(forven_db, monkeypatch):
+def test_mc_dd_ceiling_operator_tightened(AXIOM_db, monkeypatch):
     # Operator TIGHTENS the ceiling to 0.40 — a 0.45 tail DD is now rejected at 40%.
     _stub_prereqs(monkeypatch, {"monte_carlo": {"max_dd_p95": 0.45, "n_trades": 60}})
     cfg = _cfg(safety_floors={"mc_max_dd_p95": 0.40}, required_tests=[], mc_max_dd_p95=0.99)
@@ -209,7 +209,7 @@ def test_mc_dd_ceiling_operator_tightened(forven_db, monkeypatch):
 # a genuinely tiny sample even with NO Monte Carlo artifact.
 # ---------------------------------------------------------------------------
 
-def test_trade_count_floor_blocks_tiny_sample(forven_db, monkeypatch):
+def test_trade_count_floor_blocks_tiny_sample(AXIOM_db, monkeypatch):
     _stub_prereqs(monkeypatch, {})  # no MC / WFA / jitter artifacts at all
     cfg = _cfg(required_tests=[], min_trades=1)  # operator relaxes min_trades to 1
     metrics = copy.deepcopy(_PASS_METRICS)
@@ -224,7 +224,7 @@ def test_trade_count_floor_blocks_tiny_sample(forven_db, monkeypatch):
     assert str(_PAPER_GATE_FLOORS["min_trades"]) in msg  # floored at 3, not the relaxed 1
 
 
-def test_trade_count_floor_allows_modest_sample(forven_db, monkeypatch):
+def test_trade_count_floor_allows_modest_sample(AXIOM_db, monkeypatch):
     # When the operator relaxes the gauntlet threshold BELOW the safety floor (here to 1),
     # the floor of 3 is what binds — a modest 5-trade sample clears ->paper. The old
     # immutable 30-trade wall is gone (achievable paper); the Default preset's own
@@ -241,7 +241,7 @@ def test_trade_count_floor_allows_modest_sample(forven_db, monkeypatch):
     assert passed, msg
 
 
-def test_trade_count_floor_operator_reenforced(forven_db, monkeypatch):
+def test_trade_count_floor_operator_reenforced(AXIOM_db, monkeypatch):
     # Operator RAISES the floor to 30 — the same 12-trade sample is rejected again.
     _stub_prereqs(monkeypatch, {})
     cfg = _cfg(safety_floors={"min_trades": 30}, required_tests=[], min_trades=1)
@@ -261,7 +261,7 @@ def test_trade_count_floor_operator_reenforced(forven_db, monkeypatch):
 # clamped to the editable floor.
 # ---------------------------------------------------------------------------
 
-def test_f4_wfa_fold_floor_fires_when_not_required(forven_db, monkeypatch):
+def test_f4_wfa_fold_floor_fires_when_not_required(AXIOM_db, monkeypatch):
     _stub_prereqs(monkeypatch, {"walk_forward": {"folds": 3, "pass_rate": 0.15}})
     cfg = _cfg(required_tests=["cost_stress"])  # walk_forward narrowed OUT of required
     cfg.setdefault("robustness_thresholds", {})["wfa_fold_pass_rate_min"] = 0.0  # and relaxed to 0
@@ -272,7 +272,7 @@ def test_f4_wfa_fold_floor_fires_when_not_required(forven_db, monkeypatch):
     assert "Walk-forward pass rate" in msg  # floored at the 0.20 default, fires at 0.15
 
 
-def test_f4_jitter_floor_fires_when_not_required(forven_db, monkeypatch):
+def test_f4_jitter_floor_fires_when_not_required(AXIOM_db, monkeypatch):
     _stub_prereqs(monkeypatch, {"param_jitter": {"pass_rate": 0.25}})
     cfg = _cfg(required_tests=["cost_stress"])  # param_jitter narrowed OUT of required
     cfg.setdefault("robustness_thresholds", {})["param_jitter_pass_rate_min"] = 0.0
@@ -287,7 +287,7 @@ def test_f4_jitter_floor_fires_when_not_required(forven_db, monkeypatch):
 # Positive control — a genuinely passing strategy still clears the floored gate
 # ---------------------------------------------------------------------------
 
-def test_floored_gate_still_passes_legit_strategy(forven_db, monkeypatch):
+def test_floored_gate_still_passes_legit_strategy(AXIOM_db, monkeypatch):
     _stub_prereqs(monkeypatch, {
         "walk_forward": {"folds": 4, "pass_rate": 1.0},
         "param_jitter": {"pass_rate": 0.9},
@@ -305,7 +305,7 @@ def test_floored_gate_still_passes_legit_strategy(forven_db, monkeypatch):
 # to a fraction and enforced (the floor only clamps, the operator can still tighten).
 # ---------------------------------------------------------------------------
 
-def test_mc_dd_setting_percent_normalized_and_wired(forven_db, monkeypatch):
+def test_mc_dd_setting_percent_normalized_and_wired(AXIOM_db, monkeypatch):
     save_pipeline_config({"gauntlet": {"mc_max_dd_p95": 35}})
     cfg = load_pipeline_config()
     assert abs(float(cfg["gauntlet"]["mc_max_dd_p95"]) - 0.35) < 1e-9  # normalized to fraction

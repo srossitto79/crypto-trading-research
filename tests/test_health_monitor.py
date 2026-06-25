@@ -1,11 +1,11 @@
-"""Tests for the unified health monitor."""
+﻿"""Tests for the unified health monitor."""
 
 import asyncio
 import time
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
-from forven.health_monitor import (
+from axiom.health_monitor import (
     ComponentStatus,
     DataCheck,
     HealthAlert,
@@ -30,7 +30,7 @@ from forven.health_monitor import (
 )
 
 # Common mock target for notification emission
-_EMIT_TARGET = "forven.notifications.emit_notification"
+_EMIT_TARGET = "axiom.notifications.emit_notification"
 
 
 # ---------------------------------------------------------------------------
@@ -355,9 +355,9 @@ class TestCheckScheduler:
             {"id": "job1", "next_run_at": (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat(),
              "interval_ms": 900_000, "enabled": True},
         ]
-        with patch("forven.scheduler.get_enabled_jobs", return_value=jobs):
+        with patch("axiom.scheduler.get_enabled_jobs", return_value=jobs):
             with patch(
-                "forven.db.kv_get",
+                "axiom.db.kv_get",
                 side_effect=lambda key, default=None: datetime.now(timezone.utc).isoformat()
                 if key in {"scheduler:last_successful_tick", "scheduler:last_tick_started"}
                 else "0",
@@ -366,7 +366,7 @@ class TestCheckScheduler:
                 assert result.state == State.GREEN
 
     def test_red_with_no_jobs(self):
-        with patch("forven.scheduler.get_enabled_jobs", return_value=[]):
+        with patch("axiom.scheduler.get_enabled_jobs", return_value=[]):
             result = check_scheduler()
             assert result.state == State.RED
 
@@ -376,9 +376,9 @@ class TestCheckScheduler:
              "next_run_at": (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat(),
              "interval_ms": 900_000, "enabled": True},
         ]
-        with patch("forven.scheduler.get_enabled_jobs", return_value=jobs):
+        with patch("axiom.scheduler.get_enabled_jobs", return_value=jobs):
             with patch(
-                "forven.db.kv_get",
+                "axiom.db.kv_get",
                 side_effect=lambda key, default=None: datetime.now(timezone.utc).isoformat()
                 if key in {"scheduler:last_successful_tick", "scheduler:last_tick_started"}
                 else "0",
@@ -392,9 +392,9 @@ class TestCheckScheduler:
              "interval_ms": 900_000, "enabled": True},
         ]
         stale_tick = (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat()
-        with patch("forven.scheduler.get_enabled_jobs", return_value=jobs):
+        with patch("axiom.scheduler.get_enabled_jobs", return_value=jobs):
             with patch(
-                "forven.db.kv_get",
+                "axiom.db.kv_get",
                 side_effect=lambda key, default=None: stale_tick
                 if key in {"scheduler:last_successful_tick", "scheduler:last_tick_started"}
                 else "0",
@@ -403,7 +403,7 @@ class TestCheckScheduler:
                 # the same process that drove the scheduler (e.g. the circuit
                 # breaker tests) leaves a fresh module-global _LAST_TICK_AT,
                 # which check_scheduler prefers over the (stale) KV heartbeat.
-                with patch("forven.scheduler.get_last_tick_at", return_value=None):
+                with patch("axiom.scheduler.get_last_tick_at", return_value=None):
                     result = check_scheduler()
                 assert result.state == State.RED
 
@@ -412,9 +412,9 @@ class TestCheckScheduler:
             {"id": "job1", "next_run_at": (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat(),
              "interval_ms": 900_000, "enabled": True},
         ]
-        with patch("forven.scheduler.get_enabled_jobs", return_value=jobs):
+        with patch("axiom.scheduler.get_enabled_jobs", return_value=jobs):
             with patch(
-                "forven.db.kv_get",
+                "axiom.db.kv_get",
                 side_effect=lambda key, default=None: (
                     datetime.now(timezone.utc).isoformat()
                     if key in {"scheduler:last_successful_tick", "scheduler:last_tick_started", "scheduler:last_error_at"}
@@ -431,9 +431,9 @@ class TestCheckScheduler:
         ]
         now_iso = datetime.now(timezone.utc).isoformat()
         old_error = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
-        with patch("forven.scheduler.get_enabled_jobs", return_value=jobs):
+        with patch("axiom.scheduler.get_enabled_jobs", return_value=jobs):
             with patch(
-                "forven.db.kv_get",
+                "axiom.db.kv_get",
                 side_effect=lambda key, default=None: (
                     now_iso if key == "scheduler:last_tick_started"
                     else old_error if key == "scheduler:last_error_at"
@@ -450,7 +450,7 @@ class TestCheckScheduler:
         recent_running = (datetime.now(timezone.utc) - timedelta(minutes=2)).isoformat()
         jobs = [
             {
-                "id": "forven-coding-daily",
+                "id": "Axiom-coding-daily",
                 "next_run_at": (datetime.now(timezone.utc) - timedelta(minutes=30)).isoformat(),
                 "running_since": recent_running,
                 "interval_ms": 600_000,
@@ -458,9 +458,9 @@ class TestCheckScheduler:
             }
         ]
 
-        with patch("forven.scheduler.get_enabled_jobs", return_value=jobs):
+        with patch("axiom.scheduler.get_enabled_jobs", return_value=jobs):
             with patch(
-                "forven.db.kv_get",
+                "axiom.db.kv_get",
                 side_effect=lambda key, default=None: (
                     stale_tick if key in {"scheduler:last_successful_tick", "scheduler:last_tick_started"}
                     else "0"
@@ -477,9 +477,9 @@ class TestCheckScheduler:
              "interval_ms": 900_000, "enabled": True},
         ]
 
-        with patch("forven.scheduler.get_enabled_jobs", return_value=jobs):
+        with patch("axiom.scheduler.get_enabled_jobs", return_value=jobs):
             with patch(
-                "forven.db.kv_get",
+                "axiom.db.kv_get",
                 side_effect=lambda key, default=None: (
                     recent_progress if key == "scheduler:last_progress_at"
                     else stale_tick if key in {"scheduler:last_successful_tick", "scheduler:last_tick_started"}
@@ -492,7 +492,7 @@ class TestCheckScheduler:
 
 class TestCheckBots:
     def test_no_bots_is_green(self):
-        with patch("forven.db.get_running_bots", return_value=[]):
+        with patch("axiom.db.get_running_bots", return_value=[]):
             results = check_bots()
             assert len(results) == 1
             assert results[0].state == State.GREEN
@@ -502,7 +502,7 @@ class TestCheckBots:
             "bot_id": "b1", "name": "TestBot", "pid": 1234,
             "last_heartbeat": (datetime.now(timezone.utc) - timedelta(minutes=20)).isoformat(),
         }]
-        with patch("forven.db.get_running_bots", return_value=bots):
+        with patch("axiom.db.get_running_bots", return_value=bots):
             results = check_bots()
             assert len(results) == 1
             assert results[0].state == State.RED
@@ -512,7 +512,7 @@ class TestCheckBots:
             "bot_id": "b1", "name": "TestBot", "pid": 1234,
             "last_heartbeat": datetime.now(timezone.utc).isoformat(),
         }]
-        with patch("forven.db.get_running_bots", return_value=bots):
+        with patch("axiom.db.get_running_bots", return_value=bots):
             results = check_bots()
             assert len(results) == 1
             assert results[0].state == State.GREEN
@@ -520,7 +520,7 @@ class TestCheckBots:
 
 class TestCheckLabWorker:
     def test_no_worker_is_green(self):
-        with patch("forven.lab_db.get_lab_meta", return_value={}):
+        with patch("axiom.lab_db.get_lab_meta", return_value={}):
             result = check_lab_worker()
             assert result.state == State.GREEN
 
@@ -529,7 +529,7 @@ class TestCheckLabWorker:
             "state": "running", "pid": 999,
             "heartbeat_at": (datetime.now(timezone.utc) - timedelta(minutes=20)).isoformat(),
         }
-        with patch("forven.lab_db.get_lab_meta", return_value=meta):
+        with patch("axiom.lab_db.get_lab_meta", return_value=meta):
             result = check_lab_worker()
             assert result.state == State.RED
 
@@ -539,7 +539,7 @@ class TestCheckLabWorker:
             "pid": 999,
             "heartbeat_at": time.time(),
         }
-        with patch("forven.lab_db.get_lab_meta", return_value=meta):
+        with patch("axiom.lab_db.get_lab_meta", return_value=meta):
             result = check_lab_worker()
             assert result.state == State.GREEN
 
@@ -548,14 +548,14 @@ class TestCheckBrainWorkers:
     def test_running_brain_job_is_not_marked_overdue(self):
         jobs = [
             {
-                "id": "forven-testing-cycle",
+                "id": "Axiom-testing-cycle",
                 "next_run_at": (datetime.now(timezone.utc) - timedelta(hours=3)).isoformat(),
                 "running_since": datetime.now(timezone.utc).isoformat(),
                 "interval_ms": 600_000,
                 "enabled": True,
             }
         ]
-        with patch("forven.scheduler.get_enabled_jobs", return_value=jobs):
+        with patch("axiom.scheduler.get_enabled_jobs", return_value=jobs):
             result = check_brain_workers()
             assert result.state == State.GREEN
             assert "running" in result.message
@@ -573,23 +573,23 @@ class TestCheckPipelineConsistency:
         mock_conn.execute.return_value.fetchone.return_value = {"cnt": 0}
         mock_conn.__enter__ = MagicMock(return_value=mock_conn)
         mock_conn.__exit__ = MagicMock(return_value=False)
-        with patch("forven.db.get_db", return_value=mock_conn):
+        with patch("axiom.db.get_db", return_value=mock_conn):
             results = check_pipeline_consistency()
             assert len(results) >= 1
 
     def test_check_handles_exception(self):
-        with patch("forven.db.get_db", side_effect=Exception("db locked")):
+        with patch("axiom.db.get_db", side_effect=Exception("db locked")):
             results = check_pipeline_consistency()
             assert any(not r.passed for r in results)
 
 
 class TestCheckSqliteHealth:
-    def test_healthy_db(self, forven_db):
+    def test_healthy_db(self, AXIOM_db):
         result = check_sqlite_health()
         assert result.passed
 
     def test_handles_exception(self):
-        with patch("forven.db.get_db", side_effect=Exception("locked")):
+        with patch("axiom.db.get_db", side_effect=Exception("locked")):
             result = check_sqlite_health()
             assert not result.passed
             assert result.severity == Severity.CRITICAL
@@ -614,7 +614,7 @@ class TestHealthMonitor:
         """Individual check failures don't crash the loop."""
         async def _run():
             monitor = HealthMonitor(poll_interval=0.1, data_check_interval=100)
-            with patch("forven.health_monitor.check_scheduler", side_effect=Exception("boom")):
+            with patch("axiom.health_monitor.check_scheduler", side_effect=Exception("boom")):
                 await monitor.start()
                 await asyncio.sleep(0.2)
                 await monitor.stop()
@@ -628,10 +628,10 @@ class TestHealthMonitor:
             monitor = HealthMonitor(poll_interval=0.05, data_check_interval=100)
             down = ComponentStatus(name="ai_providers", state=State.RED, message="quota exhausted")
 
-            with patch("forven.health_monitor.autonomous_runtime_allowed", return_value=False), \
-                 patch("forven.health_monitor.check_ai_providers", return_value=down) as ai_check, \
-                 patch("forven.health_monitor._dispatch_alerts") as dispatch, \
-                 patch("forven.health_monitor._attempt_recovery") as recovery:
+            with patch("axiom.health_monitor.autonomous_runtime_allowed", return_value=False), \
+                 patch("axiom.health_monitor.check_ai_providers", return_value=down) as ai_check, \
+                 patch("axiom.health_monitor._dispatch_alerts") as dispatch, \
+                 patch("axiom.health_monitor._attempt_recovery") as recovery:
                 await monitor.start()
                 await asyncio.sleep(0.15)
                 await monitor.stop()
@@ -651,10 +651,10 @@ class TestHealthMonitor:
             monitor = HealthMonitor(poll_interval=0.05, data_check_interval=100)
             down = ComponentStatus(name="ai_providers", state=State.RED, message="down")
 
-            with patch("forven.health_monitor.autonomous_runtime_allowed", return_value=True), \
-                 patch("forven.health_monitor.check_ai_providers", return_value=down), \
-                 patch("forven.health_monitor._dispatch_alerts"), \
-                 patch("forven.health_monitor._attempt_recovery") as recovery:
+            with patch("axiom.health_monitor.autonomous_runtime_allowed", return_value=True), \
+                 patch("axiom.health_monitor.check_ai_providers", return_value=down), \
+                 patch("axiom.health_monitor._dispatch_alerts"), \
+                 patch("axiom.health_monitor._attempt_recovery") as recovery:
                 await monitor.start()
                 await asyncio.sleep(0.15)
                 await monitor.stop()
@@ -669,15 +669,15 @@ class TestHealthMonitor:
 
 class TestWatchdogCrashIsVisible:
     def test_data_freshness_crash_returns_amber_not_green(self):
-        from forven.health_monitor import check_data_freshness
+        from axiom.health_monitor import check_data_freshness
 
-        with patch("forven.data_manager.data_manager_stats", side_effect=Exception("boom")):
+        with patch("axiom.data_manager.data_manager_stats", side_effect=Exception("boom")):
             result = check_data_freshness()
         assert result.state == State.AMBER
         assert "Check failed" in result.message
 
     def test_pipeline_throughput_crash_returns_amber_not_green(self):
-        with patch("forven.lab_db.get_lab_meta", side_effect=Exception("boom")):
+        with patch("axiom.lab_db.get_lab_meta", side_effect=Exception("boom")):
             result = check_pipeline_throughput()
         assert result.state == State.AMBER
         assert "Check failed" in result.message
@@ -689,7 +689,7 @@ class TestWatchdogCrashIsVisible:
 
 class TestAutoRecovery:
     def test_recovery_records_attempt(self):
-        from forven.health_monitor import _attempt_recovery
+        from axiom.health_monitor import _attempt_recovery
 
         async def _run():
             state = HealthState()
@@ -702,7 +702,7 @@ class TestAutoRecovery:
         asyncio.run(_run())
 
     def test_circuit_breaker_escalates(self):
-        from forven.health_monitor import _attempt_recovery
+        from axiom.health_monitor import _attempt_recovery
 
         async def _run():
             state = HealthState()
@@ -726,7 +726,7 @@ class TestPipelineThroughput:
     """Tests for the composite pipeline frozen detection."""
 
     def test_green_when_worker_stopped(self):
-        with patch("forven.lab_db.get_lab_meta") as mock_meta:
+        with patch("axiom.lab_db.get_lab_meta") as mock_meta:
             mock_meta.return_value = {"state": "stopped"}
             result = check_pipeline_throughput()
             assert result.state == State.GREEN
@@ -743,8 +743,8 @@ class TestPipelineThroughput:
                 return progress_meta
             return default
 
-        with patch("forven.lab_db.get_lab_meta", side_effect=_mock_meta):
-            with patch("forven.lab_db.list_lab_jobs", return_value=[MagicMock()]):
+        with patch("axiom.lab_db.get_lab_meta", side_effect=_mock_meta):
+            with patch("axiom.lab_db.list_lab_jobs", return_value=[MagicMock()]):
                 result = check_pipeline_throughput()
                 assert result.state == State.RED
                 assert "FROZEN" in result.message
@@ -761,8 +761,8 @@ class TestPipelineThroughput:
                 return progress_meta
             return default
 
-        with patch("forven.lab_db.get_lab_meta", side_effect=_mock_meta):
-            with patch("forven.lab_db.list_lab_jobs", return_value=[MagicMock()]):
+        with patch("axiom.lab_db.get_lab_meta", side_effect=_mock_meta):
+            with patch("axiom.lab_db.list_lab_jobs", return_value=[MagicMock()]):
                 result = check_pipeline_throughput()
                 assert result.state == State.GREEN
 
@@ -775,8 +775,8 @@ class TestPipelineThroughputRecovery:
             state = HealthState()
             status = ComponentStatus(name="pipeline_throughput", state=State.RED, message="FROZEN")
             with patch(_EMIT_TARGET):
-                with patch("forven.health_monitor._kill_lab_worker_processes", return_value=1) as mock_kill:
-                    with patch("forven.lab_worker_service._reconcile_orchestrator_state"):
+                with patch("axiom.health_monitor._kill_lab_worker_processes", return_value=1) as mock_kill:
+                    with patch("axiom.lab_worker_service._reconcile_orchestrator_state"):
                         await _attempt_recovery(state, "pipeline_throughput", status)
                         mock_kill.assert_called_once()
         asyncio.run(_run())

@@ -1,12 +1,12 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import pytest
 
-from forven.db import factory_reset, get_db, kv_set
+from axiom.db import factory_reset, get_db, kv_set
 
 
-def test_create_hypothesis_persists_first_class_fields_and_lists(forven_db):
-    from forven.hypotheses import create_hypothesis, get_hypothesis
+def test_create_hypothesis_persists_first_class_fields_and_lists(AXIOM_db):
+    from axiom.hypotheses import create_hypothesis, get_hypothesis
 
     created = create_hypothesis(
         title="Funding dislocation mean reversion",
@@ -51,8 +51,8 @@ def test_create_hypothesis_persists_first_class_fields_and_lists(forven_db):
     assert fetched_by_display_id["id"] == created["id"]
 
 
-def test_add_hypothesis_artifact_persists_source_provenance(forven_db):
-    from forven.hypotheses import add_hypothesis_artifact, create_hypothesis
+def test_add_hypothesis_artifact_persists_source_provenance(AXIOM_db):
+    from axiom.hypotheses import add_hypothesis_artifact, create_hypothesis
 
     hypothesis = create_hypothesis(
         title="Funding dislocation mean reversion",
@@ -97,8 +97,8 @@ def test_add_hypothesis_artifact_persists_source_provenance(forven_db):
     assert row["source_title"] == "Funding rates and reversals"
 
 
-def test_hypothesis_manager_state_defaults_and_lifecycle_transitions(forven_db):
-    from forven.hypotheses import (
+def test_hypothesis_manager_state_defaults_and_lifecycle_transitions(AXIOM_db):
+    from axiom.hypotheses import (
         archive_hypothesis,
         create_hypothesis,
         restore_hypothesis,
@@ -137,8 +137,8 @@ def test_hypothesis_manager_state_defaults_and_lifecycle_transitions(forven_db):
     assert restored["restored_at"] is not None
 
 
-def test_list_hypotheses_filters_by_view_search_and_sort(forven_db):
-    from forven.hypotheses import archive_hypothesis, create_hypothesis, list_hypotheses, trash_hypothesis
+def test_list_hypotheses_filters_by_view_search_and_sort(AXIOM_db):
+    from axiom.hypotheses import archive_hypothesis, create_hypothesis, list_hypotheses, trash_hypothesis
 
     alpha = create_hypothesis(
         title="Alpha funding fade",
@@ -185,8 +185,8 @@ def test_list_hypotheses_filters_by_view_search_and_sort(forven_db):
     assert [item["id"] for item in searched] == [alpha["id"]]
 
 
-def test_bulk_hypothesis_lifecycle_mutations_only_touch_requested_ids(forven_db):
-    from forven.hypotheses import (
+def test_bulk_hypothesis_lifecycle_mutations_only_touch_requested_ids(AXIOM_db):
+    from axiom.hypotheses import (
         bulk_archive_hypotheses,
         bulk_restore_hypotheses,
         bulk_trash_hypotheses,
@@ -239,8 +239,8 @@ def test_bulk_hypothesis_lifecycle_mutations_only_touch_requested_ids(forven_db)
     assert get_hypothesis(third["id"])["manager_state"] == "active"
 
 
-def test_record_data_gap_rolls_up_repeated_requests_and_links_to_strategy_or_hypothesis(forven_db):
-    from forven.hypotheses import create_hypothesis, list_ranked_data_gaps, record_data_gap
+def test_record_data_gap_rolls_up_repeated_requests_and_links_to_strategy_or_hypothesis(AXIOM_db):
+    from axiom.hypotheses import create_hypothesis, list_ranked_data_gaps, record_data_gap
 
     hypothesis = create_hypothesis(
         title="Liquidity regime breakout",
@@ -301,8 +301,8 @@ def test_record_data_gap_rolls_up_repeated_requests_and_links_to_strategy_or_hyp
     }
 
 
-def test_factory_reset_pipeline_data_wipes_hypothesis_tables(forven_db):
-    from forven.hypotheses import add_hypothesis_artifact, create_hypothesis, record_data_gap
+def test_factory_reset_pipeline_data_wipes_hypothesis_tables(AXIOM_db):
+    from axiom.hypotheses import add_hypothesis_artifact, create_hypothesis, record_data_gap
 
     hypothesis = create_hypothesis(
         title="Factory reset coverage",
@@ -342,7 +342,7 @@ def test_factory_reset_pipeline_data_wipes_hypothesis_tables(forven_db):
             assert count == 0
 
 
-def test_reset_friendly_schema_includes_hypotheses_tables_and_strategy_backlink(forven_db):
+def test_reset_friendly_schema_includes_hypotheses_tables_and_strategy_backlink(AXIOM_db):
     with get_db() as conn:
         tables = {row["name"] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall()}
         strategy_columns = {row["name"] for row in conn.execute("PRAGMA table_info('strategies')").fetchall()}
@@ -354,8 +354,8 @@ def test_reset_friendly_schema_includes_hypotheses_tables_and_strategy_backlink(
     assert "hypothesis_id" in strategy_columns
 
 
-def test_record_data_gap_requires_hypothesis_or_strategy_link(forven_db):
-    from forven.hypotheses import record_data_gap
+def test_record_data_gap_requires_hypothesis_or_strategy_link(AXIOM_db):
+    from axiom.hypotheses import record_data_gap
 
     with pytest.raises(ValueError, match="linked_hypothesis_id and/or linked_strategy_id"):
         record_data_gap(
@@ -365,7 +365,7 @@ def test_record_data_gap_requires_hypothesis_or_strategy_link(forven_db):
         )
 
 
-def test_data_gap_links_reject_orphan_rows_at_db_layer(forven_db):
+def test_data_gap_links_reject_orphan_rows_at_db_layer(AXIOM_db):
     with get_db() as conn:
         conn.execute(
             """
@@ -397,8 +397,8 @@ def test_data_gap_links_reject_orphan_rows_at_db_layer(forven_db):
             )
 
 
-def test_deleting_hypothesis_nulls_strategy_and_child_backlinks(forven_db):
-    from forven.hypotheses import create_hypothesis
+def test_deleting_hypothesis_nulls_strategy_and_child_backlinks(AXIOM_db):
+    from axiom.hypotheses import create_hypothesis
 
     parent = create_hypothesis(
         title="Parent hypothesis",
@@ -439,8 +439,8 @@ def test_deleting_hypothesis_nulls_strategy_and_child_backlinks(forven_db):
     assert strategy_row["hypothesis_id"] is None
 
 
-def test_get_hypothesis_spawn_stats_uses_live_research_settings(forven_db):
-    from forven.hypotheses import create_hypothesis, get_hypothesis_spawn_stats
+def test_get_hypothesis_spawn_stats_uses_live_research_settings(AXIOM_db):
+    from axiom.hypotheses import create_hypothesis, get_hypothesis_spawn_stats
 
     hypothesis = create_hypothesis(
         title="Live settings hypothesis",
@@ -453,7 +453,7 @@ def test_get_hypothesis_spawn_stats_uses_live_research_settings(forven_db):
     )
 
     kv_set(
-        "forven:settings",
+        "axiom:settings",
         {
             "research_settings": {
                 "spawn_limits": {
@@ -472,8 +472,8 @@ def test_get_hypothesis_spawn_stats_uses_live_research_settings(forven_db):
     assert stats["window_days"] == 3
 
 
-def test_brain_create_strategy_rejects_unknown_hypothesis_id(forven_db):
-    from forven.brain import create_strategy
+def test_brain_create_strategy_rejects_unknown_hypothesis_id(AXIOM_db):
+    from axiom.brain import create_strategy
 
     result = create_strategy(
         strategy_id="unknown-hypothesis-strategy",

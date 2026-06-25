@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """Tag paper trades that were force-closed by the exchange-truth reconciler.
 
 Lead-1 / D2: before the F4 fix, reconcile_exchange_positions and
@@ -30,9 +30,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from forven.db import get_db  # noqa: E402
-from forven.sim.clock import get_now  # noqa: E402
-from forven.trade_state import is_local_only_paper_trade, parse_trade_signal_data  # noqa: E402
+from axiom.db import get_db  # noqa: E402
+from axiom.sim.clock import get_now  # noqa: E402
+from axiom.trade_state import is_local_only_paper_trade, parse_trade_signal_data  # noqa: E402
 
 FABRICATED_CLOSE_REASONS = (
     "reconcile_missing_on_exchange",
@@ -82,7 +82,7 @@ def main() -> int:
             print(
                 "Refusing to run: get_db() resolved a trades table with 0 rows — "
                 "this is almost certainly the wrong DB (split-brain home). Set "
-                "FORVEN_HOME to the live home (e.g. ~/.forven) and run inside the "
+                "AXIOM_HOME to the live home (e.g. ~/.Axiom) and run inside the "
                 "app's environment, with the app stopped.",
                 file=sys.stderr,
             )

@@ -1,4 +1,4 @@
-"""Regression tests for agent-side backtesting tool persistence."""
+﻿"""Regression tests for agent-side backtesting tool persistence."""
 
 from __future__ import annotations
 
@@ -6,11 +6,11 @@ import json
 from pathlib import Path
 from datetime import datetime, timezone
 
-from forven.agents.context import _current_strategy_id_var, reset_tool_context, set_tool_context
-import forven.agents.tools_backtesting as tools_mod
-from forven.agents.tools_backtesting import _persist_agent_verdict, _tool_backtesting, _tool_register_strategy, _tool_run_backtest
-from forven.db import get_db
-from forven.policy import evaluate_promotion
+from axiom.agents.context import _current_strategy_id_var, reset_tool_context, set_tool_context
+import axiom.agents.tools_backtesting as tools_mod
+from axiom.agents.tools_backtesting import _persist_agent_verdict, _tool_backtesting, _tool_register_strategy, _tool_run_backtest
+from axiom.db import get_db
+from axiom.policy import evaluate_promotion
 
 
 def _insert_strategy(
@@ -77,7 +77,7 @@ def _insert_result(
         )
 
 
-def test_agent_run_backtest_persists_result_and_syncs_strategy(forven_db, monkeypatch):
+def test_agent_run_backtest_persists_result_and_syncs_strategy(AXIOM_db, monkeypatch):
     _insert_strategy("s-agent-backtest", stage="quick_screen")
 
     def _fake_backtest_strategy(**_kwargs):
@@ -96,8 +96,8 @@ def test_agent_run_backtest_persists_result_and_syncs_strategy(forven_db, monkey
             "trades": [],
         }
 
-    monkeypatch.setattr("forven.strategies.backtest.backtest_strategy", _fake_backtest_strategy)
-    monkeypatch.setattr("forven.vectordb.store_backtest_result", lambda **_kwargs: None)
+    monkeypatch.setattr("axiom.strategies.backtest.backtest_strategy", _fake_backtest_strategy)
+    monkeypatch.setattr("axiom.vectordb.store_backtest_result", lambda **_kwargs: None)
 
     token = _current_strategy_id_var.set("s-agent-backtest")
     try:
@@ -138,7 +138,7 @@ def test_agent_run_backtest_persists_result_and_syncs_strategy(forven_db, monkey
     assert float(stored_metrics["fitness"]) > 0
 
 
-def test_agent_verdict_persistence_normalizes_gauntlet_aliases(forven_db):
+def test_agent_verdict_persistence_normalizes_gauntlet_aliases(AXIOM_db):
     _insert_strategy(
         "s-agent-verdict",
         stage="gauntlet",
@@ -266,7 +266,7 @@ def test_agent_verdict_persistence_normalizes_gauntlet_aliases(forven_db):
     assert passed is True, reason
 
 
-def test_gauntlet_promotion_requires_visible_optimization_or_walk_forward_artifact(forven_db):
+def test_gauntlet_promotion_requires_visible_optimization_or_walk_forward_artifact(AXIOM_db):
     _insert_strategy(
         "s-agent-gauntlet-artifacts",
         stage="gauntlet",
@@ -302,11 +302,11 @@ def test_gauntlet_promotion_requires_visible_optimization_or_walk_forward_artifa
     assert reason == "Gauntlet requires at least one persisted optimization or walk-forward run before promotion to paper"
 
 
-def test_register_strategy_persists_runtime_type_for_current_strategy(forven_db, monkeypatch, tmp_path):
+def test_register_strategy_persists_runtime_type_for_current_strategy(AXIOM_db, monkeypatch, tmp_path):
     _insert_strategy("s-runtime-type", stage="paper")
 
     monkeypatch.setattr(
-        "forven.selfheal.validate_strategy_code",
+        "axiom.selfheal.validate_strategy_code",
         lambda code: {
             "valid": True,
             "code": code,
@@ -317,14 +317,14 @@ def test_register_strategy_persists_runtime_type_for_current_strategy(forven_db,
     )
     monkeypatch.setattr(tools_mod, "__file__", str(tmp_path / "agents" / "tools_backtesting.py"))
 
-    import forven.strategies.registry as registry_mod
+    import axiom.strategies.registry as registry_mod
 
     registry_mod.reset()
     monkeypatch.setattr(registry_mod, "reset", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(registry_mod, "discover", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(registry_mod, "_TYPE_MAP", {"bb_fade_s00194": object()})
     monkeypatch.setattr(
-        "forven.strategies.intake.register_custom_strategy_file",
+        "axiom.strategies.intake.register_custom_strategy_file",
         lambda **_kwargs: {},
     )
 
@@ -334,7 +334,7 @@ def test_register_strategy_persists_runtime_type_for_current_strategy(forven_db,
             {
                 "type_name": "bb_fade_s00194",
                 "hypothesis_id": "HYP-123",
-                "code": "from forven.strategies.base import BaseStrategy, Signal\n",
+                "code": "from axiom.strategies.base import BaseStrategy, Signal\n",
             }
         )
     finally:
@@ -352,7 +352,7 @@ def test_register_strategy_persists_runtime_type_for_current_strategy(forven_db,
     assert Path(tmp_path / "strategies" / "custom" / "bb_fade_s00194.py").exists()
 
 
-def test_register_strategy_persists_agent_candidate_provenance(forven_db, monkeypatch, tmp_path):
+def test_register_strategy_persists_agent_candidate_provenance(AXIOM_db, monkeypatch, tmp_path):
     _insert_strategy("s-registered-provenance", stage="quick_screen")
     with get_db() as conn:
         conn.execute(
@@ -382,7 +382,7 @@ def test_register_strategy_persists_agent_candidate_provenance(forven_db, monkey
         )
 
     monkeypatch.setattr(
-        "forven.selfheal.validate_strategy_code",
+        "axiom.selfheal.validate_strategy_code",
         lambda code: {
             "valid": True,
             "code": code,
@@ -393,14 +393,14 @@ def test_register_strategy_persists_agent_candidate_provenance(forven_db, monkey
     )
     monkeypatch.setattr(tools_mod, "__file__", str(tmp_path / "agents" / "tools_backtesting.py"))
 
-    import forven.strategies.registry as registry_mod
+    import axiom.strategies.registry as registry_mod
 
     registry_mod.reset()
     monkeypatch.setattr(registry_mod, "reset", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(registry_mod, "discover", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(registry_mod, "_TYPE_MAP", {"bb_fade_s00200": object()})
     monkeypatch.setattr(
-        "forven.strategies.intake.register_custom_strategy_file",
+        "axiom.strategies.intake.register_custom_strategy_file",
         lambda **_kwargs: {"strategy_id": "s-registered-provenance"},
     )
 
@@ -410,7 +410,7 @@ def test_register_strategy_persists_agent_candidate_provenance(forven_db, monkey
             {
                 "type_name": "bb_fade_s00200",
                 "hypothesis_id": "HYP-123",
-                "code": "from forven.strategies.base import BaseStrategy, Signal\n",
+                "code": "from axiom.strategies.base import BaseStrategy, Signal\n",
             }
         )
     finally:
@@ -436,7 +436,7 @@ def test_register_strategy_persists_agent_candidate_provenance(forven_db, monkey
     }
 
 
-def test_jbt_create_strategy_persists_agent_candidate_provenance_after_strict_client_create(forven_db, monkeypatch):
+def test_jbt_create_strategy_persists_agent_candidate_provenance_after_strict_client_create(AXIOM_db, monkeypatch):
     captured: dict[str, object] = {}
     with get_db() as conn:
         conn.execute(
@@ -499,13 +499,13 @@ def test_jbt_create_strategy_persists_agent_candidate_provenance_after_strict_cl
             return {"strategy_id": "S12345"}
 
     monkeypatch.setattr(tools_mod, "_check_backtesting_available", lambda: True)
-    monkeypatch.setattr("forven.backtesting.get_client", lambda: FakeClient())
+    monkeypatch.setattr("axiom.backtesting.get_client", lambda: FakeClient())
 
     tokens = set_tool_context("strategy-developer", "T0101")
     try:
         result = json.loads(
             _tool_backtesting(
-                "forven_create_strategy",
+                "AXIOM_create_strategy",
                 {
                     "name": "MACD candidate",
                     "hypothesis_id": "HYP-456",
@@ -538,7 +538,7 @@ def test_jbt_create_strategy_persists_agent_candidate_provenance_after_strict_cl
     }
 
 
-def test_jbt_create_strategy_rejects_mismatched_hypothesis_and_crucible(forven_db, monkeypatch):
+def test_jbt_create_strategy_rejects_mismatched_hypothesis_and_crucible(AXIOM_db, monkeypatch):
     created: list[dict] = []
     with get_db() as conn:
         conn.execute(
@@ -567,13 +567,13 @@ def test_jbt_create_strategy_rejects_mismatched_hypothesis_and_crucible(forven_d
             return {"strategy_id": "S99999"}
 
     monkeypatch.setattr(tools_mod, "_check_backtesting_available", lambda: True)
-    monkeypatch.setattr("forven.backtesting.get_client", lambda: FakeClient())
+    monkeypatch.setattr("axiom.backtesting.get_client", lambda: FakeClient())
 
     tokens = set_tool_context("strategy-developer", "T0102")
     try:
         result = json.loads(
             _tool_backtesting(
-                "forven_create_strategy",
+                "AXIOM_create_strategy",
                 {
                     "name": "Mismatched candidate",
                     "crucible_id": "HYP-parent",

@@ -1,4 +1,4 @@
-"""P3-T08 — /api/skills + /api/brain/lessons router tests."""
+﻿"""P3-T08 — /api/skills + /api/brain/lessons router tests."""
 from __future__ import annotations
 
 import json
@@ -6,21 +6,21 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from forven.api import app
-from forven import quant_skills as qs
-from forven import skill_outcomes as so
-from forven.db import get_db
+from axiom.api import app
+from axiom import quant_skills as qs
+from axiom import skill_outcomes as so
+from axiom.db import get_db
 
 
 @pytest.fixture
-def env(tmp_path, monkeypatch, forven_db):
+def env(tmp_path, monkeypatch, AXIOM_db):
     skills_dir = tmp_path / "quant-skills"
     skills_dir.mkdir()
     (skills_dir / "_hypotheses").mkdir()
     (skills_dir / "_archived").mkdir()
-    monkeypatch.setattr("forven.quant_skills.SKILLS_DIR", skills_dir)
-    monkeypatch.setattr("forven.quant_skills.HYPOTHESES_DIR", skills_dir / "_hypotheses")
-    monkeypatch.setattr("forven.quant_skills.ARCHIVED_DIR", skills_dir / "_archived")
+    monkeypatch.setattr("axiom.quant_skills.SKILLS_DIR", skills_dir)
+    monkeypatch.setattr("axiom.quant_skills.HYPOTHESES_DIR", skills_dir / "_hypotheses")
+    monkeypatch.setattr("axiom.quant_skills.ARCHIVED_DIR", skills_dir / "_archived")
     yield skills_dir
 
 

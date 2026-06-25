@@ -1,4 +1,4 @@
-"""Phase 6 / P6-T01 — operator profile parser tests."""
+﻿"""Phase 6 / P6-T01 — operator profile parser tests."""
 from __future__ import annotations
 
 import importlib
@@ -11,12 +11,12 @@ def workspace(tmp_path, monkeypatch):
     """Point WORKSPACE_DIR at a tmp dir for the test."""
     ws = tmp_path / "ws"
     ws.mkdir()
-    from forven import config
+    from axiom import config
 
     monkeypatch.setattr(config, "WORKSPACE_DIR", ws, raising=False)
     monkeypatch.setattr(config, "LEGACY_WORKSPACE_DIR", ws, raising=False)
 
-    import forven.workspace as ws_mod
+    import axiom.workspace as ws_mod
 
     importlib.reload(ws_mod)
     monkeypatch.setattr(ws_mod, "WORKSPACE_DIR", ws, raising=False)

@@ -1,4 +1,4 @@
-"""Verify a paper trade matches a backtest (execution-correctness confirmation).
+﻿"""Verify a paper trade matches a backtest (execution-correctness confirmation).
 
 Usage: python scripts/verify_paper_vs_backtest.py <STRATEGY_ID>
 
@@ -19,7 +19,7 @@ import urllib.request
 from pathlib import Path
 
 BASE = "http://127.0.0.1:8003"
-DB = str(Path(os.environ.get("FORVEN_HOME", Path.home() / ".forven")) / "forven.db")
+DB = str(Path(os.environ.get("AXIOM_HOME", Path.home() / ".Axiom")) / "axiom.db")
 
 
 def _post(path, body=None, t=300):

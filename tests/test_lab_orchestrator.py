@@ -1,11 +1,11 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from forven.lab_db import get_lab_experiment, get_lab_job
-from forven.lab_db import replace_regime_segments, upsert_lab_experiment, upsert_regime_program, upsert_snapshot_manifest
-from forven.lab_models import LabJobState
-from forven.lab_orchestrator import (
+from axiom.lab_db import get_lab_experiment, get_lab_job
+from axiom.lab_db import replace_regime_segments, upsert_lab_experiment, upsert_regime_program, upsert_snapshot_manifest
+from axiom.lab_models import LabJobState
+from axiom.lab_orchestrator import (
     ORCHESTRATOR_JOB_TYPE,
     enqueue_continuous_cycle,
     get_orchestrator_status,
@@ -17,7 +17,7 @@ from forven.lab_orchestrator import (
 
 def test_maybe_enqueue_due_continuous_cycle_honors_enabled_schedule(monkeypatch):
     fixed_now = datetime(2026, 3, 18, 12, 0, tzinfo=UTC)
-    monkeypatch.setattr("forven.lab_orchestrator._now", lambda: fixed_now)
+    monkeypatch.setattr("axiom.lab_orchestrator._now", lambda: fixed_now)
 
     config = update_orchestrator_config(
         {
@@ -44,7 +44,7 @@ def test_maybe_enqueue_due_continuous_cycle_honors_enabled_schedule(monkeypatch)
 
 def test_run_orchestrator_cycle_job_upserts_experiment_and_model_job(monkeypatch):
     fixed_now = datetime(2026, 3, 18, 12, 0, tzinfo=UTC)
-    monkeypatch.setattr("forven.lab_orchestrator._now", lambda: fixed_now)
+    monkeypatch.setattr("axiom.lab_orchestrator._now", lambda: fixed_now)
 
     config = update_orchestrator_config(
         {
@@ -89,7 +89,7 @@ def test_run_orchestrator_cycle_job_upserts_experiment_and_model_job(monkeypatch
 
 def test_enqueue_continuous_cycle_blocks_when_chain_is_active(monkeypatch):
     fixed_now = datetime(2026, 3, 18, 12, 0, tzinfo=UTC)
-    monkeypatch.setattr("forven.lab_orchestrator._now", lambda: fixed_now)
+    monkeypatch.setattr("axiom.lab_orchestrator._now", lambda: fixed_now)
 
     update_orchestrator_config({"enabled": True})
     first = enqueue_continuous_cycle(reason="manual", force=True)
@@ -101,7 +101,7 @@ def test_enqueue_continuous_cycle_blocks_when_chain_is_active(monkeypatch):
 
 def test_run_orchestrator_cycle_job_reuses_active_program_model(monkeypatch):
     fixed_now = datetime(2026, 3, 18, 12, 0, tzinfo=UTC)
-    monkeypatch.setattr("forven.lab_orchestrator._now", lambda: fixed_now)
+    monkeypatch.setattr("axiom.lab_orchestrator._now", lambda: fixed_now)
 
     program = upsert_regime_program(
         program_id="lrp_test_reuse",
@@ -131,7 +131,7 @@ def test_run_orchestrator_cycle_job_reuses_active_program_model(monkeypatch):
     )
     assert experiment is not None
 
-    from forven.lab_db import create_or_update_model_version, update_regime_program as _update_program
+    from axiom.lab_db import create_or_update_model_version, update_regime_program as _update_program
 
     model = create_or_update_model_version(
         version_key="rm_reuse_baseline",
@@ -190,7 +190,7 @@ def test_run_orchestrator_cycle_job_reuses_active_program_model(monkeypatch):
 
 def test_run_orchestrator_cycle_job_refreshes_when_baseline_window_is_too_short(monkeypatch):
     fixed_now = datetime(2026, 3, 18, 12, 0, tzinfo=UTC)
-    monkeypatch.setattr("forven.lab_orchestrator._now", lambda: fixed_now)
+    monkeypatch.setattr("axiom.lab_orchestrator._now", lambda: fixed_now)
 
     program = upsert_regime_program(
         program_id="lrp_test_short_window",
@@ -225,7 +225,7 @@ def test_run_orchestrator_cycle_job_refreshes_when_baseline_window_is_too_short(
         manifest_json={"requested_window_start": "2025-03-18T12:00:00+00:00", "requested_window_end": "2026-03-18T12:00:00+00:00"},
     )
 
-    from forven.lab_db import create_or_update_model_version, update_regime_program as _update_program
+    from axiom.lab_db import create_or_update_model_version, update_regime_program as _update_program
 
     model = create_or_update_model_version(
         version_key="rm_short_baseline",

@@ -1,4 +1,4 @@
-"""Tests for the manual paper-position controls (forven/api_domains/paper_control.py).
+﻿"""Tests for the manual paper-position controls (Axiom/api_domains/paper_control.py).
 
 Covers the domain write paths (close / partial / open / adjust SL-TP / flip / pause)
 against an isolated DB, plus the scanner's absolute-SL/TP helper and the
@@ -13,8 +13,8 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-import forven.api_domains.paper_control as pc
-import forven.scanner as scanner_mod
+import axiom.api_domains.paper_control as pc
+import axiom.scanner as scanner_mod
 
 # Mirror frontend PaperSessionSummary.svelte SYNTHETIC_REASON_TOKENS — manual close
 # reasons must contain none of these or the rollup flags them as fabricated.
@@ -28,7 +28,7 @@ def _iso(minutes_ago: float = 0.0) -> str:
 
 
 def _insert_paper_strategy(strategy_id: str = STRATEGY_ID, *, symbol: str = "BTC/USDT") -> None:
-    from forven.db import get_db
+    from axiom.db import get_db
 
     with get_db() as conn:
         conn.execute(
@@ -59,7 +59,7 @@ def _insert_open_trade(
     source: str | None = None,
     signal_data: dict | None = None,
 ) -> None:
-    from forven.db import get_db
+    from axiom.db import get_db
 
     sd = dict(signal_data or {})
     if source is not None:
@@ -90,13 +90,13 @@ def _insert_open_trade(
 
 
 def _set_mid(asset: str, price: float) -> None:
-    from forven.db import kv_set
+    from axiom.db import kv_set
 
     kv_set("daemon_state", {"last_prices": {asset: price}})
 
 
 def _get_trade(trade_id: str) -> dict | None:
-    from forven.db import get_db
+    from axiom.db import get_db
 
     with get_db() as conn:
         row = conn.execute("SELECT * FROM trades WHERE id = ?", (trade_id,)).fetchone()
@@ -124,7 +124,7 @@ def test_manual_price_exit_reason_ignores_missing_levels():
 
 
 # ── DB-backed control paths ─────────────────────────────────────────────────
-def test_close_paper_position(forven_db):
+def test_close_paper_position(AXIOM_db):
     _insert_paper_strategy()
     _insert_open_trade("E100", entry_price=100.0, size=2.0)
     _set_mid("BTC", 110.0)
@@ -141,7 +141,7 @@ def test_close_paper_position(forven_db):
     assert session.get("position") is None
 
 
-def test_manual_close_reason_is_not_synthetic(forven_db):
+def test_manual_close_reason_is_not_synthetic(AXIOM_db):
     _insert_paper_strategy()
     _insert_open_trade("E101")
     _set_mid("BTC", 100.0)
@@ -151,7 +151,7 @@ def test_manual_close_reason_is_not_synthetic(forven_db):
     assert not any(token in reason.lower() for token in SYNTHETIC_REASON_TOKENS)
 
 
-def test_partial_close_keeps_residual(forven_db):
+def test_partial_close_keeps_residual(AXIOM_db):
     _insert_paper_strategy()
     _insert_open_trade("E102", entry_price=100.0, size=4.0)
     _set_mid("BTC", 110.0)
@@ -173,7 +173,7 @@ def test_partial_close_keeps_residual(forven_db):
     assert child["pnl_usd"] == pytest.approx(20.0, abs=1e-6)
 
 
-def test_open_manual_position(forven_db):
+def test_open_manual_position(AXIOM_db):
     _insert_paper_strategy()
     _set_mid("BTC", 100.0)
 
@@ -181,7 +181,7 @@ def test_open_manual_position(forven_db):
         STRATEGY_ID, direction="short", size=1.5, leverage=2.0, stop_loss_price=110.0, take_profit_price=90.0
     )
 
-    from forven.db import get_db
+    from axiom.db import get_db
 
     with get_db() as conn:
         row = conn.execute(
@@ -199,7 +199,7 @@ def test_open_manual_position(forven_db):
     assert "entry_exchange_order_id" not in sd
 
 
-def test_open_manual_rejects_when_already_open(forven_db):
+def test_open_manual_rejects_when_already_open(AXIOM_db):
     from fastapi import HTTPException
 
     _insert_paper_strategy()
@@ -210,7 +210,7 @@ def test_open_manual_rejects_when_already_open(forven_db):
         pc.open_manual_position(STRATEGY_ID, direction="long", size=1.0)
 
 
-def test_open_manual_rejects_inverted_stop(forven_db):
+def test_open_manual_rejects_inverted_stop(AXIOM_db):
     from fastapi import HTTPException
 
     _insert_paper_strategy()
@@ -221,7 +221,7 @@ def test_open_manual_rejects_inverted_stop(forven_db):
         pc.open_manual_position(STRATEGY_ID, direction="long", size=1.0, stop_loss_price=120.0)
 
 
-def test_adjust_stop_loss_and_take_profit(forven_db):
+def test_adjust_stop_loss_and_take_profit(AXIOM_db):
     _insert_paper_strategy()
     _insert_open_trade("E104", direction="long", entry_price=100.0)
     _set_mid("BTC", 100.0)
@@ -240,7 +240,7 @@ def test_adjust_stop_loss_and_take_profit(forven_db):
     assert "stop_loss_price" not in sd2
 
 
-def test_set_manual_pause(forven_db):
+def test_set_manual_pause(AXIOM_db):
     _insert_paper_strategy()
     _insert_open_trade("E105")
     _set_mid("BTC", 100.0)
@@ -251,7 +251,7 @@ def test_set_manual_pause(forven_db):
     assert json.loads(_get_trade("E105")["signal_data"])["manual_pause"] is False
 
 
-def test_flip_position(forven_db):
+def test_flip_position(AXIOM_db):
     _insert_paper_strategy()
     _insert_open_trade("E106", direction="long", entry_price=100.0, size=2.0)
     _set_mid("BTC", 105.0)
@@ -262,7 +262,7 @@ def test_flip_position(forven_db):
     assert old["status"] == "CLOSED"
     assert json.loads(old["signal_data"])["close_reason"] == "manual_flip_close"
 
-    from forven.db import get_db
+    from axiom.db import get_db
 
     with get_db() as conn:
         row = conn.execute(
@@ -287,7 +287,7 @@ def _insert_live_trade(
     book: str | None = None,
 ) -> None:
     """A live, exchange-backed open trade (execution_type='live' + entry order id)."""
-    from forven.db import get_db
+    from axiom.db import get_db
 
     sd = {"source": "scanner", "entry_exchange_order_id": "OID-ENTRY"}
     with get_db() as conn:
@@ -304,25 +304,25 @@ def _insert_live_trade(
 
 
 def _enable_books(*, long_addr: str | None = None, short_addr: str | None = None) -> None:
-    from forven.db import kv_set
+    from axiom.db import kv_set
 
     settings = {"live_books_enabled": True}
     if long_addr is not None:
         settings["hyperliquid_long_book_address"] = long_addr
     if short_addr is not None:
         settings["hyperliquid_short_book_address"] = short_addr
-    kv_set("forven:settings", settings)
+    kv_set("axiom:settings", settings)
 
 
-def test_trade_is_live_classification(forven_db):
+def test_trade_is_live_classification(AXIOM_db):
     paper = {"execution_type": "paper", "signal_data": "{}"}
     live = {"execution_type": "live", "signal_data": json.dumps({"entry_exchange_order_id": "X"})}
     assert pc._trade_is_live(paper) is False
     assert pc._trade_is_live(live) is True
 
 
-def test_live_close_places_order_and_clean_reason(forven_db, monkeypatch):
-    import forven.exchange.hyperliquid as hl
+def test_live_close_places_order_and_clean_reason(AXIOM_db, monkeypatch):
+    import axiom.exchange.hyperliquid as hl
 
     _insert_paper_strategy()
     _insert_live_trade("L100", direction="long", size=1.0, entry_price=100.0)
@@ -348,7 +348,7 @@ def test_live_close_places_order_and_clean_reason(forven_db, monkeypatch):
     assert sd["exit_exchange_order_id"] == "OID-EXIT"
 
 
-def test_live_open_respects_gate(forven_db, monkeypatch):
+def test_live_open_respects_gate(AXIOM_db, monkeypatch):
     from fastapi import HTTPException
 
     _insert_paper_strategy()
@@ -361,8 +361,8 @@ def test_live_open_respects_gate(forven_db, monkeypatch):
     assert exc.value.status_code == 409
 
 
-def test_live_open_places_market_order_and_registers(forven_db, monkeypatch):
-    import forven.exchange.hyperliquid as hl
+def test_live_open_places_market_order_and_registers(AXIOM_db, monkeypatch):
+    import axiom.exchange.hyperliquid as hl
 
     _insert_paper_strategy()
     _set_mid("BTC", 100.0)
@@ -385,7 +385,7 @@ def test_live_open_places_market_order_and_registers(forven_db, monkeypatch):
 
     pc.open_manual_position(STRATEGY_ID, direction="long", size=2.0, stop_loss_price=90.0)
 
-    from forven.db import get_db
+    from axiom.db import get_db
 
     with get_db() as conn:
         row = conn.execute(
@@ -401,8 +401,8 @@ def test_live_open_places_market_order_and_registers(forven_db, monkeypatch):
     assert registered.get("called") is True
 
 
-def test_live_adjust_stop_places_protective_stop(forven_db, monkeypatch):
-    import forven.exchange.hyperliquid as hl
+def test_live_adjust_stop_places_protective_stop(AXIOM_db, monkeypatch):
+    import axiom.exchange.hyperliquid as hl
 
     _insert_paper_strategy()
     _insert_live_trade("L200", direction="long", size=1.0, entry_price=100.0)
@@ -426,8 +426,8 @@ def test_live_adjust_stop_places_protective_stop(forven_db, monkeypatch):
 
 
 # ── Sub-account (direction book) routing ────────────────────────────────────
-def test_live_open_routes_to_short_book(forven_db, monkeypatch):
-    import forven.exchange.hyperliquid as hl
+def test_live_open_routes_to_short_book(AXIOM_db, monkeypatch):
+    import axiom.exchange.hyperliquid as hl
 
     _insert_paper_strategy()
     _set_mid("BTC", 100.0)
@@ -449,7 +449,7 @@ def test_live_open_routes_to_short_book(forven_db, monkeypatch):
     pc.open_manual_position(STRATEGY_ID, direction="short", size=1.0)
 
     assert seen["vault"] == "0xSHORT"  # routed to the short sub-account
-    from forven.db import get_db
+    from axiom.db import get_db
 
     with get_db() as conn:
         row = conn.execute(
@@ -458,7 +458,7 @@ def test_live_open_routes_to_short_book(forven_db, monkeypatch):
     assert dict(row)["book"] == "short"
 
 
-def test_live_open_long_only_skips_short(forven_db, monkeypatch):
+def test_live_open_long_only_skips_short(AXIOM_db, monkeypatch):
     from fastapi import HTTPException
 
     _insert_paper_strategy()
@@ -472,8 +472,8 @@ def test_live_open_long_only_skips_short(forven_db, monkeypatch):
     assert "LONG ONLY" in str(exc.value.detail)
 
 
-def test_live_close_routes_to_trade_book(forven_db, monkeypatch):
-    import forven.exchange.hyperliquid as hl
+def test_live_close_routes_to_trade_book(AXIOM_db, monkeypatch):
+    import axiom.exchange.hyperliquid as hl
 
     _insert_paper_strategy()
     _enable_books(short_addr="0xSHORT")
@@ -500,14 +500,14 @@ def _client():
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
 
-    from forven.routers.paper import router as paper_router
+    from axiom.routers.paper import router as paper_router
 
     app = FastAPI()
     app.include_router(paper_router)
     return TestClient(app)
 
 
-def test_route_close_position(forven_db):
+def test_route_close_position(AXIOM_db):
     _insert_paper_strategy()
     _insert_open_trade("E200", entry_price=100.0, size=2.0)
     _set_mid("BTC", 110.0)
@@ -518,7 +518,7 @@ def test_route_close_position(forven_db):
     assert _get_trade("E200")["status"] == "CLOSED"
 
 
-def test_route_open_position_validation(forven_db):
+def test_route_open_position_validation(AXIOM_db):
     _insert_paper_strategy()
     _set_mid("BTC", 100.0)
 
@@ -527,7 +527,7 @@ def test_route_open_position_validation(forven_db):
     assert resp.status_code == 422
 
 
-def test_route_partial_close(forven_db):
+def test_route_partial_close(AXIOM_db):
     _insert_paper_strategy()
     _insert_open_trade("E201", entry_price=100.0, size=4.0)
     _set_mid("BTC", 110.0)

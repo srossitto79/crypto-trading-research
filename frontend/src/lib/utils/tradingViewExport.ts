@@ -124,10 +124,10 @@ function buildHeader(container: StrategyContainerPayload, params: Record<string,
 	].filter(Boolean);
 	return [
 		'// ============================================================================',
-		`// Forven TradingView export - ${container.strategy.id}`,
+		`// Axiom TradingView export - ${container.strategy.id}`,
 		'// ============================================================================',
 		'// Paste this into TradingView Pine Editor, add it to the matching chart,',
-		'// then compare Strategy Tester results against the Forven run below.',
+		'// then compare Strategy Tester results against the Axiom run below.',
 		'//',
 		...metricLines,
 		`//   exporter       : ${source}`,
@@ -141,7 +141,7 @@ function buildWindow(run: StrategyContainerHistoryItem | null): string {
 	const startMs = epochMs(run?.start_date) ?? Date.UTC(2020, 0, 1);
 	const endMs = epochMs(run?.end_date) ?? Date.UTC(2035, 0, 1);
 	return [
-		'use_window = input.bool(true, "Restrict to Forven verification window", group = "Date range")',
+		'use_window = input.bool(true, "Restrict to Axiom verification window", group = "Date range")',
 		`start_ts = input.time(${startMs}, "Window start (UTC)", group = "Date range")`,
 		`end_ts = input.time(${endMs}, "Window end (UTC)", group = "Date range")`,
 		'in_window = not use_window or (time >= start_ts and time <= end_ts)',
@@ -153,7 +153,7 @@ function strategyDeclaration(container: StrategyContainerPayload): string {
 	return [
 		'//@version=6',
 		'strategy(',
-		`     title              = "Forven ${pineString(container.strategy.id)} - ${pineString(container.strategy.name)}",`,
+		`     title              = "Axiom ${pineString(container.strategy.id)} - ${pineString(container.strategy.name)}",`,
 		`     shorttitle         = "${pineString(container.strategy.id)}",`,
 		'     overlay            = true,',
 		'     pyramiding         = 0,',
@@ -317,9 +317,9 @@ export function buildTradingViewExport(container: StrategyContainerPayload): Tra
 		'',
 		'plotshape(buy_signal, title = "BUY", text = "BUY", style = shape.labelup, location = location.belowbar, color = color.new(color.green, 0), textcolor = color.white, size = size.tiny)',
 		'plotshape(sell_signal or window_forced_sell, title = "SELL", text = "SELL", style = shape.labeldown, location = location.abovebar, color = color.new(color.red, 0), textcolor = color.white, size = size.tiny)',
-		'alertcondition(buy_signal, title = "Forven BUY", message = "Forven BUY signal")',
-		'alertcondition(sell_signal or window_forced_sell, title = "Forven SELL", message = "Forven SELL signal")',
-		'bgcolor(in_window ? color.new(color.blue, 92) : na, title = "Forven verification window")',
+		'alertcondition(buy_signal, title = "Axiom BUY", message = "Axiom BUY signal")',
+		'alertcondition(sell_signal or window_forced_sell, title = "Axiom SELL", message = "Axiom SELL signal")',
+		'bgcolor(in_window ? color.new(color.blue, 92) : na, title = "Axiom verification window")',
 		'',
 	].join('\n');
 	return {

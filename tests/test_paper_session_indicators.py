@@ -1,9 +1,9 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import pandas as pd
 
-from forven.api_domains import paper as paper_domain
-from forven.db import get_db
+from axiom.api_domains import paper as paper_domain
+from axiom.db import get_db
 
 
 def test_session_indicators_follow_requested_timeframe_and_classify_panels(monkeypatch):
@@ -136,7 +136,7 @@ def test_session_markers_include_strategy_signal_intent_from_default_params(monk
     monkeypatch.setattr(paper_domain, "_find_compat_paper_session", lambda session_id, include_deployed=True: session)
     monkeypatch.setattr(paper_domain, "_load_session_bars", lambda *_args, **_kwargs: bars)
 
-    import forven.scanner as scanner_mod
+    import axiom.scanner as scanner_mod
 
     def fake_get_signal(strat_id: str, strat: dict, frame: pd.DataFrame, strategy_instance=None) -> dict:
         assert strat_id == "S-SIGNAL-MARKERS"
@@ -207,7 +207,7 @@ def test_session_markers_skip_generated_signal_reconstruction_by_default(monkeyp
     assert result == {"entries": [], "exits": [], "blocked": []}
 
 
-def test_session_markers_use_persisted_signal_results_before_recomputing(forven_db, monkeypatch):
+def test_session_markers_use_persisted_signal_results_before_recomputing(AXIOM_db, monkeypatch):
     session = {
         "id": "compat:strategy:S-PERSISTED-SIGNALS",
         "strategy_id": "S-PERSISTED-SIGNALS",
@@ -293,7 +293,7 @@ def test_session_markers_use_persisted_signal_results_before_recomputing(forven_
     ]
 
 
-def test_session_markers_coalesce_repeated_persisted_signals(forven_db, monkeypatch):
+def test_session_markers_coalesce_repeated_persisted_signals(AXIOM_db, monkeypatch):
     session = {
         "id": "compat:strategy:S-PERSISTED-REPEATS",
         "strategy_id": "S-PERSISTED-REPEATS",

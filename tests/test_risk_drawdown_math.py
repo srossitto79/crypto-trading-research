@@ -1,10 +1,10 @@
-"""Risk math checks for drawdown and high-water mark tracking."""
+﻿"""Risk math checks for drawdown and high-water mark tracking."""
 
-from forven.db import kv_get
-from forven.exchange.risk import update_equity
+from axiom.db import kv_get
+from axiom.exchange.risk import update_equity
 
 
-def test_drawdown_percent_tracks_high_water_mark(forven_db):
+def test_drawdown_percent_tracks_high_water_mark(AXIOM_db):
     first = update_equity(10000.0)
     assert first["high_water_mark"] == 10000.0
     assert first["drawdown_pct"] == 0.0
@@ -25,7 +25,7 @@ def test_drawdown_percent_tracks_high_water_mark(forven_db):
     assert fourth["action"] is None
 
 
-def test_kill_switch_triggers_exactly_at_drawdown_threshold(forven_db):
+def test_kill_switch_triggers_exactly_at_drawdown_threshold(AXIOM_db):
     # Establish HWM at 10,000 then drop exactly 10%.
     update_equity(10000.0)
     result = update_equity(9000.0)
@@ -34,7 +34,7 @@ def test_kill_switch_triggers_exactly_at_drawdown_threshold(forven_db):
     assert result["action"] == "kill_switch"
 
 
-def test_daily_loss_halt_triggers_exactly_at_limit(forven_db):
+def test_daily_loss_halt_triggers_exactly_at_limit(AXIOM_db):
     # Daily start equity set on first call; second call lands exactly at -5%.
     update_equity(10000.0)
     result = update_equity(9500.0)
@@ -43,7 +43,7 @@ def test_daily_loss_halt_triggers_exactly_at_limit(forven_db):
     assert result["action"] == "daily_halt"
 
 
-def test_update_equity_persists_drawdown_and_daily_snapshot(forven_db):
+def test_update_equity_persists_drawdown_and_daily_snapshot(AXIOM_db):
     update_equity(10000.0)
     update_equity(9700.0)
 

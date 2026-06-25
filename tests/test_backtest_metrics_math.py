@@ -1,10 +1,10 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import math
 
 import pytest
 
-from forven.strategies.backtest import _compute_basic_metrics, compute_metrics
+from axiom.strategies.backtest import _compute_basic_metrics, compute_metrics
 
 
 def test_compute_basic_metrics_uses_compounded_equity_curve():

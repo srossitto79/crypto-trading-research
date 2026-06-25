@@ -1,4 +1,4 @@
-"""Regression test: the manual-backtest submit handler must forward execution
+﻿"""Regression test: the manual-backtest submit handler must forward execution
 controls (window, fee/slippage, initial_capital, sizing/stops) into the engine.
 
 This guards against the audited bug where the page sent ~13 controls that the
@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import pytest
 
-from forven import api_core as core
-from forven.strategies import backtest as backtest_mod
+from axiom import api_core as core
+from axiom.strategies import backtest as backtest_mod
 
 
 @pytest.fixture
@@ -134,7 +134,7 @@ def test_manual_strategy_rejects_bad_type_name():
 _VALID_STRATEGY = '''
 import pandas as pd
 import numpy as np
-from forven.strategies.base import BaseStrategy, Signal
+from axiom.strategies.base import BaseStrategy, Signal
 
 
 class ManualWiringTest(BaseStrategy):
@@ -191,9 +191,9 @@ _FORGE_SPEC = {
 }
 
 
-def test_send_visual_strategy_to_forge(forven_db):
+def test_send_visual_strategy_to_forge(AXIOM_db):
     """A visual (rule_engine) strategy lands in the Forge with its spec preserved."""
-    from forven.db import get_db
+    from axiom.db import get_db
     res = core.send_manual_strategy_to_forge(
         core.SendToForgeBody(mode="visual", spec=_FORGE_SPEC, symbol="BTC/USDT", timeframe="1h")
     )
@@ -208,7 +208,7 @@ def test_send_visual_strategy_to_forge(forven_db):
     assert '"spec"' in (row["params"] or "")  # the rule spec round-trips into params
 
     # And it rebuilds into a working strategy from the stored row (pipeline path).
-    from forven.strategies.registry import build_strategy_from_row
+    from axiom.strategies.registry import build_strategy_from_row
     with get_db() as conn:
         full = dict(conn.execute("SELECT * FROM strategies WHERE id = ?", (res["strategy_id"],)).fetchone())
     strat = build_strategy_from_row(full)
@@ -216,7 +216,7 @@ def test_send_visual_strategy_to_forge(forven_db):
     assert isinstance(strat.params.get("spec"), dict)
 
 
-def test_send_code_strategy_to_forge(forven_db):
+def test_send_code_strategy_to_forge(AXIOM_db):
     """A registered code strategy type lands in the Forge."""
     res = core.send_manual_strategy_to_forge(
         core.SendToForgeBody(mode="code", type_name="rsi_momentum", params={"rsi_period": 14}, symbol="ETH", timeframe="4h")
@@ -226,16 +226,16 @@ def test_send_code_strategy_to_forge(forven_db):
     assert res["stage"] == "quick_screen"
 
 
-def test_send_to_forge_rejects_unregistered_type(forven_db):
+def test_send_to_forge_rejects_unregistered_type(AXIOM_db):
     with pytest.raises(core.HTTPException):
         core.send_manual_strategy_to_forge(core.SendToForgeBody(mode="code", type_name="totally_unregistered_xyz"))
 
 
-def test_per_spec_rule_engine_ids_resolve_and_segregate(forven_db):
+def test_per_spec_rule_engine_ids_resolve_and_segregate(AXIOM_db):
     """Ad-hoc visual runs use rule_engine__<hash> ids so distinct strategies get
     distinct rows (no collision under a shared 'rule_engine'), all resolving to
     the rule_engine runtime type."""
-    from forven.db import get_db
+    from axiom.db import get_db
     r1 = core._require_existing_strategy_row("rule_engine__aaa")
     r2 = core._require_existing_strategy_row("rule_engine__bbb")
     assert r1["id"] == "rule_engine__aaa" and r1["type"] == "rule_engine"
@@ -251,7 +251,7 @@ def test_per_spec_rule_engine_ids_resolve_and_segregate(forven_db):
     assert base["id"] == "rule_engine" and base["type"] == "rule_engine"
 
 
-def test_send_to_forge_rejects_bad_mode(forven_db):
+def test_send_to_forge_rejects_bad_mode(AXIOM_db):
     with pytest.raises(core.HTTPException):
         core.send_manual_strategy_to_forge(core.SendToForgeBody(mode="bogus", spec=_FORGE_SPEC))
 

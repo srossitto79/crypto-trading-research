@@ -1,6 +1,6 @@
-"""Phase 5 / P5-T03 — smart approval classifier.
+﻿"""Phase 5 / P5-T03 — smart approval classifier.
 
-Tests the ``forven.control_plane.smart_approval`` module:
+Tests the ``Axiom.control_plane.smart_approval`` module:
 
 * Hard rules override the model:
     - ``approval_type`` matching live/real-money/withdraw → forced ``escalate``.
@@ -19,8 +19,8 @@ from __future__ import annotations
 import json
 
 
-from forven.control_plane import smart_approval as sa
-from forven.db import create_approval, get_approval, init_db
+from axiom.control_plane import smart_approval as sa
+from axiom.db import create_approval, get_approval, init_db
 
 
 def _aux_returns(monkeypatch, payload: dict | str | Exception) -> None:
@@ -34,7 +34,7 @@ def _aux_returns(monkeypatch, payload: dict | str | Exception) -> None:
 
 # --- Hard rules -----------------------------------------------------------
 
-def test_force_escalate_on_live_trade(forven_db, monkeypatch) -> None:
+def test_force_escalate_on_live_trade(AXIOM_db, monkeypatch) -> None:
     """``approval_type='live_trade_arm'`` always escalates, even if the
     classifier says auto_approve."""
     init_db()
@@ -57,7 +57,7 @@ def test_force_escalate_on_live_trade(forven_db, monkeypatch) -> None:
     assert "high-stakes" in result["model"].lower() or "hard-rule" in result["model"].lower()
 
 
-def test_force_escalate_on_real_money(forven_db, monkeypatch) -> None:
+def test_force_escalate_on_real_money(AXIOM_db, monkeypatch) -> None:
     init_db()
     _aux_returns(monkeypatch, {"recommendation": "auto_approve",
                                "reasoning": "x", "confidence": 1.0})
@@ -69,7 +69,7 @@ def test_force_escalate_on_real_money(forven_db, monkeypatch) -> None:
     assert result["recommendation"] == "escalate"
 
 
-def test_force_hold_on_oversized_payload(forven_db, monkeypatch) -> None:
+def test_force_hold_on_oversized_payload(AXIOM_db, monkeypatch) -> None:
     """Payload >64 KB always returns hold, regardless of model output."""
     init_db()
     _aux_returns(monkeypatch, {"recommendation": "auto_approve",
@@ -86,7 +86,7 @@ def test_force_hold_on_oversized_payload(forven_db, monkeypatch) -> None:
 
 # --- Failure modes default to hold ----------------------------------------
 
-def test_aux_unreachable_defaults_to_hold(forven_db, monkeypatch) -> None:
+def test_aux_unreachable_defaults_to_hold(AXIOM_db, monkeypatch) -> None:
     init_db()
     _aux_returns(monkeypatch, RuntimeError("network down"))
     result = sa.classify_approval({
@@ -98,7 +98,7 @@ def test_aux_unreachable_defaults_to_hold(forven_db, monkeypatch) -> None:
     assert result["confidence"] == 0.0
 
 
-def test_malformed_response_defaults_to_hold(forven_db, monkeypatch) -> None:
+def test_malformed_response_defaults_to_hold(AXIOM_db, monkeypatch) -> None:
     init_db()
     _aux_returns(monkeypatch, "not json at all just prose")
     result = sa.classify_approval({
@@ -109,7 +109,7 @@ def test_malformed_response_defaults_to_hold(forven_db, monkeypatch) -> None:
     assert result["recommendation"] == "hold"
 
 
-def test_invalid_recommendation_value_defaults_to_hold(forven_db, monkeypatch) -> None:
+def test_invalid_recommendation_value_defaults_to_hold(AXIOM_db, monkeypatch) -> None:
     init_db()
     _aux_returns(monkeypatch, {"recommendation": "definitely_yes",
                                "reasoning": "go", "confidence": 0.9})
@@ -123,7 +123,7 @@ def test_invalid_recommendation_value_defaults_to_hold(forven_db, monkeypatch) -
 
 # --- Happy path: persistence + apply_smart_decision -----------------------
 
-def test_classify_persists_columns_to_approvals_row(forven_db, monkeypatch) -> None:
+def test_classify_persists_columns_to_approvals_row(AXIOM_db, monkeypatch) -> None:
     init_db()
     _aux_returns(monkeypatch, {"recommendation": "auto_approve",
                                "reasoning": "routine paper deploy",
@@ -149,7 +149,7 @@ def test_classify_persists_columns_to_approvals_row(forven_db, monkeypatch) -> N
     assert row["classifier_at"]
 
 
-def test_apply_smart_decision_auto_approves_in_smart_mode(forven_db, monkeypatch) -> None:
+def test_apply_smart_decision_auto_approves_in_smart_mode(AXIOM_db, monkeypatch) -> None:
     init_db()
     _aux_returns(monkeypatch, {"recommendation": "auto_approve",
                                "reasoning": "safe routine",
@@ -158,7 +158,7 @@ def test_apply_smart_decision_auto_approves_in_smart_mode(forven_db, monkeypatch
     # Disable the auto-classify-on-create hook so apply_smart_decision is the
     # one driving the state transition we're verifying.
     monkeypatch.setattr(
-        "forven.control_plane.approval_modes.get_mode",
+        "axiom.control_plane.approval_modes.get_mode",
         lambda *_args, **_kw: "manual",
     )
 
@@ -181,7 +181,7 @@ def test_apply_smart_decision_auto_approves_in_smart_mode(forven_db, monkeypatch
     assert str(row.get("status") or "").lower() in ("approved", "completed")
 
 
-def test_apply_smart_decision_no_op_in_manual_mode(forven_db, monkeypatch) -> None:
+def test_apply_smart_decision_no_op_in_manual_mode(AXIOM_db, monkeypatch) -> None:
     """In manual mode, classifier still runs but auto-approve is NOT applied."""
     init_db()
     _aux_returns(monkeypatch, {"recommendation": "auto_approve",
@@ -189,7 +189,7 @@ def test_apply_smart_decision_no_op_in_manual_mode(forven_db, monkeypatch) -> No
                                "confidence": 0.9})
 
     monkeypatch.setattr(
-        "forven.control_plane.approval_modes.get_mode",
+        "axiom.control_plane.approval_modes.get_mode",
         lambda *_args, **_kw: "manual",
     )
 
@@ -211,7 +211,7 @@ def test_apply_smart_decision_no_op_in_manual_mode(forven_db, monkeypatch) -> No
     assert str(row.get("status") or "").lower().startswith("pending")
 
 
-def test_apply_smart_decision_returns_hold_for_missing_row(forven_db) -> None:
+def test_apply_smart_decision_returns_hold_for_missing_row(AXIOM_db) -> None:
     init_db()
     result = sa.apply_smart_decision(99999999, "smart")
     assert result["recommendation"] == "hold"

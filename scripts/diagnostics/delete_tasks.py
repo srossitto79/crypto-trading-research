@@ -1,7 +1,7 @@
-import sqlite3
+﻿import sqlite3
 import os
 
-db_path = os.path.expanduser('~/.forven/forven.db')
+db_path = os.path.expanduser('~/.Axiom/axiom.db')
 print("Connecting to DB:", db_path, os.path.exists(db_path))
 c = sqlite3.connect(db_path)
 

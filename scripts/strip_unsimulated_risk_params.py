@@ -1,7 +1,7 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """Strip never-simulated optimizer-injected stop/TP values from strategies.params.
 
-Audit lead B-4: forven/strategies/optimizer.py:_get_param_space used to inject
+Audit lead B-4: Axiom/strategies/optimizer.py:_get_param_space used to inject
 stop_loss_pct=[0.02, 0.03, 0.05, 0.08] and take_profit_pct=[0.04, 0.06, 0.10,
 0.15] grids into every fallback parameter space. The backtest engine ignores
 both fields inside ``params`` (warn-only, _UNSUPPORTED_BACKTEST_RISK_FIELDS),
@@ -41,8 +41,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from forven.db import get_db  # noqa: E402
-from forven.sim.clock import get_now  # noqa: E402
+from axiom.db import get_db  # noqa: E402
+from axiom.sim.clock import get_now  # noqa: E402
 
 # The exact grids the optimizer used to inject (optimizer.py P2-3, removed by B-4).
 OVERLAY_GRIDS: dict[str, tuple[float, ...]] = {
@@ -103,7 +103,7 @@ def main() -> int:
             print(
                 "Refusing to run: get_db() resolved a strategies table with 0 rows — "
                 "this is almost certainly the wrong DB (split-brain home). Set "
-                "FORVEN_HOME to the live home (e.g. ~/.forven) and run inside the "
+                "AXIOM_HOME to the live home (e.g. ~/.Axiom) and run inside the "
                 "app's environment, with the app stopped.",
                 file=sys.stderr,
             )

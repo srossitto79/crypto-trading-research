@@ -1,4 +1,4 @@
-"""Phase 1 (P1-T07) — outcome backfill tests.
+﻿"""Phase 1 (P1-T07) — outcome backfill tests.
 
 Asserts the ``backfill_outcome_for_strategy`` helper maps terminal stages
 correctly, fills only NULL outcomes (idempotent), and is invoked from
@@ -7,8 +7,8 @@ linked decision row.
 """
 from __future__ import annotations
 
-from forven import brain_decisions as bd
-from forven.db import get_db
+from axiom import brain_decisions as bd
+from axiom.db import get_db
 
 
 def _seed_strategy(strategy_id: str, stage: str = "quick_screen") -> None:
@@ -54,7 +54,7 @@ def _seed_decision_with_task(strategy_id: str) -> tuple[int, int]:
     return decision_id, task_id
 
 
-def test_stage_to_outcome_maps_terminals(forven_db):
+def test_stage_to_outcome_maps_terminals(AXIOM_db):
     assert bd.stage_to_outcome("live_graduated") == "success"
     assert bd.stage_to_outcome("archived") == "failure"
     assert bd.stage_to_outcome("rejected") == "failure"
@@ -67,7 +67,7 @@ def test_stage_to_outcome_maps_terminals(forven_db):
     assert bd.stage_to_outcome(None) is None
 
 
-def test_backfill_marks_success_on_live_graduated(forven_db):
+def test_backfill_marks_success_on_live_graduated(AXIOM_db):
     _seed_strategy("S00100")
     decision_id, _ = _seed_decision_with_task("S00100")
     out = bd.backfill_outcome_for_strategy("S00100", "live_graduated")
@@ -78,7 +78,7 @@ def test_backfill_marks_success_on_live_graduated(forven_db):
     assert row["outcome_at"] is not None
 
 
-def test_backfill_marks_failure_on_archived(forven_db):
+def test_backfill_marks_failure_on_archived(AXIOM_db):
     _seed_strategy("S00101")
     decision_id, _ = _seed_decision_with_task("S00101")
     bd.backfill_outcome_for_strategy("S00101", "archived")
@@ -86,7 +86,7 @@ def test_backfill_marks_failure_on_archived(forven_db):
     assert row["outcome_observed"] == "failure"
 
 
-def test_backfill_skips_intermediate_stage(forven_db):
+def test_backfill_skips_intermediate_stage(AXIOM_db):
     _seed_strategy("S00102")
     decision_id, _ = _seed_decision_with_task("S00102")
     out = bd.backfill_outcome_for_strategy("S00102", "gauntlet")
@@ -95,7 +95,7 @@ def test_backfill_skips_intermediate_stage(forven_db):
     assert row["outcome_observed"] is None
 
 
-def test_backfill_idempotent_first_terminal_wins(forven_db, caplog):
+def test_backfill_idempotent_first_terminal_wins(AXIOM_db, caplog):
     _seed_strategy("S00103")
     decision_id, _ = _seed_decision_with_task("S00103")
     bd.backfill_outcome_for_strategy("S00103", "live_graduated")
@@ -103,7 +103,7 @@ def test_backfill_idempotent_first_terminal_wins(forven_db, caplog):
     # log a warning.
     import logging
 
-    caplog.set_level(logging.WARNING, logger="forven.brain_decisions")
+    caplog.set_level(logging.WARNING, logger="axiom.brain_decisions")
     out = bd.backfill_outcome_for_strategy("S00103", "archived")
     assert out["resolved"] == 0
     assert out["skipped"] == 1
@@ -112,7 +112,7 @@ def test_backfill_idempotent_first_terminal_wins(forven_db, caplog):
     assert any("refusing to overwrite outcome" in rec.message for rec in caplog.records)
 
 
-def test_backfill_noops_when_strategy_has_no_decision_link(forven_db):
+def test_backfill_noops_when_strategy_has_no_decision_link(AXIOM_db):
     _seed_strategy("S00104")
     out = bd.backfill_outcome_for_strategy("S00104", "live_graduated")
     assert out["resolved"] == 0
@@ -122,7 +122,7 @@ def test_backfill_noops_when_strategy_has_no_decision_link(forven_db):
     assert count == 0
 
 
-def test_transition_stage_triggers_backfill(forven_db, monkeypatch):
+def test_transition_stage_triggers_backfill(AXIOM_db, monkeypatch):
     """End-to-end: transition_stage must call backfill on terminal stages."""
     _seed_strategy("S00105", stage="paper")
     decision_id, _ = _seed_decision_with_task("S00105")
@@ -130,7 +130,7 @@ def test_transition_stage_triggers_backfill(forven_db, monkeypatch):
     # Stub out the heavy promotion-path side effects so we exercise just the
     # backfill hook. transition_stage is large; we monkeypatch the bits that
     # would otherwise require a fully-populated lab DB.
-    from forven import brain as brain_mod
+    from axiom import brain as brain_mod
 
     captured = {}
 

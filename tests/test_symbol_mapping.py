@@ -1,10 +1,10 @@
-"""Tests for universal symbol mapping."""
+﻿"""Tests for universal symbol mapping."""
 
 from __future__ import annotations
 
 import pytest
 
-from forven.symbol_mapping import (
+from axiom.symbol_mapping import (
     AssetClass,
     detect_asset_class,
     from_polygon,

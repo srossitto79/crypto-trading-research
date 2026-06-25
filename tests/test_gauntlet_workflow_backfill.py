@@ -1,4 +1,4 @@
-"""Self-healing workflow backfill across the whole pre-paper set (2026-06-14).
+﻿"""Self-healing workflow backfill across the whole pre-paper set (2026-06-14).
 
 The backfill used to cover only quick_screen stage and only the
 "no current-version workflow" case. So a strategy DEMOTED back from paper to
@@ -9,9 +9,9 @@ gauntlet too, and resets a terminal current-version workflow in place.
 
 from datetime import datetime, timezone
 
-from forven.db import get_db
-from forven.gauntlet.engine import backfill_missing_quick_screen_workflows
-from forven.gauntlet.store import WORKFLOW_DEFINITION_VERSION, create_or_get_workflow
+from axiom.db import get_db
+from axiom.gauntlet.engine import backfill_missing_quick_screen_workflows
+from axiom.gauntlet.store import WORKFLOW_DEFINITION_VERSION, create_or_get_workflow
 
 
 def _now():
@@ -55,7 +55,7 @@ def _active_wf(sid):
         ).fetchone()
 
 
-def test_backfill_resets_passed_workflow_demoted_to_gauntlet(forven_db):
+def test_backfill_resets_passed_workflow_demoted_to_gauntlet(AXIOM_db):
     # The operator's case: a strategy that passed and reached paper, then was
     # demoted back to gauntlet. Its only workflow is a terminal current-version
     # 'passed' — the backfill must reset it to a fresh active run.
@@ -68,7 +68,7 @@ def test_backfill_resets_passed_workflow_demoted_to_gauntlet(forven_db):
     assert act["status"] == "pending"
 
 
-def test_backfill_creates_fresh_when_only_old_version_exists(forven_db):
+def test_backfill_creates_fresh_when_only_old_version_exists(AXIOM_db):
     # A v1-passed workflow (old definition) with no current-version workflow:
     # the backfill creates a fresh current-version run.
     _insert_strategy("oldver", stage="gauntlet")
@@ -78,13 +78,13 @@ def test_backfill_creates_fresh_when_only_old_version_exists(forven_db):
     assert act is not None and act["definition_version"] == WORKFLOW_DEFINITION_VERSION
 
 
-def test_backfill_still_covers_quick_screen_with_no_workflow(forven_db):
+def test_backfill_still_covers_quick_screen_with_no_workflow(AXIOM_db):
     _insert_strategy("qs-fresh", stage="quick_screen")
     backfill_missing_quick_screen_workflows(limit=10)
     assert _active_wf("qs-fresh") is not None
 
 
-def test_backfill_leaves_active_workflow_untouched(forven_db):
+def test_backfill_leaves_active_workflow_untouched(AXIOM_db):
     _insert_strategy("already-active", stage="gauntlet")
     wf = create_or_get_workflow(strategy_id="already-active", created_by="pytest")
     healed = backfill_missing_quick_screen_workflows(limit=10)
@@ -93,7 +93,7 @@ def test_backfill_leaves_active_workflow_untouched(forven_db):
     assert act is not None and act["id"] == wf["id"]
 
 
-def test_backfill_does_not_reset_queued_or_blocked_workflow(forven_db):
+def test_backfill_does_not_reset_queued_or_blocked_workflow(AXIOM_db):
     # REGRESSION: a workflow momentarily 'queued' or 'blocked_runtime' during normal
     # step processing is NON-TERMINAL and active — the backfill must NOT treat it as
     # stranded and reset it (doing so churned every active workflow back to the start).
@@ -124,7 +124,7 @@ def test_backfill_does_not_reset_queued_or_blocked_workflow(forven_db):
         assert step == "passed", f"{status}: passed step must NOT be reset, got {step}"
 
 
-def test_backfill_does_not_reset_failed_gate_workflow(forven_db):
+def test_backfill_does_not_reset_failed_gate_workflow(AXIOM_db):
     # REGRESSION (2026-06-16): a failed_gate workflow is a genuine gate failure, not a
     # stranded dead-end. The backfill used to reset it to 'pending', re-running the whole
     # ~50-backtest suite -> fail same gate -> reset again, an infinite churn loop (observed
@@ -142,10 +142,10 @@ def test_backfill_does_not_reset_failed_gate_workflow(forven_db):
     assert _active_wf("failed-gate-strat") is None  # neither reset in place nor a fresh run created
 
 
-def test_transition_to_gauntlet_resets_passed_workflow(forven_db):
+def test_transition_to_gauntlet_resets_passed_workflow(AXIOM_db):
     # Demoting a paper strategy to gauntlet via transition_stage immediately resets
     # its terminal 'passed' workflow (doesn't wait for the backfill tick).
-    from forven.brain import transition_stage
+    from axiom.brain import transition_stage
 
     _insert_strategy("trans-demote", stage="paper")
     wid = _insert_terminal_workflow("trans-demote", status="passed", version=WORKFLOW_DEFINITION_VERSION)

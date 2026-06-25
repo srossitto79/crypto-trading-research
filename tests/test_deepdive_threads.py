@@ -1,5 +1,5 @@
-from forven.db import get_db
-from forven.deepdive_db import (
+﻿from axiom.db import get_db
+from axiom.deepdive_db import (
     create_or_get_active_thread,
     archive_thread,
     get_thread,
@@ -15,7 +15,7 @@ def _seed_strategy(strategy_id: str) -> None:
         )
 
 
-def test_create_first_thread_for_strategy(forven_db):
+def test_create_first_thread_for_strategy(AXIOM_db):
     _seed_strategy("S00001")
     t = create_or_get_active_thread("S00001")
     assert t["strategy_id"] == "S00001"
@@ -23,14 +23,14 @@ def test_create_first_thread_for_strategy(forven_db):
     assert t["id"]
 
 
-def test_get_existing_active_thread_idempotent(forven_db):
+def test_get_existing_active_thread_idempotent(AXIOM_db):
     _seed_strategy("S00002")
     t1 = create_or_get_active_thread("S00002")
     t2 = create_or_get_active_thread("S00002")
     assert t1["id"] == t2["id"]
 
 
-def test_archive_then_create_returns_fresh(forven_db):
+def test_archive_then_create_returns_fresh(AXIOM_db):
     _seed_strategy("S00003")
     t1 = create_or_get_active_thread("S00003")
     archive_thread(t1["id"])
@@ -39,5 +39,5 @@ def test_archive_then_create_returns_fresh(forven_db):
     assert get_thread(t1["id"])["archived_at"] is not None
 
 
-def test_get_thread_returns_none_for_unknown(forven_db):
+def test_get_thread_returns_none_for_unknown(AXIOM_db):
     assert get_thread("nonexistent") is None

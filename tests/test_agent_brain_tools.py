@@ -1,22 +1,22 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 
-from forven.agents.context import reset_tool_context, set_tool_context
-from forven.agents.tools_brain import _tool_create_strategy
+from axiom.agents.context import reset_tool_context, set_tool_context
+from axiom.agents.tools_brain import _tool_create_strategy
 
 
 def test_tool_create_strategy_returns_duplicate_error_without_keyerror(monkeypatch):
     monkeypatch.setattr(
-        "forven.ai.normalize_provider_and_model",
+        "axiom.ai.normalize_provider_and_model",
         lambda model, model_id: (model, model_id),
     )
     monkeypatch.setattr(
-        "forven.agents.tools_research.assert_hypothesis_spawn_allowed",
+        "axiom.agents.tools_research.assert_hypothesis_spawn_allowed",
         lambda hypothesis_id: None,
     )
     monkeypatch.setattr(
-        "forven.brain.create_strategy",
+        "axiom.brain.create_strategy",
         lambda **_kwargs: {"error": "Duplicate: active strategy S00165 has identical type+params"},
     )
 
@@ -61,11 +61,11 @@ def test_tool_create_strategy_allows_research_only_payload(monkeypatch):
     captured: dict[str, object] = {}
 
     monkeypatch.setattr(
-        "forven.ai.normalize_provider_and_model",
+        "axiom.ai.normalize_provider_and_model",
         lambda model, model_id: (model, model_id),
     )
     monkeypatch.setattr(
-        "forven.agents.tools_research.assert_hypothesis_spawn_allowed",
+        "axiom.agents.tools_research.assert_hypothesis_spawn_allowed",
         lambda hypothesis_id: None,
     )
 
@@ -73,7 +73,7 @@ def test_tool_create_strategy_allows_research_only_payload(monkeypatch):
         captured.update(kwargs)
         return {"id": "S00999", "status": "research_only"}
 
-    monkeypatch.setattr("forven.brain.create_strategy", _fake_create_strategy)
+    monkeypatch.setattr("axiom.brain.create_strategy", _fake_create_strategy)
 
     result = _tool_create_strategy(
         {
@@ -113,7 +113,7 @@ def test_tool_create_strategy_requires_hypothesis_id():
     assert "hypothesis_id" in result
 
 
-def test_tool_create_strategy_rejects_agent_context_without_planner_task(forven_db):
+def test_tool_create_strategy_rejects_agent_context_without_planner_task(AXIOM_db):
     tokens = set_tool_context("strategy-developer", "T0099")
     try:
         result = _tool_create_strategy(
@@ -135,10 +135,10 @@ def test_tool_create_strategy_rejects_agent_context_without_planner_task(forven_
     assert "planner-approved" in result
 
 
-def test_bootstrap_brain_cannot_assign_quant_researcher_research_task(monkeypatch, forven_db):
-    from forven.agents import tools_brain
-    from forven.agents.manager import create_agent
-    from forven.db import get_db
+def test_bootstrap_brain_cannot_assign_quant_researcher_research_task(monkeypatch, AXIOM_db):
+    from axiom.agents import tools_brain
+    from axiom.agents.manager import create_agent
+    from axiom.db import get_db
 
     create_agent(
         agent_id="quant-researcher",
@@ -157,7 +157,7 @@ def test_bootstrap_brain_cannot_assign_quant_researcher_research_task(monkeypatc
             INSERT INTO tasks (id, type, payload, status, priority, created_at)
             VALUES (42, 'brain_invoke', ?, 'running', 1, datetime('now'))
             """,
-            (json.dumps({"source": "bootstrap", "message": "Forven just started."}),),
+            (json.dumps({"source": "bootstrap", "message": "axiom just started."}),),
         )
 
     monkeypatch.setattr(
@@ -169,7 +169,7 @@ def test_bootstrap_brain_cannot_assign_quant_researcher_research_task(monkeypatc
 
     assigned: list[tuple[str, str, str]] = []
     monkeypatch.setattr(
-        "forven.brain.assign_task",
+        "axiom.brain.assign_task",
         lambda agent_id, task_type, title, description, **kwargs: assigned.append((agent_id, task_type, title)),
     )
 
@@ -186,10 +186,10 @@ def test_bootstrap_brain_cannot_assign_quant_researcher_research_task(monkeypatc
     assert assigned == []
 
 
-def test_non_bootstrap_brain_can_still_assign_quant_researcher_support_task(monkeypatch, forven_db):
-    from forven.agents import tools_brain
-    from forven.agents.manager import create_agent
-    from forven.db import get_db
+def test_non_bootstrap_brain_can_still_assign_quant_researcher_support_task(monkeypatch, AXIOM_db):
+    from axiom.agents import tools_brain
+    from axiom.agents.manager import create_agent
+    from axiom.db import get_db
 
     create_agent(
         agent_id="quant-researcher",
@@ -215,7 +215,7 @@ def test_non_bootstrap_brain_can_still_assign_quant_researcher_support_task(monk
 
     assigned: list[tuple[str, str, str]] = []
     monkeypatch.setattr(
-        "forven.brain.assign_task",
+        "axiom.brain.assign_task",
         lambda agent_id, task_type, title, description, **kwargs: assigned.append((agent_id, task_type, title)),
     )
 

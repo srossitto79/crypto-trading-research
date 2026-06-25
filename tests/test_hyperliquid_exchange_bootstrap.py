@@ -1,4 +1,4 @@
-"""Regression coverage for HyperLiquid Exchange bootstrap fallbacks."""
+﻿"""Regression coverage for HyperLiquid Exchange bootstrap fallbacks."""
 
 from __future__ import annotations
 
@@ -90,13 +90,13 @@ def hl_exchange_module(monkeypatch):
     monkeypatch.setitem(sys.modules, "hyperliquid.utils.constants", constants_mod)
     monkeypatch.setitem(sys.modules, "hyperliquid.utils.types", types_mod)
 
-    sys.modules.pop("forven.exchange.hyperliquid", None)
-    import forven.exchange.hyperliquid as hl
+    sys.modules.pop("axiom.exchange.hyperliquid", None)
+    import axiom.exchange.hyperliquid as hl
 
     module = importlib.reload(hl)
     module._exchange_calls = exchange_calls
     yield module
-    sys.modules.pop("forven.exchange.hyperliquid", None)
+    sys.modules.pop("axiom.exchange.hyperliquid", None)
 
 
 def test_get_exchange_retries_with_sanitized_spot_meta(hl_exchange_module, monkeypatch):

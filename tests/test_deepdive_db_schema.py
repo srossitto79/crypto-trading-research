@@ -1,9 +1,9 @@
-"""Schema tests for the Deepdive Strategy Chat tables."""
+﻿"""Schema tests for the Deepdive Strategy Chat tables."""
 
-from forven.db import get_db
+from axiom.db import get_db
 
 
-def test_deepdive_threads_table_exists(forven_db):
+def test_deepdive_threads_table_exists(AXIOM_db):
     with get_db() as conn:
         cur = conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
@@ -12,7 +12,7 @@ def test_deepdive_threads_table_exists(forven_db):
         assert cur.fetchone() is not None
 
 
-def test_deepdive_messages_table_exists(forven_db):
+def test_deepdive_messages_table_exists(AXIOM_db):
     with get_db() as conn:
         cur = conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
@@ -21,13 +21,13 @@ def test_deepdive_messages_table_exists(forven_db):
         assert cur.fetchone() is not None
 
 
-def test_deepdive_threads_columns(forven_db):
+def test_deepdive_threads_columns(AXIOM_db):
     with get_db() as conn:
         cols = {row[1] for row in conn.execute("PRAGMA table_info(deepdive_threads)")}
     assert cols == {"id", "strategy_id", "created_at", "updated_at", "archived_at"}
 
 
-def test_deepdive_messages_columns(forven_db):
+def test_deepdive_messages_columns(AXIOM_db):
     with get_db() as conn:
         cols = {row[1] for row in conn.execute("PRAGMA table_info(deepdive_messages)")}
     assert cols == {
@@ -42,7 +42,7 @@ def test_deepdive_messages_columns(forven_db):
     }
 
 
-def test_deepdive_indices_exist(forven_db):
+def test_deepdive_indices_exist(AXIOM_db):
     with get_db() as conn:
         rows = conn.execute(
             "SELECT name FROM sqlite_master WHERE type='index' AND name IN (?, ?)",

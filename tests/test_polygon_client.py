@@ -1,4 +1,4 @@
-"""Tests for Polygon.io REST client (mocked — no real API calls)."""
+﻿"""Tests for Polygon.io REST client (mocked — no real API calls)."""
 
 from __future__ import annotations
 
@@ -6,20 +6,20 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from forven.polygon_client import PolygonClient, PolygonAuthError
+from axiom.polygon_client import PolygonClient, PolygonAuthError
 
 
 @pytest.fixture
 def mock_client():
     """Create a PolygonClient with a fake key and mocked httpx."""
-    with patch("forven.polygon_client.get_polygon_api_key", return_value="test_key_1234"):
+    with patch("axiom.polygon_client.get_polygon_api_key", return_value="test_key_1234"):
         client = PolygonClient(api_key="test_key_1234", calls_per_minute=6000)
     yield client
     client.close()
 
 
 def test_init_requires_api_key():
-    with patch("forven.polygon_client.get_polygon_api_key", return_value=None):
+    with patch("axiom.polygon_client.get_polygon_api_key", return_value=None):
         with pytest.raises(PolygonAuthError):
             PolygonClient(api_key=None)
 
@@ -107,6 +107,6 @@ def test_validate_key_failure(mock_client: PolygonClient):
 
 
 def test_context_manager():
-    with patch("forven.polygon_client.get_polygon_api_key", return_value="test_key_1234"):
+    with patch("axiom.polygon_client.get_polygon_api_key", return_value="test_key_1234"):
         with PolygonClient(api_key="test_key_1234") as client:
             assert client._api_key == "test_key_1234"

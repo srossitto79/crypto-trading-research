@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """Create/update a high-turnover strategy and fast-track scanner cadence.
 
 This is intended for end-to-end pipeline and trade-review feature validation.
@@ -10,14 +10,14 @@ import argparse
 import json
 from datetime import datetime, timezone
 
-from forven.config import (
+from axiom.config import (
     get_execution_fast_path,
     get_execution_mode,
     set_execution_fast_path,
     set_execution_mode,
 )
-from forven.db import get_db, init_db, kv_get, kv_set
-from forven.scheduler import apply_runtime_scheduler_overrides
+from axiom.db import get_db, init_db, kv_get, kv_set
+from axiom.scheduler import apply_runtime_scheduler_overrides
 
 
 VALID_TIMEFRAMES = ("1m", "5m", "15m", "1h", "4h", "1d")
@@ -150,13 +150,13 @@ def _apply_scanner_cadence(signal_minutes: int, execution_minutes: int, dry_run:
     if dry_run:
         return 0
 
-    raw = kv_get("forven:settings", {})
+    raw = kv_get("axiom:settings", {})
     settings = dict(raw) if isinstance(raw, dict) else {}
     settings["throughput_auto_scheduler_control"] = True
     settings["scanner_signal_interval_minutes"] = int(signal_minutes)
     settings["scanner_execution_interval_minutes"] = int(execution_minutes)
     settings["scanner_allow_direct_market_fetch"] = True
-    kv_set("forven:settings", settings)
+    kv_set("axiom:settings", settings)
     return int(apply_runtime_scheduler_overrides())
 
 

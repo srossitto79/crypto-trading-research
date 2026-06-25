@@ -1,4 +1,4 @@
-"""Tests for HyperLiquid price payload parsing and public mids fallback."""
+﻿"""Tests for HyperLiquid price payload parsing and public mids fallback."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ pytestmark = pytest.mark.skipif(not _HAS_HYPERLIQUID, reason="hyperliquid packag
 
 
 def test_resolve_price_payload_handles_ws_data_dict():
-    from forven.exchange.hyperliquid import _resolve_price_payload
+    from axiom.exchange.hyperliquid import _resolve_price_payload
 
     payload = {
         "channel": "allMids",
@@ -31,7 +31,7 @@ def test_resolve_price_payload_handles_ws_data_dict():
 
 
 def test_resolve_price_payload_handles_nested_mids():
-    from forven.exchange.hyperliquid import _resolve_price_payload
+    from axiom.exchange.hyperliquid import _resolve_price_payload
 
     payload = {
         "channel": "allMids",
@@ -49,7 +49,7 @@ def test_resolve_price_payload_handles_nested_mids():
 
 
 def test_get_all_mids_uses_public_client_when_creds_missing(monkeypatch):
-    import forven.exchange.hyperliquid as hl
+    import axiom.exchange.hyperliquid as hl
 
     class _DummyInfo:
         def all_mids(self):
@@ -58,7 +58,7 @@ def test_get_all_mids_uses_public_client_when_creds_missing(monkeypatch):
     def _raise_missing(*_args, **_kwargs):
         raise FileNotFoundError("missing creds")
 
-    monkeypatch.setattr("forven.sim.clock.is_sim_active", lambda: False)
+    monkeypatch.setattr("axiom.sim.clock.is_sim_active", lambda: False)
     monkeypatch.setattr(hl.hl_price_breaker, "can_execute", lambda: True)
     monkeypatch.setattr(hl, "get_exchange", _raise_missing)
     monkeypatch.setattr(hl, "_get_public_info_client", lambda testnet: _DummyInfo())
@@ -69,9 +69,9 @@ def test_get_all_mids_uses_public_client_when_creds_missing(monkeypatch):
 
 
 def test_get_all_mids_uses_cached_prices_when_breaker_open(monkeypatch):
-    import forven.exchange.hyperliquid as hl
+    import axiom.exchange.hyperliquid as hl
 
-    monkeypatch.setattr("forven.sim.clock.is_sim_active", lambda: False)
+    monkeypatch.setattr("axiom.sim.clock.is_sim_active", lambda: False)
     monkeypatch.setattr(hl.hl_price_breaker, "can_execute", lambda: False)
     monkeypatch.setattr(hl, "kv_get", lambda key, default=None: {"last_prices": {"BTC": "100.0", "ETH": 50}} if key == "daemon_state" else default)
 
@@ -81,7 +81,7 @@ def test_get_all_mids_uses_cached_prices_when_breaker_open(monkeypatch):
 
 def test_get_creds_plaintext_when_encryption_disabled(monkeypatch, tmp_path):
     import json
-    import forven.exchange.hyperliquid as hl
+    import axiom.exchange.hyperliquid as hl
 
     settings = {
         "HL_API_SECRET": "plain-secret",
@@ -91,8 +91,8 @@ def test_get_creds_plaintext_when_encryption_disabled(monkeypatch, tmp_path):
     }
     (tmp_path / "settings.json").write_text(json.dumps(settings), encoding="utf-8")
 
-    monkeypatch.setenv("FORVEN_HL_CREDS_PATH", str(tmp_path))
-    monkeypatch.setenv("FORVEN_HL_DISABLE_ENCRYPTION", "1")
+    monkeypatch.setenv("AXIOM_HL_CREDS_PATH", str(tmp_path))
+    monkeypatch.setenv("AXIOM_HL_DISABLE_ENCRYPTION", "1")
 
     creds = hl._get_creds()
     assert creds["HL_API_SECRET"] == "plain-secret"
@@ -102,9 +102,9 @@ def test_get_creds_plaintext_when_encryption_disabled(monkeypatch, tmp_path):
 
 
 def test_get_account_value_falls_back_in_paper_mode_when_creds_missing(monkeypatch):
-    import forven.exchange.hyperliquid as hl
+    import axiom.exchange.hyperliquid as hl
 
-    monkeypatch.setattr("forven.sim.clock.is_sim_active", lambda: False)
+    monkeypatch.setattr("axiom.sim.clock.is_sim_active", lambda: False)
     monkeypatch.setattr(
         hl,
         "_get_account_info_client",
@@ -123,9 +123,9 @@ def test_get_account_value_falls_back_in_paper_mode_when_creds_missing(monkeypat
 
 
 def test_get_account_value_falls_back_in_paper_mode_when_exchange_init_fails(monkeypatch):
-    import forven.exchange.hyperliquid as hl
+    import axiom.exchange.hyperliquid as hl
 
-    monkeypatch.setattr("forven.sim.clock.is_sim_active", lambda: False)
+    monkeypatch.setattr("axiom.sim.clock.is_sim_active", lambda: False)
     monkeypatch.setattr(
         hl,
         "_get_account_info_client",
@@ -144,9 +144,9 @@ def test_get_account_value_falls_back_in_paper_mode_when_exchange_init_fails(mon
 
 
 def test_get_account_value_raises_when_connection_required(monkeypatch):
-    import forven.exchange.hyperliquid as hl
+    import axiom.exchange.hyperliquid as hl
 
-    monkeypatch.setattr("forven.sim.clock.is_sim_active", lambda: False)
+    monkeypatch.setattr("axiom.sim.clock.is_sim_active", lambda: False)
     monkeypatch.setattr(
         hl,
         "_get_account_info_client",
@@ -159,7 +159,7 @@ def test_get_account_value_raises_when_connection_required(monkeypatch):
 
 
 def test_get_account_value_uses_wallet_only_settings(monkeypatch):
-    import forven.exchange.hyperliquid as hl
+    import axiom.exchange.hyperliquid as hl
 
     class _DummyInfo:
         def user_state(self, wallet):
@@ -174,16 +174,16 @@ def test_get_account_value_uses_wallet_only_settings(monkeypatch):
             }
 
     def _kv_get(key, default=None):
-        if key == "forven:settings":
+        if key == "axiom:settings":
             return {
                 "hyperliquid_wallet": "0xabc123",
                 "hyperliquid_testnet": True,
             }
-        if key == "forven:settings:secrets":
+        if key == "axiom:settings:secrets":
             return {}
         return default
 
-    monkeypatch.setattr("forven.sim.clock.is_sim_active", lambda: False)
+    monkeypatch.setattr("axiom.sim.clock.is_sim_active", lambda: False)
     monkeypatch.setattr(hl, "kv_get", _kv_get)
     monkeypatch.setattr(hl, "_get_public_info_client", lambda testnet=True: _DummyInfo())
     monkeypatch.setattr(hl, "_with_breaker", lambda _name, _breaker, fn, *a, **k: fn(*a, **k))
@@ -194,28 +194,28 @@ def test_get_account_value_uses_wallet_only_settings(monkeypatch):
 
 
 def test_load_creds_from_settings_includes_api_address(monkeypatch):
-    import forven.exchange.hyperliquid as hl
+    import axiom.exchange.hyperliquid as hl
 
     def _kv_get(key, default=None):
-        if key == "forven:settings":
+        if key == "axiom:settings":
             return {
                 "hyperliquid_wallet": "0xactual",
                 "hyperliquid_api_address": "0xapi",
                 "hyperliquid_testnet": True,
             }
-        if key == "forven:settings:secrets":
+        if key == "axiom:settings:secrets":
             return {"hyperliquid_private_key": "0xsecret"}
         return default
 
     monkeypatch.setattr(hl, "kv_get", _kv_get)
-    creds = hl._load_creds_from_forven_settings()
+    creds = hl._load_creds_from_AXIOM_settings()
     assert creds["HL_WALLET_ADDRESS"] == "0xactual"
     assert creds["HL_API_KEY"] == "0xapi"
     assert creds["HL_API_SECRET"] == "0xsecret"
 
 
 def test_get_account_value_uses_spot_usdc_when_margin_zero(monkeypatch):
-    import forven.exchange.hyperliquid as hl
+    import axiom.exchange.hyperliquid as hl
 
     class _DummyInfo:
         def user_state(self, wallet):
@@ -238,16 +238,16 @@ def test_get_account_value_uses_spot_usdc_when_margin_zero(monkeypatch):
             }
 
     def _kv_get(key, default=None):
-        if key == "forven:settings":
+        if key == "axiom:settings":
             return {
                 "hyperliquid_wallet": "0xabc123",
                 "hyperliquid_testnet": True,
             }
-        if key == "forven:settings:secrets":
+        if key == "axiom:settings:secrets":
             return {}
         return default
 
-    monkeypatch.setattr("forven.sim.clock.is_sim_active", lambda: False)
+    monkeypatch.setattr("axiom.sim.clock.is_sim_active", lambda: False)
     monkeypatch.setattr(hl, "kv_get", _kv_get)
     monkeypatch.setattr(hl, "_get_public_info_client", lambda testnet=True: _DummyInfo())
     monkeypatch.setattr(hl, "_with_breaker", lambda _name, _breaker, fn, *a, **k: fn(*a, **k))
@@ -259,7 +259,7 @@ def test_get_account_value_uses_spot_usdc_when_margin_zero(monkeypatch):
 
 
 def test_get_exchange_sets_account_address_for_delegated_agent(monkeypatch):
-    import forven.exchange.hyperliquid as hl
+    import axiom.exchange.hyperliquid as hl
 
     captured = {}
 
@@ -294,7 +294,7 @@ def test_get_exchange_sets_account_address_for_delegated_agent(monkeypatch):
 
 
 def test_get_exchange_rejects_mismatched_api_address_and_private_key(monkeypatch):
-    import forven.exchange.hyperliquid as hl
+    import axiom.exchange.hyperliquid as hl
 
     monkeypatch.setattr(
         hl,
@@ -312,7 +312,7 @@ def test_get_exchange_rejects_mismatched_api_address_and_private_key(monkeypatch
 
 
 def test_agent_authorization_check_blocks_unapproved_agent():
-    import forven.exchange.hyperliquid as hl
+    import axiom.exchange.hyperliquid as hl
 
     class _DummyWallet:
         address = "0xCafeBabeCafeBabeCafeBabeCafeBabeCafeBabe"
@@ -334,7 +334,7 @@ def test_agent_authorization_check_blocks_unapproved_agent():
 
 
 def test_agent_authorization_lookup_warning_fails_open(monkeypatch):
-    import forven.exchange.hyperliquid as hl
+    import axiom.exchange.hyperliquid as hl
 
     warnings: list[str] = []
 
@@ -358,7 +358,7 @@ def test_agent_authorization_lookup_warning_fails_open(monkeypatch):
 
 
 def test_sanitize_spot_meta_logs_invalid_token_indexes(monkeypatch):
-    import forven.exchange.hyperliquid as hl
+    import axiom.exchange.hyperliquid as hl
 
     warnings: list[str] = []
 
@@ -386,7 +386,7 @@ def test_sanitize_spot_meta_logs_invalid_token_indexes(monkeypatch):
 
 
 def test_with_breaker_logs_warning_and_reraises(monkeypatch):
-    import forven.exchange.hyperliquid as hl
+    import axiom.exchange.hyperliquid as hl
 
     warnings: list[str] = []
 

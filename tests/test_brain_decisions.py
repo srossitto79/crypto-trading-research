@@ -1,4 +1,4 @@
-"""Phase 1 (P1-T06) — brain_decisions recording tests.
+﻿"""Phase 1 (P1-T06) — brain_decisions recording tests.
 
 Asserts ``execute_brain_actions`` writes exactly one ``brain_decisions`` row
 per call, populates the metadata columns, and links any ``agent_tasks`` rows
@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import json
 
-from forven import brain as brain_mod
-from forven import brain_decisions as bd
-from forven.brain import BrainDecision, BrainTaskAction, BrainTransitionAction
-from forven.db import get_db
+from axiom import brain as brain_mod
+from axiom import brain_decisions as bd
+from axiom.brain import BrainDecision, BrainTaskAction, BrainTransitionAction
+from axiom.db import get_db
 
 
 def _count_decisions() -> int:
@@ -27,7 +27,7 @@ def _ensure_test_agent(agent_id: str = "quant-researcher") -> None:
         )
 
 
-def test_record_decision_writes_row(forven_db):
+def test_record_decision_writes_row(AXIOM_db):
     decision_id = bd.record_decision(
         cycle_id="c1",
         situation_summary="BTC breaking 70k with rising volume",
@@ -46,7 +46,7 @@ def test_record_decision_writes_row(forven_db):
     assert parsed["summary"] == "promote"
 
 
-def test_situation_summary_truncates_at_cap(forven_db):
+def test_situation_summary_truncates_at_cap(AXIOM_db):
     huge = "x" * (bd.SITUATION_SUMMARY_MAX_CHARS + 500)
     decision_id = bd.record_decision(
         cycle_id="c1",
@@ -58,7 +58,7 @@ def test_situation_summary_truncates_at_cap(forven_db):
     assert row["situation_summary"].endswith("…[truncated]")
 
 
-def test_update_action_taken_round_trip(forven_db):
+def test_update_action_taken_round_trip(AXIOM_db):
     decision_id = bd.record_decision(
         cycle_id="c1",
         situation_summary="s",
@@ -70,7 +70,7 @@ def test_update_action_taken_round_trip(forven_db):
     assert parsed[0]["task_id"] == 42
 
 
-def test_link_agent_task_sets_brain_decision_id(forven_db):
+def test_link_agent_task_sets_brain_decision_id(AXIOM_db):
     _ensure_test_agent("quant-researcher")
     with get_db() as conn:
         cur = conn.execute(
@@ -90,7 +90,7 @@ def test_link_agent_task_sets_brain_decision_id(forven_db):
     assert int(row["brain_decision_id"]) == decision_id
 
 
-def test_execute_brain_actions_writes_one_row_per_call(forven_db, monkeypatch):
+def test_execute_brain_actions_writes_one_row_per_call(AXIOM_db, monkeypatch):
     _ensure_test_agent("quant-researcher")
 
     captured_task_ids: list[int] = []
@@ -162,7 +162,7 @@ def test_execute_brain_actions_writes_one_row_per_call(forven_db, monkeypatch):
     assert int(link["brain_decision_id"]) == decision_id
 
 
-def test_execute_brain_actions_rejects_unknown_agent(forven_db, monkeypatch):
+def test_execute_brain_actions_rejects_unknown_agent(AXIOM_db, monkeypatch):
     """A task assigned to a non-existent agent_id is refused, not orphaned."""
     called: list[dict] = []
 
@@ -192,7 +192,7 @@ def test_execute_brain_actions_rejects_unknown_agent(forven_db, monkeypatch):
     assert "unknown agent_id" in results[0]["error"]
 
 
-def test_execute_brain_actions_allows_known_agent(forven_db, monkeypatch):
+def test_execute_brain_actions_allows_known_agent(AXIOM_db, monkeypatch):
     """Sanity: a real seeded agent still gets its task created."""
     _ensure_test_agent("quant-researcher")
     called: list[dict] = []
@@ -222,7 +222,7 @@ def test_execute_brain_actions_allows_known_agent(forven_db, monkeypatch):
     assert results[0]["status"] == "ok"
 
 
-def test_execute_brain_actions_uses_ambient_cycle_context(forven_db, monkeypatch):
+def test_execute_brain_actions_uses_ambient_cycle_context(AXIOM_db, monkeypatch):
     _ensure_test_agent("quant-researcher")
 
     def fake_assign_task_direct(**kwargs):
@@ -249,7 +249,7 @@ def test_execute_brain_actions_uses_ambient_cycle_context(forven_db, monkeypatch
     assert row["prompt_hash"] == "ambient-hash"
 
 
-def test_execute_brain_actions_records_with_no_actions(forven_db):
+def test_execute_brain_actions_records_with_no_actions(AXIOM_db):
     decision = BrainDecision(summary="status quo", observations=["calm"], actions=[])
     before = _count_decisions()
     results = brain_mod.execute_brain_actions(
@@ -263,7 +263,7 @@ def test_execute_brain_actions_records_with_no_actions(forven_db):
     assert _count_decisions() == before + 1
 
 
-def test_transition_action_records_decision_too(forven_db, monkeypatch):
+def test_transition_action_records_decision_too(AXIOM_db, monkeypatch):
     monkeypatch.setattr(
         brain_mod,
         "transition_stage",

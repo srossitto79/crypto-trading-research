@@ -1,6 +1,6 @@
 # First-Run Checklist
 
-Use this checklist when cloning Forven onto a new machine.
+Use this checklist when cloning Axiom onto a new machine.
 
 ## 1. Install prerequisites
 
@@ -12,7 +12,7 @@ Use this checklist when cloning Forven onto a new machine.
 ## 2. Clone the repo
 
 - [ ] `git clone https://github.com/srossitto79/axiom.git`
-- [ ] `cd Forven`
+- [ ] `cd Axiom`
 
 ## 3. Choose a bootstrap path
 
@@ -84,25 +84,25 @@ Notes:
 ## 5. Configure auth and secrets
 
 - [ ] Review `.env.example`
-- [ ] Keep `FORVEN_EXECUTION_MODE=paper`
-- [ ] **Generate and set `FORVEN_OPERATOR_KEY`** (required for LLM provider config):
+- [ ] Keep `AXIOM_EXECUTION_MODE=paper`
+- [ ] **Generate and set `AXIOM_OPERATOR_KEY`** (required for LLM provider config):
 
 ```powershell
-python -m forven auth init-operator-key
+python -m axiom auth init-operator-key
 # Copy the generated key and add it to .env:
-# FORVEN_OPERATOR_KEY=<key>
+# AXIOM_OPERATOR_KEY=<key>
 ```
 
 - [ ] Restart the backend after updating `.env`
-- [ ] Set `FORVEN_ENCRYPTION_KEY` if you want portable encrypted secrets
-- [ ] Set `FORVEN_API_KEY` if the API will be used beyond localhost
+- [ ] Set `AXIOM_ENCRYPTION_KEY` if you want portable encrypted secrets
+- [ ] Set `AXIOM_API_KEY` if the API will be used beyond localhost
 - [ ] Log in to AI providers as needed:
 
 ```powershell
-python -m forven configure
-python -m forven auth login openai
-python -m forven auth login minimax
-python -m forven auth status
+python -m axiom configure
+python -m axiom auth login openai
+python -m axiom auth login minimax
+python -m axiom auth status
 ```
 
 - [ ] In the UI, go to Settings → Agents → AI Providers and verify OAuth flows work without browser console hacks
@@ -127,7 +127,7 @@ python -m pytest tests -q
 - [ ] Backend lint:
 
 ```powershell
-python -m ruff check forven tests
+python -m ruff check axiom tests
 ```
 
 - [ ] Frontend tests and checks:
@@ -142,5 +142,5 @@ npm run check
 
 - [ ] Windows logs: `.tmp\logs\unified_backend.log` and `.tmp\logs\unified_frontend.log`
 - [ ] Unix logs: `.tmp/logs/unified_backend.log` and `.tmp/logs/unified_frontend.log`
-- [ ] Runtime state path: `~/.forven` unless `FORVEN_HOME` is set
-- [ ] Remember that `python -m forven` opens the CLI; backend-only startup uses `python -m uvicorn --app-dir . forven.api:app`
+- [ ] Runtime state path: `~/.axiom` unless `AXIOM_HOME` is set
+- [ ] Remember that `python -m axiom` opens the CLI; backend-only startup uses `python -m uvicorn --app-dir . axiom.api:app`

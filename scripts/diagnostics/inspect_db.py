@@ -1,10 +1,10 @@
-import sys
-sys.path.append('C:/Forven')
-from forven.db import get_db, kv_get, FORVEN_DB as DB_PATH
+﻿import sys
+sys.path.append('C:/Axiom')
+from axiom.db import get_db, kv_get, AXIOM_DB as DB_PATH
 
 print('DB Path:', DB_PATH)
-print('Global Mode:', kv_get('forven:settings', {}).get('execution_mode'))
-print('Has Hyperliquid Key:', 'hyperliquid_private_key' in kv_get('forven:secrets', {}))
+print('Global Mode:', kv_get('Axiom:settings', {}).get('execution_mode'))
+print('Has Hyperliquid Key:', 'hyperliquid_private_key' in kv_get('Axiom:secrets', {}))
 
 with get_db() as conn:
     trades = conn.execute('SELECT execution_type, status, count(*) as count FROM trades GROUP BY execution_type, status').fetchall()

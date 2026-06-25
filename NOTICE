@@ -1,13 +1,17 @@
-Forven
+Axiom
 Copyright (C) 2026 Judder <judder@forven.app>
+Copyright (C) 2026 Salvatore Rossitto <srossitto79@gmail.com>
+
+Based on Forven by Judder.
 
 This program is free software licensed under the GNU Affero General Public
 License, version 3 or (at your option) any later version. See the LICENSE file
 for the full terms, or https://www.gnu.org/licenses/agpl-3.0.html.
 
-"Forven" and the Forven logo are unregistered trademarks of Judder. The
-AGPL license covers this software's source code; it does NOT grant any right to
-use the "Forven" name or logo. See TRADEMARK.md.
+"Axiom" is the project name of this fork. "Forven" and the Forven logo are
+unregistered trademarks of Judder. The AGPL license covers this software's
+source code; it does NOT grant any right to use the "Forven" name or logo.
+See TRADEMARK.md.
 
 This software is provided AS IS, without warranty of any kind, and is not
 financial advice. It ships in paper-trading mode and supports Hyperliquid

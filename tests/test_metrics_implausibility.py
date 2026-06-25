@@ -1,4 +1,4 @@
-"""Implausible-metrics quarantine (the look-ahead / data-leak fingerprint).
+﻿"""Implausible-metrics quarantine (the look-ahead / data-leak fingerprint).
 
 `check_metrics_integrity` now flags clamped/implausible Sharpe, PF, and return
 values and routes them to the non-terminal `DataQualityHold` quarantine. This
@@ -8,7 +8,7 @@ clamped-Sharpe leak can no longer enqueue while gates are relaxed.
 """
 from __future__ import annotations
 
-from forven.metrics_integrity import (
+from axiom.metrics_integrity import (
     check_metrics_integrity,
     data_quality_hold_reason,
     DATA_QUALITY_HOLD_PREFIX,

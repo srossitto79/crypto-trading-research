@@ -1,8 +1,8 @@
-import json
+﻿import json
 from unittest.mock import patch
 
-from forven.db import get_db
-from forven.hypotheses import create_hypothesis, update_hypothesis_status
+from axiom.db import get_db
+from axiom.hypotheses import create_hypothesis, update_hypothesis_status
 
 
 def _hyp(status="researching"):
@@ -18,17 +18,17 @@ def _hyp(status="researching"):
     return h
 
 
-def test_promotion_loop_skips_disproven(forven_db):
-    from forven.hypothesis_promotion import run_promotion_loop
+def test_promotion_loop_skips_disproven(AXIOM_db):
+    from axiom.hypothesis_promotion import run_promotion_loop
     h = _hyp(status="disproven")
-    with patch("forven.brain.assign_task") as m:
+    with patch("axiom.brain.assign_task") as m:
         result = run_promotion_loop(top_k=3)
     assert h["id"] not in result["dispatched_ids"]
     m.assert_not_called()
 
 
-def test_promotion_loop_dispatches_top_k_by_promise(forven_db):
-    from forven.hypothesis_promotion import run_promotion_loop
+def test_promotion_loop_dispatches_top_k_by_promise(AXIOM_db):
+    from axiom.hypothesis_promotion import run_promotion_loop
     hot = _hyp()
     cold = _hyp()
     with get_db() as conn:
@@ -39,7 +39,7 @@ def test_promotion_loop_dispatches_top_k_by_promise(forven_db):
                        'active', ?, 'brain', '{}', '{}', ?, datetime('now'), datetime('now'))""",
             (hot["id"], json.dumps({"lifecycle": "paper_eligible"})),
         )
-    with patch("forven.brain.assign_task", return_value=999) as m:
+    with patch("axiom.brain.assign_task", return_value=999) as m:
         result = run_promotion_loop(top_k=1)
     assert result["dispatched_ids"] == [hot["id"]]
     m.assert_called_once()
@@ -51,36 +51,36 @@ def test_promotion_loop_dispatches_top_k_by_promise(forven_db):
     assert kwargs["input_data"]["hypothesis_id"] == hot["id"]
 
 
-def test_promotion_loop_skips_proposed_hypotheses(forven_db):
-    from forven.hypothesis_promotion import run_promotion_loop
+def test_promotion_loop_skips_proposed_hypotheses(AXIOM_db):
+    from axiom.hypothesis_promotion import run_promotion_loop
 
     h = _hyp(status="proposed")
 
-    with patch("forven.brain.assign_task") as m:
+    with patch("axiom.brain.assign_task") as m:
         result = run_promotion_loop(top_k=3)
 
     assert h["id"] not in result["dispatched_ids"]
     m.assert_not_called()
 
 
-def test_promotion_loop_respects_cooldown(forven_db):
-    from forven.hypothesis_promotion import run_promotion_loop
+def test_promotion_loop_respects_cooldown(AXIOM_db):
+    from axiom.hypothesis_promotion import run_promotion_loop
     h = _hyp()
     from datetime import datetime, timezone
     now_iso = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
         conn.execute("UPDATE hypotheses SET last_dispatched_at = ? WHERE id = ?", (now_iso, h["id"]))
-    with patch("forven.brain.assign_task") as m:
+    with patch("axiom.brain.assign_task") as m:
         result = run_promotion_loop(top_k=1)
     assert h["id"] not in result["dispatched_ids"]
 
 
-def test_promotion_loop_respects_global_cap(forven_db):
+def test_promotion_loop_respects_global_cap(AXIOM_db):
     """When MAX_IN_FLIGHT is hit, dispatches nothing new."""
-    from forven.hypothesis_promotion import run_promotion_loop
+    from axiom.hypothesis_promotion import run_promotion_loop
     _hyp(); _hyp(); _hyp()
-    with patch("forven.hypothesis_promotion._current_in_flight_task_count", return_value=99):
-        with patch("forven.brain.assign_task") as m:
+    with patch("axiom.hypothesis_promotion._current_in_flight_task_count", return_value=99):
+        with patch("axiom.brain.assign_task") as m:
             result = run_promotion_loop(top_k=3, max_in_flight=5)
     assert result["dispatched_ids"] == []
     m.assert_not_called()

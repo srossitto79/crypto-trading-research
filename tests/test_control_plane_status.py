@@ -1,11 +1,11 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import math
 
-from forven.control_plane import status as control_plane_status
+from axiom.control_plane import status as control_plane_status
 
 
-def test_get_system_status_reports_pause_state(forven_db, monkeypatch):
+def test_get_system_status_reports_pause_state(AXIOM_db, monkeypatch):
     monkeypatch.setattr(
         control_plane_status,
         "normalize_daemon_state",
@@ -60,15 +60,15 @@ def test_get_system_heartbeat_preserves_expected_keys(monkeypatch):
     monkeypatch.setattr(control_plane_status, "get_sentiment", lambda: {"composite": 0.5})
     monkeypatch.setattr(control_plane_status, "get_regime", lambda: {"BTC": {"regime": "trend"}})
     monkeypatch.setattr(control_plane_status, "get_scanner_state", lambda: {"last_scan": "2026-03-06T00:00:00+00:00"})
-    monkeypatch.setattr("forven.api_domains.trading.read_open_trades", lambda verify_exchange=False: [])
-    monkeypatch.setattr("forven.api_domains.tasks.get_agent_tasks", lambda: [])
-    monkeypatch.setattr("forven.api_domains.data.get_datasets_stub", lambda remote_skip=False: [])
-    monkeypatch.setattr("forven.api_domains.analytics.get_research_feed_metrics_stub", lambda: {"new_count": 0})
-    monkeypatch.setattr("forven.api_domains.analytics.list_scanner_scans_stub", lambda limit=200: [])
-    monkeypatch.setattr("forven.api_domains.data.get_data_ingestion_runs", lambda limit=25, offset=0, remote_skip=True: [])
-    monkeypatch.setattr("forven.api_domains.paper.get_paper_sessions", lambda: [])
-    monkeypatch.setattr("forven.db.get_strategies", lambda: [])
-    monkeypatch.setattr("forven.control_plane.approvals.get_approvals_list", lambda status=None: [])
+    monkeypatch.setattr("axiom.api_domains.trading.read_open_trades", lambda verify_exchange=False: [])
+    monkeypatch.setattr("axiom.api_domains.tasks.get_agent_tasks", lambda: [])
+    monkeypatch.setattr("axiom.api_domains.data.get_datasets_stub", lambda remote_skip=False: [])
+    monkeypatch.setattr("axiom.api_domains.analytics.get_research_feed_metrics_stub", lambda: {"new_count": 0})
+    monkeypatch.setattr("axiom.api_domains.analytics.list_scanner_scans_stub", lambda limit=200: [])
+    monkeypatch.setattr("axiom.api_domains.data.get_data_ingestion_runs", lambda limit=25, offset=0, remote_skip=True: [])
+    monkeypatch.setattr("axiom.api_domains.paper.get_paper_sessions", lambda: [])
+    monkeypatch.setattr("axiom.db.get_strategies", lambda: [])
+    monkeypatch.setattr("axiom.control_plane.approvals.get_approvals_list", lambda status=None: [])
     monkeypatch.setattr(
         control_plane_status.core,
         "_load_settings_payload",
@@ -101,16 +101,16 @@ def test_get_system_heartbeat_includes_memory_nav_indicator(monkeypatch):
     monkeypatch.setattr(control_plane_status, "get_sentiment", lambda: {"composite": 0.5})
     monkeypatch.setattr(control_plane_status, "get_regime", lambda: {"BTC": {"regime": "trend"}})
     monkeypatch.setattr(control_plane_status, "get_scanner_state", lambda: {"last_scan": "2026-03-06T00:00:00+00:00"})
-    monkeypatch.setattr("forven.api_domains.trading.read_open_trades", lambda verify_exchange=False: [])
-    monkeypatch.setattr("forven.api_domains.tasks.get_agent_tasks", lambda: [])
-    monkeypatch.setattr("forven.api_domains.data.get_datasets_stub", lambda remote_skip=False: [])
-    monkeypatch.setattr("forven.api_domains.analytics.get_research_feed_metrics_stub", lambda: {"new_count": 0})
-    monkeypatch.setattr("forven.api_domains.analytics.list_scanner_scans_stub", lambda limit=200: [])
-    monkeypatch.setattr("forven.api_domains.data.get_data_ingestion_runs", lambda limit=25, offset=0, remote_skip=True: [])
-    monkeypatch.setattr("forven.api_domains.paper.get_paper_sessions", lambda: [])
-    monkeypatch.setattr("forven.db.get_strategies", lambda: [])
-    monkeypatch.setattr("forven.control_plane.approvals.get_approvals_list", lambda status=None: [])
-    monkeypatch.setattr("forven.api_domains.memory.get_memory_nav_indicator", lambda: {
+    monkeypatch.setattr("axiom.api_domains.trading.read_open_trades", lambda verify_exchange=False: [])
+    monkeypatch.setattr("axiom.api_domains.tasks.get_agent_tasks", lambda: [])
+    monkeypatch.setattr("axiom.api_domains.data.get_datasets_stub", lambda remote_skip=False: [])
+    monkeypatch.setattr("axiom.api_domains.analytics.get_research_feed_metrics_stub", lambda: {"new_count": 0})
+    monkeypatch.setattr("axiom.api_domains.analytics.list_scanner_scans_stub", lambda limit=200: [])
+    monkeypatch.setattr("axiom.api_domains.data.get_data_ingestion_runs", lambda limit=25, offset=0, remote_skip=True: [])
+    monkeypatch.setattr("axiom.api_domains.paper.get_paper_sessions", lambda: [])
+    monkeypatch.setattr("axiom.db.get_strategies", lambda: [])
+    monkeypatch.setattr("axiom.control_plane.approvals.get_approvals_list", lambda status=None: [])
+    monkeypatch.setattr("axiom.api_domains.memory.get_memory_nav_indicator", lambda: {
         "kind": "status",
         "severity": "success",
         "label": "CANON",
@@ -137,7 +137,7 @@ def test_get_system_heartbeat_includes_memory_nav_indicator(monkeypatch):
 
 
 def test_system_heartbeat_route_sanitizes_nonfinite_values(monkeypatch):
-    from forven.routers import status as status_router
+    from axiom.routers import status as status_router
 
     monkeypatch.setattr(
         status_router.control_plane_status,
@@ -150,7 +150,7 @@ def test_system_heartbeat_route_sanitizes_nonfinite_values(monkeypatch):
     assert payload == {"scanner_state": {"total_pnl_pct": None, "bad": None}}
 
 
-def test_get_dashboard_exposes_pause_and_recovery_state(forven_db, monkeypatch):
+def test_get_dashboard_exposes_pause_and_recovery_state(AXIOM_db, monkeypatch):
     monkeypatch.setattr(
         control_plane_status,
         "normalize_daemon_state",

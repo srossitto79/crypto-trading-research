@@ -1,4 +1,4 @@
-"""M-15/M-14/L-19 (2026-06-09 audit): gate floors are wired settings, not hardcoded.
+﻿"""M-15/M-14/L-19 (2026-06-09 audit): gate floors are wired settings, not hardcoded.
 
 M-15: quick-screen IS/OOS PF floor honors quick_screen.min_profit_factor; the
 gauntlet OOS PF floor honors gauntlet.min_oos_profit_factor; the paper->live PF
@@ -21,9 +21,9 @@ import copy
 import json
 from datetime import datetime, timedelta, timezone
 
-import forven.policy as policy
-from forven.db import get_db
-from forven.policy import (
+import axiom.policy as policy
+from axiom.db import get_db
+from axiom.policy import (
     DEFAULT_PIPELINE_CONFIG,
     _evaluate_gauntlet_gate,
     _evaluate_paper_gate,
@@ -75,7 +75,7 @@ def _config_with(section: str, **overrides) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def test_new_gate_floor_knobs_have_unchanged_defaults(forven_db):
+def test_new_gate_floor_knobs_have_unchanged_defaults(AXIOM_db):
     cfg = load_pipeline_config()
     # quick_screen PF relaxed 1.05->1.0 under the Default preset; the rest unchanged.
     assert abs(float(cfg["quick_screen"]["min_profit_factor"]) - 1.0) < 1e-9
@@ -104,7 +104,7 @@ _QS_METRICS = {
 }
 
 
-def test_quick_screen_pf_floor_rejects_at_default(forven_db):
+def test_quick_screen_pf_floor_rejects_at_default(AXIOM_db):
     with get_db() as conn:
         _insert_strategy(conn, "qs-default-pf", metrics=_QS_METRICS, stage="quick_screen")
 
@@ -114,7 +114,7 @@ def test_quick_screen_pf_floor_rejects_at_default(forven_db):
     assert "1.00" in msg  # Default preset PF floor relaxed 1.05 -> 1.0
 
 
-def test_quick_screen_pf_floor_honors_operator_knob(forven_db):
+def test_quick_screen_pf_floor_honors_operator_knob(AXIOM_db):
     # Operator relaxes the floor to 0.9 through the real settings write path;
     # the same PF-0.95 strategy must now clear the PF floor (and the gate).
     save_pipeline_config({"quick_screen": {"min_profit_factor": 0.9}})
@@ -125,7 +125,7 @@ def test_quick_screen_pf_floor_honors_operator_knob(forven_db):
     assert passed, msg
 
 
-def test_quick_screen_pf_floor_can_be_tightened(forven_db):
+def test_quick_screen_pf_floor_can_be_tightened(AXIOM_db):
     cfg = _config_with("quick_screen", min_profit_factor=1.30)
     metrics = copy.deepcopy(_QS_METRICS)
     metrics["in_sample"]["profit_factor"] = 1.2
@@ -174,7 +174,7 @@ def _stub_gauntlet_prerequisites(monkeypatch):
     )
 
 
-def test_gauntlet_oos_pf_floor_rejects_at_default(forven_db, monkeypatch):
+def test_gauntlet_oos_pf_floor_rejects_at_default(AXIOM_db, monkeypatch):
     _stub_gauntlet_prerequisites(monkeypatch)
     cfg = _config_with("gauntlet", required_tests=[])
     with get_db() as conn:
@@ -186,7 +186,7 @@ def test_gauntlet_oos_pf_floor_rejects_at_default(forven_db, monkeypatch):
     assert "1.05" in msg
 
 
-def test_gauntlet_oos_pf_floor_honors_operator_knob(forven_db, monkeypatch):
+def test_gauntlet_oos_pf_floor_honors_operator_knob(AXIOM_db, monkeypatch):
     _stub_gauntlet_prerequisites(monkeypatch)
     cfg = _config_with("gauntlet", required_tests=[], min_oos_profit_factor=1.0)
     with get_db() as conn:
@@ -196,7 +196,7 @@ def test_gauntlet_oos_pf_floor_honors_operator_knob(forven_db, monkeypatch):
     assert passed, msg
 
 
-def test_gauntlet_oos_pf_floor_can_be_tightened(forven_db, monkeypatch):
+def test_gauntlet_oos_pf_floor_can_be_tightened(AXIOM_db, monkeypatch):
     _stub_gauntlet_prerequisites(monkeypatch)
     cfg = _config_with("gauntlet", required_tests=[], min_oos_profit_factor=1.30)
     with get_db() as conn:
@@ -212,7 +212,7 @@ def test_gauntlet_oos_pf_floor_can_be_tightened(forven_db, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_paper_gate_pf_floor_rejects_at_default(forven_db):
+def test_paper_gate_pf_floor_rejects_at_default(AXIOM_db):
     with get_db() as conn:
         _insert_strategy(conn, "p-default-pf", metrics={"profit_factor": 1.4})
         _insert_paper_trades(conn, "p-default-pf", [1.0] * 60)
@@ -222,7 +222,7 @@ def test_paper_gate_pf_floor_rejects_at_default(forven_db):
     assert "1.50" in msg
 
 
-def test_paper_gate_pf_floor_honors_operator_knob(forven_db):
+def test_paper_gate_pf_floor_honors_operator_knob(AXIOM_db):
     cfg = _config_with("paper_trading", min_profit_factor_live=1.2)
     with get_db() as conn:
         _insert_strategy(conn, "p-knob-pf", metrics={"profit_factor": 1.4})
@@ -234,7 +234,7 @@ def test_paper_gate_pf_floor_honors_operator_knob(forven_db):
     assert "50% size reduction" in msg
 
 
-def test_paper_gate_pf_reduction_threshold_honors_operator_knob(forven_db):
+def test_paper_gate_pf_reduction_threshold_honors_operator_knob(AXIOM_db):
     # PF 1.7 is below the default 2.0 threshold (reduced sizing); lowering the
     # threshold to 1.6 must graduate it at full size.
     cfg = _config_with("paper_trading", pf_position_reduction_threshold=1.6)
@@ -252,7 +252,7 @@ def test_paper_gate_pf_reduction_threshold_honors_operator_knob(forven_db):
 # ---------------------------------------------------------------------------
 
 
-def test_oos_is_ratio_check_fires_on_nested_metrics(forven_db):
+def test_oos_is_ratio_check_fires_on_nested_metrics(AXIOM_db):
     with get_db() as conn:
         _insert_strategy(conn, "p-nested-overfit", metrics={
             "profit_factor": 3.0,
@@ -266,7 +266,7 @@ def test_oos_is_ratio_check_fires_on_nested_metrics(forven_db):
     assert "OVERFITTING" in msg
 
 
-def test_oos_is_ratio_check_fires_on_doubly_nested_metrics(forven_db):
+def test_oos_is_ratio_check_fires_on_doubly_nested_metrics(AXIOM_db):
     # Sections that nest under a "metrics" sub-key (the other real shape).
     with get_db() as conn:
         _insert_strategy(conn, "p-deep-overfit", metrics={
@@ -281,7 +281,7 @@ def test_oos_is_ratio_check_fires_on_doubly_nested_metrics(forven_db):
     assert "OVERFITTING" in msg
 
 
-def test_oos_is_ratio_within_limit_passes_on_nested_metrics(forven_db):
+def test_oos_is_ratio_within_limit_passes_on_nested_metrics(AXIOM_db):
     with get_db() as conn:
         _insert_strategy(conn, "p-nested-ok", metrics={
             "profit_factor": 3.0,
@@ -294,7 +294,7 @@ def test_oos_is_ratio_within_limit_passes_on_nested_metrics(forven_db):
     assert passed, msg
 
 
-def test_oos_is_ratio_limit_honors_operator_knob(forven_db):
+def test_oos_is_ratio_limit_honors_operator_knob(AXIOM_db):
     cfg = _config_with("paper_trading", max_oos_is_ratio=2.5)
     with get_db() as conn:
         _insert_strategy(conn, "p-ratio-knob", metrics={
@@ -308,7 +308,7 @@ def test_oos_is_ratio_limit_honors_operator_knob(forven_db):
     assert passed, msg
 
 
-def test_flat_is_oos_sharpe_keys_still_work_as_fallback(forven_db):
+def test_flat_is_oos_sharpe_keys_still_work_as_fallback(AXIOM_db):
     with get_db() as conn:
         _insert_strategy(conn, "p-flat-overfit", metrics={
             "profit_factor": 3.0,
@@ -327,7 +327,7 @@ def test_flat_is_oos_sharpe_keys_still_work_as_fallback(forven_db):
 # ---------------------------------------------------------------------------
 
 
-def test_paper_gate_fails_closed_on_missing_stage_changed_at(forven_db):
+def test_paper_gate_fails_closed_on_missing_stage_changed_at(AXIOM_db):
     with get_db() as conn:
         _insert_strategy(conn, "p-no-stamp", metrics={"profit_factor": 3.0}, stage_changed_at=None)
         _insert_paper_trades(conn, "p-no-stamp", [1.0] * 60)
@@ -337,7 +337,7 @@ def test_paper_gate_fails_closed_on_missing_stage_changed_at(forven_db):
     assert "Paper stage entry time unknown" in msg
 
 
-def test_paper_gate_fails_closed_on_unparseable_stage_changed_at(forven_db):
+def test_paper_gate_fails_closed_on_unparseable_stage_changed_at(AXIOM_db):
     with get_db() as conn:
         _insert_strategy(
             conn, "p-bad-stamp", metrics={"profit_factor": 3.0}, stage_changed_at="not-a-timestamp"
@@ -349,7 +349,7 @@ def test_paper_gate_fails_closed_on_unparseable_stage_changed_at(forven_db):
     assert "Paper stage entry time unknown" in msg
 
 
-def test_paper_gate_unknown_entry_time_is_evidence_absence_not_quality(forven_db):
+def test_paper_gate_unknown_entry_time_is_evidence_absence_not_quality(AXIOM_db):
     # The fail-closed reason must classify as evidence absence so it never feeds
     # the repeated-failure dethrone/auto-archive counter.
     code = policy._extract_reason_code(
@@ -359,7 +359,7 @@ def test_paper_gate_unknown_entry_time_is_evidence_absence_not_quality(forven_db
     assert code in policy._EVIDENCE_ABSENCE_REASON_CODES
 
 
-def test_check_paper_trades_window_falls_back_to_created_at(forven_db):
+def test_check_paper_trades_window_falls_back_to_created_at(AXIOM_db):
     # Strategy with no stage_changed_at: the readiness trade window must bound
     # by created_at (45 days ago) instead of counting all history.
     with get_db() as conn:

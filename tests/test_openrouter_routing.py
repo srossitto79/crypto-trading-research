@@ -1,12 +1,12 @@
-"""Tests for OpenRouter provider adapter + provider:model routing convention."""
+﻿"""Tests for OpenRouter provider adapter + provider:model routing convention."""
 
 
-from forven.agents.providers import (
+from axiom.agents.providers import (
     OpenAIProvider,
     OpenRouterProvider,
     get_provider,
 )
-from forven.ai import _split_provider_model_prefix, normalize_provider_and_model
+from axiom.ai import _split_provider_model_prefix, normalize_provider_and_model
 
 
 class TestProviderModelPrefix:
@@ -101,7 +101,7 @@ class TestOpenRouterProviderAdapter:
         headers = prov._extra_headers()
         assert "HTTP-Referer" in headers
         assert "X-Title" in headers
-        assert headers["X-Title"] == "Forven"
+        assert headers["X-Title"] == "Axiom"
 
     def test_openai_provider_has_no_extra_headers(self):
         """Default base behavior: no extra headers — clean OpenAI calls."""

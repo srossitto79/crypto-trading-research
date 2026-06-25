@@ -1,4 +1,4 @@
-"""T1.6 point-in-time / as_of reproducibility (the first real moat slice).
+﻿"""T1.6 point-in-time / as_of reproducibility (the first real moat slice).
 
 Proves the revision-capture write gate (data.save_parquet) + the
 DataHub.candles(as_of=) read path: restating a bar leaves default reads on the new
@@ -11,9 +11,9 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-import forven.data as d
-from forven.dataeng.hub import DataHub
-from forven.dataeng.revisions import append_revision, read_revisions, reconstruct_as_of
+import axiom.data as d
+from axiom.dataeng.hub import DataHub
+from axiom.dataeng.revisions import append_revision, read_revisions, reconstruct_as_of
 
 SYMBOL = "BTC/USDT"
 TF = "1h"
@@ -126,8 +126,8 @@ def test_load_parquet_as_of_reconstructs(lake):
 
 def test_resolve_point_in_time_pin_reads_setting(monkeypatch):
     from types import SimpleNamespace
-    import forven.dataeng.settings as de
-    from forven.strategies.backtest import _resolve_point_in_time_as_of
+    import axiom.dataeng.settings as de
+    from axiom.strategies.backtest import _resolve_point_in_time_as_of
 
     monkeypatch.setattr(
         de, "load_data_engine_settings",
@@ -138,8 +138,8 @@ def test_resolve_point_in_time_pin_reads_setting(monkeypatch):
 
 def test_resolve_point_in_time_latest_is_none(monkeypatch):
     from types import SimpleNamespace
-    import forven.dataeng.settings as de
-    from forven.strategies.backtest import _resolve_point_in_time_as_of
+    import axiom.dataeng.settings as de
+    from axiom.strategies.backtest import _resolve_point_in_time_as_of
 
     # Mode 'latest' (default) -> no pin even if a timestamp is configured.
     monkeypatch.setattr(

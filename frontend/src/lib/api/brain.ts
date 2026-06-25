@@ -3,7 +3,7 @@
  * the Settings auxiliary picker (P1-T18), and the strategy decision
  * widget (P1-T19).
  *
- * Contract is fixed by ``forven/routers/brain.py``. Keep these
+ * Contract is fixed by ``axiom/routers/brain.py``. Keep these
  * interfaces in lockstep with the backend payload shapes.
  */
 

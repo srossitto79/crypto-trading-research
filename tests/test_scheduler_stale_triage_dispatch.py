@@ -1,4 +1,4 @@
-"""End-to-end test for the forven-stale-triage scheduler dispatch handler.
+﻿"""End-to-end test for the Axiom-stale-triage scheduler dispatch handler.
 
 Covers the wiring from `run_job` → payload parsing → `if kind == "stale_triage"`
 branch → actual transition_stage calls. The CLI-level algorithm is covered by
@@ -24,8 +24,8 @@ def _seed(conn, sid: str, stage: str, stage_changed_offset_days: int) -> None:
 
 def test_scheduler_stale_triage_dispatch_archives_stale(recwarn):
     """Invoking run_job with kind=stale_triage must archive matching strategies."""
-    from forven.db import get_db, init_db
-    from forven.scheduler import run_job
+    from axiom.db import get_db, init_db
+    from axiom.scheduler import run_job
 
     init_db()
 
@@ -35,7 +35,7 @@ def test_scheduler_stale_triage_dispatch_archives_stale(recwarn):
         _seed(conn, "SCH-GAUNTLET", "gauntlet", stage_changed_offset_days=30)
 
     job = {
-        "id": "forven-stale-triage",
+        "id": "Axiom-stale-triage",
         "name": "Stale Quick-Screen Triage",
         "command": "stale-triage",
         "payload": json.dumps({"kind": "stale_triage", "days": 7}),

@@ -6,20 +6,20 @@
 	 *  - surfaces the new `connected: boolean` so it's visually obvious which
 	 *    providers authorize spend vs merely have an env credential.
 	 *
-	 * Saving a key (setForvenAuthProvider) connects; Disconnect
-	 * (deleteForvenAuthProvider) revokes. After any mutation we reload the
+	 * Saving a key (setAxiomAuthProvider) connects; Disconnect
+	 * (deleteAxiomAuthProvider) revokes. After any mutation we reload the
 	 * shared store so every other tab's pickers update.
 	 */
 	import {
-		setForvenAuthProvider,
-		deleteForvenAuthProvider,
-		testForvenAuthProvider,
-		startForvenAuthProviderOAuth,
-		completeForvenAuthProviderOAuth,
-		pollForvenAuthProviderOAuth,
-		cancelForvenAuthProviderOAuth,
-		type ForvenAuthProviderStatus,
-		type ForvenAuthProviderOAuthStartResponse,
+		setAxiomAuthProvider,
+		deleteAxiomAuthProvider,
+		testAxiomAuthProvider,
+		startAxiomAuthProviderOAuth,
+		completeAxiomAuthProviderOAuth,
+		pollAxiomAuthProviderOAuth,
+		cancelAxiomAuthProviderOAuth,
+		type AxiomAuthProviderStatus,
+		type AxiomAuthProviderOAuthStartResponse,
 	} from '$lib/api';
 	import { onDestroy } from 'svelte';
 	import { openExternal } from '$lib/external-open';
@@ -38,7 +38,7 @@
 	let providerBaseUrlInput: Record<string, string> = {};
 	let providerOAuthState: Record<
 		string,
-		(ForvenAuthProviderOAuthStartResponse & { code: string }) | null
+		(AxiomAuthProviderOAuthStartResponse & { code: string }) | null
 	> = {};
 	let providerOAuthStatus: Record<string, string> = {};
 
@@ -76,7 +76,7 @@
 		setProviderBusy(provider, true);
 		setProviderError(provider, null);
 		try {
-			await setForvenAuthProvider(provider, { api_key: token });
+			await setAxiomAuthProvider(provider, { api_key: token });
 			providerTokenInput = { ...providerTokenInput, [provider]: '' };
 			setProviderMessage(provider, 'Connected');
 			await reload();
@@ -96,7 +96,7 @@
 		setProviderBusy(provider, true);
 		setProviderError(provider, null);
 		try {
-			await setForvenAuthProvider(provider, { base_url: url });
+			await setAxiomAuthProvider(provider, { base_url: url });
 			setProviderMessage(provider, 'Saved');
 			await reload();
 		} catch (e) {
@@ -110,7 +110,7 @@
 		setProviderBusy(provider, true);
 		setProviderError(provider, null);
 		try {
-			const res = await testForvenAuthProvider(provider);
+			const res = await testAxiomAuthProvider(provider);
 			setProviderMessage(
 				provider,
 				res.ok ? `Test passed (${res.status})` : `Test failed: ${res.message ?? res.status}`,
@@ -127,7 +127,7 @@
 		setProviderBusy(provider, true);
 		setProviderError(provider, null);
 		try {
-			await deleteForvenAuthProvider(provider);
+			await deleteAxiomAuthProvider(provider);
 			setProviderMessage(provider, 'Disconnected');
 			await reload();
 		} catch (e) {
@@ -161,7 +161,7 @@
 		stopPolling(provider);
 		POLL_TIMERS[provider] = setTimeout(async () => {
 			try {
-				const status = await pollForvenAuthProviderOAuth(provider, state);
+				const status = await pollAxiomAuthProviderOAuth(provider, state);
 				const flow = providerOAuthState[provider];
 				if (!flow) return; // cancelled mid-flight
 				switch (status.status) {
@@ -202,7 +202,7 @@
 		setProviderBusy(provider, true);
 		setProviderError(provider, null);
 		try {
-			const res = await startForvenAuthProviderOAuth(provider);
+			const res = await startAxiomAuthProviderOAuth(provider);
 			providerOAuthState = { ...providerOAuthState, [provider]: { ...res, code: '' } };
 			if (res.authorize_url) {
 				const ok = await openExternal(res.authorize_url);
@@ -247,7 +247,7 @@
 		setProviderBusy(provider, true);
 		setProviderError(provider, null);
 		try {
-			await completeForvenAuthProviderOAuth(provider, {
+			await completeAxiomAuthProviderOAuth(provider, {
 				code: code || undefined,
 				state: flow.state,
 				code_verifier: flow.code_verifier,
@@ -271,14 +271,14 @@
 		setProviderError(provider, null);
 		if (flow?.state) {
 			try {
-				await cancelForvenAuthProviderOAuth(provider, flow.state);
+				await cancelAxiomAuthProviderOAuth(provider, flow.state);
 			} catch {
 				/* best-effort */
 			}
 		}
 	}
 
-	function connectedLabel(p: ForvenAuthProviderStatus): boolean {
+	function connectedLabel(p: AxiomAuthProviderStatus): boolean {
 		return isProviderConnected(p);
 	}
 </script>

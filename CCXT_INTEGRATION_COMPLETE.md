@@ -2,7 +2,7 @@
 
 **Status**: CCXT adapter fully implemented and integrated  
 **Date**: 2026-06-24  
-**Impact**: Forven now supports 100+ cryptocurrency exchanges
+**Impact**: Axiom now supports 100+ cryptocurrency exchanges
 
 ---
 
@@ -14,7 +14,7 @@ You can now use any CCXT-supported exchange (Binance, Kraken, Coinbase, OKX, Byb
 
 ## What Was Built
 
-### 1. **CCXTExchange Adapter** (`forven/exchange/ccxt_adapter.py` - 440 LOC)
+### 1. **CCXTExchange Adapter** (`axiom/exchange/ccxt_adapter.py` - 440 LOC)
 
 A full implementation of `ExchangeInterface` that wraps CCXT, supporting:
 
@@ -54,12 +54,12 @@ A full implementation of `ExchangeInterface` that wraps CCXT, supporting:
 - ✅ Full type hints
 - ✅ Comprehensive error handling
 
-### 2. **Exchange Package Exports** (`forven/exchange/__init__.py`)
+### 2. **Exchange Package Exports** (`axiom/exchange/__init__.py`)
 
 Clean imports for all exchange implementations:
 
 ```python
-from forven.exchange import (
+from axiom.exchange import (
     CCXTExchange,
     MockExchange,
     HyperliquidExchange,
@@ -81,7 +81,7 @@ Covers:
 - Error handling
 - Advanced CCXT options
 - Troubleshooting guide
-- Integration patterns with Forven
+- Integration patterns with Axiom
 
 ### 4. **Practical Examples** (`examples/ccxt_with_mock.py`)
 
@@ -98,8 +98,8 @@ Working examples demonstrating:
 ### Use Binance for Live Trading
 
 ```python
-from forven.exchange import CCXTExchange
-from forven.exchange.hyperliquid import set_exchange
+from axiom.exchange import CCXTExchange
+from axiom.exchange.hyperliquid import set_exchange
 
 exchange = CCXTExchange(
     exchange_id='binance',
@@ -115,8 +115,8 @@ set_exchange(exchange)
 ### Paper Trading with Live Prices
 
 ```python
-from forven.exchange import CCXTExchange, MockExchange
-from forven.exchange.hyperliquid import set_exchange
+from axiom.exchange import CCXTExchange, MockExchange
+from axiom.exchange.hyperliquid import set_exchange
 
 # Get live prices from Binance
 binance = CCXTExchange(exchange_id='binance', api_key='', api_secret='')
@@ -148,11 +148,11 @@ set_exchange(mock)
 
 ## Architecture
 
-### Integration with Forven
+### Integration with Axiom
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ Forven Code (scanner.py, daemon.py, etc)               │
+│ Axiom Code (scanner.py, daemon.py, etc)               │
 │ Uses: ExchangeInterface                                 │
 └──────────────────┬──────────────────────────────────────┘
                    │
@@ -182,7 +182,7 @@ set_exchange(mock)
 ### Runtime Exchange Swapping
 
 ```python
-from forven.exchange.hyperliquid import set_exchange
+from axiom.exchange.hyperliquid import set_exchange
 
 # Switch to different exchanges at runtime
 set_exchange(hyperliquid_exchange)  # Default
@@ -233,12 +233,12 @@ result = await exchange.place_protective_stop(...)  # Returns OrderResult(succes
 ## Files Created/Modified
 
 ### New Files
-- ✅ `forven/exchange/ccxt_adapter.py` (440 LOC)
+- ✅ `axiom/exchange/ccxt_adapter.py` (440 LOC)
 - ✅ `docs/CCXT_INTEGRATION.md` (500+ lines)
 - ✅ `examples/ccxt_with_mock.py` (260 LOC)
 
 ### Modified Files
-- ✅ `forven/exchange/__init__.py` - Added CCXTExchange export
+- ✅ `axiom/exchange/__init__.py` - Added CCXTExchange export
 
 ### Total: 3 new files, 1 modified, 1,200+ LOC of code and docs
 
@@ -289,8 +289,8 @@ EXCHANGE_USE_TESTNET=true              # Optional: use testnet
 
 ```python
 import os
-from forven.exchange import CCXTExchange
-from forven.exchange.hyperliquid import set_exchange
+from axiom.exchange import CCXTExchange
+from axiom.exchange.hyperliquid import set_exchange
 
 exchange = CCXTExchange(
     exchange_id=os.getenv('EXCHANGE_ID', 'binance'),
@@ -350,7 +350,7 @@ set_exchange(exchange)
 1. Update `.env` with your preferred exchange credentials
 2. Set `EXCHANGE_ID=binance` (or your choice)
 3. Restart backend
-4. Forven now uses your selected exchange
+4. Axiom now uses your selected exchange
 
 ### Short-term (Recommended)
 1. Run `examples/ccxt_with_mock.py` to verify setup
@@ -386,7 +386,7 @@ Some exchanges don't support all features. Check `exchange.ccxt_exchange.has['fe
 ## Documentation
 
 - **[CCXT_INTEGRATION.md](docs/CCXT_INTEGRATION.md)** - Complete integration guide (500+ lines)
-- **[ccxt_adapter.py](forven/exchange/ccxt_adapter.py)** - Source code with inline docs
+- **[ccxt_adapter.py](axiom/exchange/ccxt_adapter.py)** - Source code with inline docs
 - **[examples/ccxt_with_mock.py](examples/ccxt_with_mock.py)** - Working examples
 - **[CCXT Official Docs](https://docs.ccxt.com)** - All exchange capabilities
 
@@ -512,7 +512,7 @@ Hyperliquid Binance Kraken MockExchange
 - **Type safety** with full type hints
 - **Feature detection** (checks exchange capabilities)
 
-### Integration with Forven
+### Integration with Axiom
 - **Drop-in replacement** for HyperliquidExchange
 - **No code changes** needed in existing code
 - **Runtime swapping** via `set_exchange()`

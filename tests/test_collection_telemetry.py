@@ -1,4 +1,4 @@
-"""Collection telemetry survives restarts and tracks failures.
+﻿"""Collection telemetry survives restarts and tracks failures.
 
 Previously _record_collection was process-local (lost on restart) with no
 consecutive-failure or last-error tracking, so health reset to green on every
@@ -6,7 +6,7 @@ restart and couldn't see a stream that was repeatedly failing.
 """
 from __future__ import annotations
 
-import forven.data_manager as dm
+import axiom.data_manager as dm
 
 
 def _reset():
@@ -15,7 +15,7 @@ def _reset():
         dm._stats_loaded = False
 
 
-def test_tracks_consecutive_failures_and_last_error(forven_db):
+def test_tracks_consecutive_failures_and_last_error(AXIOM_db):
     _reset()
     dm._record_collection("ohlcv", None, 100, True)
     assert dm.data_manager_stats()["ohlcv"]["consecutive_failures"] == 0
@@ -41,7 +41,7 @@ def test_tracks_consecutive_failures_and_last_error(forven_db):
     assert dm.data_manager_stats()["ohlcv"]["consecutive_failures"] == 0
 
 
-def test_telemetry_survives_restart(forven_db):
+def test_telemetry_survives_restart(AXIOM_db):
     _reset()
     dm._record_collection("funding", None, 0, False, error="rate limited")
 

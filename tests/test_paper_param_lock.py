@@ -1,4 +1,4 @@
-"""Paper/live param + metric lock: operator-owned strategies are frozen against
+﻿"""Paper/live param + metric lock: operator-owned strategies are frozen against
 automated/background writes (params, metrics) and stop being re-processed by the
 gauntlet engine. Only an explicit USER actor may mutate them.
 
@@ -10,8 +10,8 @@ to a 6-trade rerun and filing spurious dethrone recs."
 import json
 from datetime import datetime, timezone
 
-from forven.db import get_db
-from forven.brain import (
+from axiom.db import get_db
+from axiom.brain import (
     params_write_blocked,
     stage_is_param_locked,
     update_strategy_params,
@@ -82,28 +82,28 @@ def test_params_write_blocked_predicate():
 
 # --- update_strategy_params lock --------------------------------------------
 
-def test_update_params_paper_system_is_blocked(forven_db):
+def test_update_params_paper_system_is_blocked(AXIOM_db):
     _insert_strategy("lk-paper-sys", stage="paper", params={"adx_min": 20})
     result = update_strategy_params("lk-paper-sys", {"adx_min": 99}, actor="system")
     assert isinstance(result, dict) and result.get("locked") is True
     assert _params("lk-paper-sys") == {"adx_min": 20}  # UNCHANGED
 
 
-def test_update_params_paper_ui_is_allowed(forven_db):
+def test_update_params_paper_ui_is_allowed(AXIOM_db):
     _insert_strategy("lk-paper-ui", stage="paper", params={"adx_min": 20})
     result = update_strategy_params("lk-paper-ui", {"adx_min": 30}, actor="ui")
     assert not (isinstance(result, dict) and result.get("locked"))
     assert _params("lk-paper-ui").get("adx_min") == 30  # CHANGED
 
 
-def test_update_params_gauntlet_system_is_allowed(forven_db):
+def test_update_params_gauntlet_system_is_allowed(AXIOM_db):
     _insert_strategy("lk-gauntlet-sys", stage="gauntlet", params={"adx_min": 20})
     result = update_strategy_params("lk-gauntlet-sys", {"adx_min": 45}, actor="system")
     assert not (isinstance(result, dict) and result.get("locked"))
     assert _params("lk-gauntlet-sys").get("adx_min") == 45  # CHANGED
 
 
-def test_update_params_live_evolution_is_blocked(forven_db):
+def test_update_params_live_evolution_is_blocked(AXIOM_db):
     _insert_strategy("lk-live-evo", stage="live_graduated", params={"rsi_period": 14})
     result = update_strategy_params("lk-live-evo", {"rsi_period": 7}, actor="evolution")
     assert isinstance(result, dict) and result.get("locked") is True
@@ -112,10 +112,10 @@ def test_update_params_live_evolution_is_blocked(forven_db):
 
 # --- metric-sync lock (the degradation that fed spurious dethrones) ----------
 
-def test_metric_sync_skips_paper_strategy(forven_db):
+def test_metric_sync_skips_paper_strategy(AXIOM_db):
     """A paper strategy's stored metrics must NOT be overwritten by an automated
     backtest metric-sync with worse / fewer-trade metrics."""
-    from forven.strategies import backtest as bt
+    from axiom.strategies import backtest as bt
 
     good = {"sharpe": 1.8, "total_trades": 32}
     _insert_strategy("lk-paper-metrics", stage="paper", metrics=good)
@@ -127,10 +127,10 @@ def test_metric_sync_skips_paper_strategy(forven_db):
     assert _metrics("lk-paper-metrics") == good  # FROZEN — not overwritten
 
 
-def test_metric_sync_updates_gauntlet_strategy(forven_db):
+def test_metric_sync_updates_gauntlet_strategy(AXIOM_db):
     """Control: a gauntlet strategy is NOT locked, so the metric sync still
     writes (no behaviour change for pre-paper stages)."""
-    from forven.strategies import backtest as bt
+    from axiom.strategies import backtest as bt
 
     _insert_strategy("lk-gauntlet-metrics", stage="quick_screen", metrics={})
     new = {"sharpe": 1.2, "total_trades": 25, "backtest_months": 4.0}
@@ -144,7 +144,7 @@ def test_metric_sync_updates_gauntlet_strategy(forven_db):
 # --- gauntlet engine stops re-processing paper strategies -------------------
 
 def _insert_workflow(workflow_id, strategy_id, *, status="running"):
-    from forven.gauntlet.store import init_gauntlet_schema
+    from axiom.gauntlet.store import init_gauntlet_schema
 
     now = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
@@ -158,8 +158,8 @@ def _insert_workflow(workflow_id, strategy_id, *, status="running"):
         conn.commit()
 
 
-def test_list_active_workflow_ids_excludes_paper(forven_db):
-    from forven.gauntlet.engine import list_active_workflow_ids
+def test_list_active_workflow_ids_excludes_paper(AXIOM_db):
+    from axiom.gauntlet.engine import list_active_workflow_ids
 
     _insert_strategy("wf-paper", stage="paper")
     _insert_strategy("wf-gauntlet", stage="gauntlet")
@@ -171,8 +171,8 @@ def test_list_active_workflow_ids_excludes_paper(forven_db):
     assert "wfid-gauntlet" in ids   # gauntlet strategy still active
 
 
-def test_cancel_param_locked_workflows_drains_paper(forven_db):
-    from forven.gauntlet.engine import cancel_param_locked_workflows
+def test_cancel_param_locked_workflows_drains_paper(AXIOM_db):
+    from axiom.gauntlet.engine import cancel_param_locked_workflows
 
     _insert_strategy("wf-paper2", stage="paper")
     _insert_workflow("wfid-paper2", "wf-paper2", status="running")

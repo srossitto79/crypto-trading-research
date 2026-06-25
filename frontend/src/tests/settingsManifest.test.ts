@@ -54,7 +54,7 @@ describe('settings manifest invariants', () => {
 });
 
 describe('M-15 gate-floor knobs are surfaced in the manifest', () => {
-  // 2026-06-09 audit: these floors were hardcoded in forven/policy.py and the
+  // 2026-06-09 audit: these floors were hardcoded in axiom/policy.py and the
   // wired settings were silently ignored. Defaults must match the previously
   // enforced values exactly (wiring, not relaxing — paper->live is the
   // live-money gate).

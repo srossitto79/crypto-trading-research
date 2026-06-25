@@ -1,5 +1,5 @@
 /**
- * Utility functions for strategy and metrics handling in the Forven frontend.
+ * Utility functions for strategy and metrics handling in the Axiom frontend.
  */
 
 export interface ManagerRow {

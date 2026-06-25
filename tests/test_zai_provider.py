@@ -1,15 +1,15 @@
-"""Tests for Z.AI (GLM) provider integration."""
+﻿"""Tests for Z.AI (GLM) provider integration."""
 
 import asyncio
 from copy import deepcopy
 from unittest.mock import AsyncMock, patch, MagicMock
 
-from forven.model_routing import (
+from axiom.model_routing import (
     _SUPPORTED_PROVIDERS,
     _DEFAULT_MODEL_ROUTING,
     get_default_model_for_provider,
 )
-from forven.ai import (
+from axiom.ai import (
     normalize_provider_and_model,
     _normalize_provider,
     ENDPOINTS,
@@ -39,7 +39,7 @@ def test_zai_is_default_primary_provider():
 
 
 def test_get_default_model_for_zai():
-    with patch("forven.model_routing.kv_get", side_effect=_mock_kv_get):
+    with patch("axiom.model_routing.kv_get", side_effect=_mock_kv_get):
         model = get_default_model_for_provider("zai")
     assert model == "glm-5.1"
 
@@ -71,14 +71,14 @@ def test_normalize_zai_provider_and_model():
 
 
 def test_normalize_zai_default_model():
-    with patch("forven.model_routing.kv_get", side_effect=_mock_kv_get):
+    with patch("axiom.model_routing.kv_get", side_effect=_mock_kv_get):
         provider, model = normalize_provider_and_model("zai", None)
     assert provider == "zai"
     assert model == "glm-5.1"
 
 
 def test_normalize_missing_provider_and_model_uses_primary_routing():
-    with patch("forven.model_routing.kv_get", side_effect=_mock_kv_get):
+    with patch("axiom.model_routing.kv_get", side_effect=_mock_kv_get):
         provider, model = normalize_provider_and_model(None, None)
     assert provider == "zai"
     assert model == "glm-5.1"
@@ -97,7 +97,7 @@ def test_normalize_glm_prefix_infers_zai():
 
 
 def test_auth_store_reads_anthropic_env_for_zai():
-    from forven.auth.store import get_profile
+    from axiom.auth.store import get_profile
 
     with patch.dict(
         "os.environ",
@@ -107,7 +107,7 @@ def test_auth_store_reads_anthropic_env_for_zai():
         },
         clear=False,
     ):
-        with patch("forven.auth.store.load_auth", return_value={"version": 1, "profiles": {}}):
+        with patch("axiom.auth.store.load_auth", return_value={"version": 1, "profiles": {}}):
             profile = get_profile("zai")
 
     assert profile["access"] == "env-zai-token"
@@ -116,13 +116,13 @@ def test_auth_store_reads_anthropic_env_for_zai():
 
 # Task 3 tests
 def test_call_single_dispatches_to_zai():
-    from forven.ai import _call_single
+    from axiom.ai import _call_single
 
     mock_response = "Hello from GLM"
 
     async def _run():
-        with patch("forven.ai._call_zai", new_callable=AsyncMock, return_value=mock_response) as mock_call:
-            with patch("forven.ai.get_token", return_value="fake-zai-token"):
+        with patch("axiom.ai._call_zai", new_callable=AsyncMock, return_value=mock_response) as mock_call:
+            with patch("axiom.ai.get_token", return_value="fake-zai-token"):
                 result = await _call_single("zai", "glm-5.1", [{"role": "user", "content": "hi"}], 100, 0.7, None)
         return result, mock_call
 
@@ -132,7 +132,7 @@ def test_call_single_dispatches_to_zai():
 
 
 def test_call_zai_uses_reasoning_content_when_content_empty():
-    from forven.ai import _call_zai
+    from axiom.ai import _call_zai
 
     mock_response = MagicMock()
     mock_response.status_code = 200
@@ -150,8 +150,8 @@ def test_call_zai_uses_reasoning_content_when_content_empty():
     }
 
     async def _run():
-        with patch("forven.ai.get_profile", return_value={"base_url": "https://api.z.ai/api/paas/v4"}):
-            with patch("forven.ai.httpx.AsyncClient") as MockClient:
+        with patch("axiom.ai.get_profile", return_value={"base_url": "https://api.z.ai/api/paas/v4"}):
+            with patch("axiom.ai.httpx.AsyncClient") as MockClient:
                 mock_client = MagicMock()
                 mock_client.__aenter__ = AsyncMock(return_value=mock_client)
                 mock_client.__aexit__ = AsyncMock(return_value=False)
@@ -170,7 +170,7 @@ def test_call_zai_uses_reasoning_content_when_content_empty():
 
 
 def test_call_zai_supports_anthropic_compatible_base_url():
-    from forven.ai import _call_zai
+    from axiom.ai import _call_zai
 
     mock_response = MagicMock()
     mock_response.status_code = 200
@@ -188,8 +188,8 @@ def test_call_zai_supports_anthropic_compatible_base_url():
         return mock_response
 
     async def _run():
-        with patch("forven.ai.get_profile", return_value={"base_url": "https://api.z.ai/api/anthropic"}):
-            with patch("forven.ai.httpx.AsyncClient") as MockClient:
+        with patch("axiom.ai.get_profile", return_value={"base_url": "https://api.z.ai/api/anthropic"}):
+            with patch("axiom.ai.httpx.AsyncClient") as MockClient:
                 mock_client = MagicMock()
                 mock_client.__aenter__ = AsyncMock(return_value=mock_client)
                 mock_client.__aexit__ = AsyncMock(return_value=False)
@@ -212,14 +212,14 @@ def test_call_zai_supports_anthropic_compatible_base_url():
 
 
 def test_agent_provider_factory_returns_zai_provider():
-    from forven.agents.providers import ZAIProvider, get_provider
+    from axiom.agents.providers import ZAIProvider, get_provider
 
     provider = get_provider("zai")
     assert isinstance(provider, ZAIProvider)
 
 
 def test_agent_zai_provider_uses_openai_compatible_endpoint():
-    from forven.agents.providers import ZAIProvider
+    from axiom.agents.providers import ZAIProvider
 
     mock_response = MagicMock()
     mock_response.raise_for_status = MagicMock()
@@ -245,8 +245,8 @@ def test_agent_zai_provider_uses_openai_compatible_endpoint():
 
     async def _run():
         provider = ZAIProvider()
-        with patch("forven.agents.providers.get_profile", return_value={"base_url": "https://api.z.ai/api/paas/v4"}):
-            with patch("forven.agents.providers.httpx.AsyncClient") as MockClient:
+        with patch("axiom.agents.providers.get_profile", return_value={"base_url": "https://api.z.ai/api/paas/v4"}):
+            with patch("axiom.agents.providers.httpx.AsyncClient") as MockClient:
                 mock_client = MagicMock()
                 mock_client.__aenter__ = AsyncMock(return_value=mock_client)
                 mock_client.__aexit__ = AsyncMock(return_value=False)
@@ -267,7 +267,7 @@ def test_agent_zai_provider_uses_openai_compatible_endpoint():
 
 
 def test_agent_zai_provider_uses_anthropic_compatible_endpoint():
-    from forven.agents.providers import ZAIProvider
+    from axiom.agents.providers import ZAIProvider
 
     mock_response = MagicMock()
     mock_response.raise_for_status = MagicMock()
@@ -289,8 +289,8 @@ def test_agent_zai_provider_uses_anthropic_compatible_endpoint():
 
     async def _run():
         provider = ZAIProvider()
-        with patch("forven.agents.providers.get_profile", return_value={"base_url": "https://api.z.ai/api/anthropic"}):
-            with patch("forven.agents.providers.httpx.AsyncClient") as MockClient:
+        with patch("axiom.agents.providers.get_profile", return_value={"base_url": "https://api.z.ai/api/anthropic"}):
+            with patch("axiom.agents.providers.httpx.AsyncClient") as MockClient:
                 mock_client = MagicMock()
                 mock_client.__aenter__ = AsyncMock(return_value=mock_client)
                 mock_client.__aexit__ = AsyncMock(return_value=False)
@@ -313,29 +313,29 @@ def test_agent_zai_provider_uses_anthropic_compatible_endpoint():
 
 # Task 4 tests
 def test_zai_in_auth_store_supported():
-    from forven.auth.store import _SUPPORTED_AUTH_PROVIDERS
+    from axiom.auth.store import _SUPPORTED_AUTH_PROVIDERS
     assert "zai" in _SUPPORTED_AUTH_PROVIDERS
 
 
 # Task 5 tests
 def test_zai_in_api_core_supported():
-    from forven.api_core import _SUPPORTED_AUTH_PROVIDERS
+    from axiom.api_core import _SUPPORTED_AUTH_PROVIDERS
     assert "zai" in _SUPPORTED_AUTH_PROVIDERS
 
 
 def test_zai_env_var_registered():
-    from forven.api_core import _AUTH_PROVIDER_ENV_VARS
+    from axiom.api_core import _AUTH_PROVIDER_ENV_VARS
     assert "zai" in _AUTH_PROVIDER_ENV_VARS
     assert _AUTH_PROVIDER_ENV_VARS["zai"] == "ZAI_API_KEY"
 
 
 def test_zai_display_name():
-    from forven.api_core import _MODEL_PROVIDER_DISPLAY_NAMES
+    from axiom.api_core import _MODEL_PROVIDER_DISPLAY_NAMES
     assert _MODEL_PROVIDER_DISPLAY_NAMES["zai"] == "Z.AI"
 
 
 def test_zai_catalog_entries():
-    from forven.api_core import _AGENT_MODEL_CATALOG
+    from axiom.api_core import _AGENT_MODEL_CATALOG
     zai_models = [e for e in _AGENT_MODEL_CATALOG if e["provider"] == "zai"]
     model_ids = [e["model_id"] for e in zai_models]
     assert "glm-5.1" in model_ids
@@ -346,38 +346,38 @@ def test_zai_catalog_entries():
 
 # Task 6 tests
 def test_zai_discovery_endpoints_registered():
-    from forven.api_core import _MODEL_DISCOVERY_ALT_ENDPOINTS
+    from axiom.api_core import _MODEL_DISCOVERY_ALT_ENDPOINTS
     assert "zai" in _MODEL_DISCOVERY_ALT_ENDPOINTS
     endpoints = _MODEL_DISCOVERY_ALT_ENDPOINTS["zai"]
     assert any("z.ai" in ep or "bigmodel.cn" in ep for ep in endpoints)
 
 
 def test_zai_discovery_headers_registered():
-    from forven.api_core import _MODEL_DISCOVERY_HEADERS
+    from axiom.api_core import _MODEL_DISCOVERY_HEADERS
     assert "zai" in _MODEL_DISCOVERY_HEADERS
     assert "Authorization" in _MODEL_DISCOVERY_HEADERS["zai"]
 
 
 def test_zai_model_should_belong():
-    from forven.api_core import _discovery_model_should_belong
+    from axiom.api_core import _discovery_model_should_belong
     assert _discovery_model_should_belong("zai", "glm-5.1") is True
     assert _discovery_model_should_belong("zai", "glm-4.7-flash") is True
     assert _discovery_model_should_belong("zai", "gpt-5.2") is False
 
 
 def test_zai_oauth_not_supported():
-    from forven.api_core import _provider_supports_oauth
+    from axiom.api_core import _provider_supports_oauth
     assert _provider_supports_oauth("zai") is False
 
 
 def test_zai_requires_token():
-    from forven.api_core import _provider_requires_token
+    from axiom.api_core import _provider_requires_token
     assert _provider_requires_token("zai") is True
 
 
 # Task 7 tests
 def test_zai_endpoint_detection_success():
-    from forven.api_core import _detect_zai_endpoint
+    from axiom.api_core import _detect_zai_endpoint
     from unittest.mock import patch, MagicMock
 
     mock_response = MagicMock()
@@ -387,7 +387,7 @@ def test_zai_endpoint_detection_success():
     }
     mock_response.raise_for_status = MagicMock()
 
-    with patch("forven.api_core.httpx.Client") as MockClient:
+    with patch("axiom.api_core.httpx.Client") as MockClient:
         mock_client = MagicMock()
         mock_client.__enter__ = MagicMock(return_value=mock_client)
         mock_client.__exit__ = MagicMock(return_value=False)
@@ -402,10 +402,10 @@ def test_zai_endpoint_detection_success():
 
 
 def test_zai_endpoint_detection_all_fail():
-    from forven.api_core import _detect_zai_endpoint
+    from axiom.api_core import _detect_zai_endpoint
     from unittest.mock import patch, MagicMock
 
-    with patch("forven.api_core.httpx.Client") as MockClient:
+    with patch("axiom.api_core.httpx.Client") as MockClient:
         mock_client = MagicMock()
         mock_client.__enter__ = MagicMock(return_value=mock_client)
         mock_client.__exit__ = MagicMock(return_value=False)
@@ -420,10 +420,10 @@ def test_zai_endpoint_detection_all_fail():
 
 # Task 8 tests
 def test_build_auth_provider_payload_zai():
-    from forven.api_core import _build_auth_provider_payload
+    from axiom.api_core import _build_auth_provider_payload
     from unittest.mock import patch
 
-    with patch("forven.api_core.get_profile", return_value=None):
+    with patch("axiom.api_core.get_profile", return_value=None):
         payload = _build_auth_provider_payload("zai")
 
     assert payload["provider"] == "zai"
@@ -435,14 +435,14 @@ def test_build_auth_provider_payload_zai():
 # Task 11 – integration round-trip tests
 def test_zai_full_provider_round_trip():
     """Verify zai appears in auth providers, model catalog, and model policy."""
-    from forven.api_core import (
+    from axiom.api_core import (
         _get_auth_providers_compat,
         _get_model_policy_compat,
         _AGENT_MODEL_CATALOG,
     )
 
-    with patch("forven.api_core.get_profile", return_value=None), \
-         patch("forven.model_routing.kv_get", side_effect=_mock_kv_get):
+    with patch("axiom.api_core.get_profile", return_value=None), \
+         patch("axiom.model_routing.kv_get", side_effect=_mock_kv_get):
         # Auth providers include zai
         auth = _get_auth_providers_compat()
         provider_ids = [p["provider"] for p in auth["providers"]]
@@ -460,25 +460,25 @@ def test_zai_full_provider_round_trip():
 
 
 def test_model_routing_migrates_legacy_priority_when_anthropic_env_present():
-    from forven.model_routing import get_model_routing
+    from axiom.model_routing import get_model_routing
 
     legacy_policy = deepcopy(_DEFAULT_MODEL_ROUTING)
     legacy_policy["provider_priority"] = ["openai", "minimax", "lmstudio", "zai"]
     captured: dict[str, object] = {}
 
     with patch.dict("os.environ", {"ANTHROPIC_AUTH_TOKEN": "env-zai-token"}, clear=False):
-        with patch("forven.model_routing.kv_get", return_value=legacy_policy):
-            with patch("forven.model_routing.kv_set", side_effect=lambda key, value: captured.update({"key": key, "value": value})):
+        with patch("axiom.model_routing.kv_get", return_value=legacy_policy):
+            with patch("axiom.model_routing.kv_set", side_effect=lambda key, value: captured.update({"key": key, "value": value})):
                 migrated = get_model_routing()
 
     assert migrated["provider_priority"][0] == "zai"
-    assert captured["key"] == "forven:model-routing"
+    assert captured["key"] == "axiom:model-routing"
     assert captured["value"]["provider_priority"][0] == "zai"
 
 
 def test_zai_normalize_provider_and_model_all_aliases():
     """All provider aliases resolve to zai with correct model."""
-    from forven.ai import normalize_provider_and_model
+    from axiom.ai import normalize_provider_and_model
 
     for alias in ["zai", "z.ai", "z-ai", "ZAI", "Z.AI"]:
         provider, model = normalize_provider_and_model(alias, "glm-5.1")
@@ -488,7 +488,7 @@ def test_zai_normalize_provider_and_model_all_aliases():
 
 def test_zai_model_inference_routes_correctly():
     """GLM model IDs infer zai provider regardless of stated provider."""
-    from forven.ai import normalize_provider_and_model
+    from axiom.ai import normalize_provider_and_model
 
     test_cases = [
         ("glm-5.1", "zai"),

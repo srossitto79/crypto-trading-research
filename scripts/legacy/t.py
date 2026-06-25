@@ -1,7 +1,7 @@
-import sys  
-sys.path.append('C:/Forven')  
+﻿import sys  
+sys.path.append('C:/Axiom')  
 import sqlite3, os  
-from forven.db import get_db  
+from axiom.db import get_db  
 with get_db() as conn:  
     rows = conn.execute("SELECT id, agent_id, title, status, output_data FROM agent_tasks WHERE agent_id='strategy-developer' AND title LIKE '%%leverage%%' OR title LIKE '%%1.5x%%' ORDER BY id DESC LIMIT 5").fetchall()  
     for r in rows:  

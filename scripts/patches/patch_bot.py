@@ -1,6 +1,6 @@
-import re
+﻿import re
 
-with open("forven/bot.py", "r") as f:
+with open("Axiom/bot.py", "r") as f:
     content = f.read()
 
 # 1. Add agent_id to __init__
@@ -26,15 +26,15 @@ content = re.sub(
 
 # 4. Modify get_bot
 content = re.sub(
-    r"def get_bot\(\) -> ForvenBot:\n    \"\"\"Get or create the singleton bot instance\.\"\"\"\n    global _bot\n    if _bot is None:\n        _bot = ForvenBot\(\)\n    return _bot",
-    "def get_bot() -> ForvenBot:\n    \"\"\"Get or create the singleton bot instance.\"\"\"\n    global _bot\n    if _bot is None:\n        _bot = ForvenBot(agent_id=None)\n    return _bot",
+    r"def get_bot\(\) -> AxiomBot:\n    \"\"\"Get or create the singleton bot instance\.\"\"\"\n    global _bot\n    if _bot is None:\n        _bot = AxiomBot\(\)\n    return _bot",
+    "def get_bot() -> AxiomBot:\n    \"\"\"Get or create the singleton bot instance.\"\"\"\n    global _bot\n    if _bot is None:\n        _bot = AxiomBot(agent_id=None)\n    return _bot",
     content
 )
 
 # 5. Modify run_bot and add _run_all_bots
 run_all_bots_code = """
 async def _run_all_bots():
-    from forven.db import get_db
+    from axiom.db import get_db
     token = get_bot_token()
     main_bot = get_bot()
     
@@ -44,7 +44,7 @@ async def _run_all_bots():
         with get_db() as conn:
             agents = conn.execute("SELECT id, discord_token FROM agents WHERE enabled=1 AND discord_token IS NOT NULL AND discord_token != ''").fetchall()
         for agent in agents:
-            agent_bot = ForvenBot(agent_id=agent["id"])
+            agent_bot = AxiomBot(agent_id=agent["id"])
             tasks.append(agent_bot.start(agent["discord_token"]))
             log.info("Starting Agent Bot for %s", agent["id"])
     except Exception as e:
@@ -57,8 +57,8 @@ async def _run_all_bots():
 content = content.replace("def run_bot():", run_all_bots_code + "def run_bot():")
 
 content = re.sub(
-    r"    try:\n        token = get_bot_token\(\)\n        bot = get_bot\(\)\n        log\.info\(\"Starting Forven gateway \(bot \+ scheduler \+ task processor\)\"\)\n        bot\.run\(token\)",
-    "    try:\n        log.info(\"Starting Forven gateway (bot + scheduler + task processor) + agent bots\")\n        asyncio.run(_run_all_bots())",
+    r"    try:\n        token = get_bot_token\(\)\n        bot = get_bot\(\)\n        log\.info\(\"Starting Axiom gateway \(bot \+ scheduler \+ task processor\)\"\)\n        bot\.run\(token\)",
+    "    try:\n        log.info(\"Starting Axiom gateway (bot + scheduler + task processor) + agent bots\")\n        asyncio.run(_run_all_bots())",
     content
 )
 
@@ -69,6 +69,6 @@ content = re.sub(
     content
 )
 
-with open("forven/bot.py", "w") as f:
+with open("Axiom/bot.py", "w") as f:
     f.write(content)
 print("Patched bot.py")

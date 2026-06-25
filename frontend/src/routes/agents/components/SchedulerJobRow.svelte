@@ -1,8 +1,8 @@
 <script lang="ts">
-	import type { ForvenSchedulerJob } from '$lib/api';
+	import type { AxiomSchedulerJob } from '$lib/api';
 	import { msToMinutes, minutesToMs, formatIntervalMs } from '$lib/utils/schedule';
 
-	export let job: ForvenSchedulerJob;
+	export let job: AxiomSchedulerJob;
 	export let onSave: (jobId: string | number, scheduleType: string, scheduleExpr: string, enabled: boolean) => Promise<void>;
 	export let onRun: ((jobId: string | number) => Promise<void>) | undefined = undefined;
 	export let showErrors = false;

@@ -1,4 +1,4 @@
-"""B-35 (2026-06-09 audit): evidence-absence gate rejections must not auto-archive.
+﻿"""B-35 (2026-06-09 audit): evidence-absence gate rejections must not auto-archive.
 
 The gauntlet->paper gate emits several rejections that mean "the tests have not
 been run or persisted YET" (work queued, optimization in flight, validation
@@ -15,8 +15,8 @@ from __future__ import annotations
 import json
 from datetime import datetime, timedelta, timezone
 
-import forven.policy as policy
-from forven.db import get_db
+import axiom.policy as policy
+from axiom.db import get_db
 
 
 def _insert_strategy(strategy_id: str, *, stage: str = "gauntlet") -> None:
@@ -94,7 +94,7 @@ def test_extract_reason_code_separates_evidence_absence_from_quality_failures():
 # --- auto-archive counter exemption ---------------------------------------------
 
 
-def test_artifacts_pending_rejections_never_auto_archive(forven_db):
+def test_artifacts_pending_rejections_never_auto_archive(AXIOM_db):
     strategy_id = "s-artifacts-pending"
     text = "Gauntlet requires at least one persisted optimization or walk-forward run before promotion to paper"
     _insert_strategy(strategy_id)
@@ -105,7 +105,7 @@ def test_artifacts_pending_rejections_never_auto_archive(forven_db):
     assert _stage(strategy_id) == "gauntlet"
 
 
-def test_stale_validation_rejections_never_auto_archive(forven_db):
+def test_stale_validation_rejections_never_auto_archive(AXIOM_db):
     strategy_id = "s-stale-validation"
     text = "Stale validation tests (run before latest optimization): walk_forward, monte_carlo"
     _insert_strategy(strategy_id)
@@ -116,7 +116,7 @@ def test_stale_validation_rejections_never_auto_archive(forven_db):
     assert _stage(strategy_id) == "gauntlet"
 
 
-def test_missing_evidence_rejections_never_auto_archive(forven_db):
+def test_missing_evidence_rejections_never_auto_archive(AXIOM_db):
     strategy_id = "s-missing-evidence"
     text = "Gauntlet missing required verdict tests: monte_carlo"
     _insert_strategy(strategy_id)
@@ -127,7 +127,7 @@ def test_missing_evidence_rejections_never_auto_archive(forven_db):
     assert _stage(strategy_id) == "gauntlet"
 
 
-def test_quality_failure_rejections_still_auto_archive(forven_db):
+def test_quality_failure_rejections_still_auto_archive(AXIOM_db):
     strategy_id = "s-quality-failure"
     text = "Walk-forward fold pass rate 0.20 below floor"
     _insert_strategy(strategy_id)
@@ -156,7 +156,7 @@ def test_extract_reason_code_classifies_insufficient_paper_evidence():
     assert not hasattr(policy, "_is_insufficient_paper_evidence_reason")
 
 
-def test_insufficient_paper_evidence_rejections_never_auto_archive_or_dethrone(forven_db):
+def test_insufficient_paper_evidence_rejections_never_auto_archive_or_dethrone(AXIOM_db):
     strategy_id = "s-paper-warmup"
     text = "Insufficient paper duration: 2/14 days"
     _insert_strategy(strategy_id, stage="paper")
@@ -187,7 +187,7 @@ def test_insufficient_paper_evidence_rejections_never_auto_archive_or_dethrone(f
     assert int(approvals) == 0
 
 
-def test_paper_quality_failures_do_not_auto_queue_dethrone_for_operator_owned(forven_db):
+def test_paper_quality_failures_do_not_auto_queue_dethrone_for_operator_owned(AXIOM_db):
     # Updated contract (paper param/metric lock): paper/live are operator-owned, so
     # background gate re-evaluations must NOT auto-queue a paper->gauntlet dethrone
     # recommendation even on a genuine ran-and-failed quality code. The strategy

@@ -1,9 +1,9 @@
-"""Tests for asset-class-specific constants."""
+﻿"""Tests for asset-class-specific constants."""
 
 from __future__ import annotations
 
-from forven.asset_constants import get_bars_per_year
-from forven.symbol_mapping import AssetClass
+from axiom.asset_constants import get_bars_per_year
+from axiom.symbol_mapping import AssetClass
 
 
 def test_crypto_bars_per_year():

@@ -51,7 +51,7 @@
 	}
 
 	function shortName(job: SchedulerJobSummary): string {
-		return job.name || job.id.replace(/^forven-/, '');
+		return job.name || job.id.replace(/^axiom-/, '');
 	}
 
 	onMount(() => {

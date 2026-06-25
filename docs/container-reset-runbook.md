@@ -6,7 +6,7 @@ Use this when lifecycle strategy containers are split across stale SQLite/Chroma
 
 The reset script performs:
 
-1. Backup `forven.db` and `chromadb/`.
+1. Backup `axiom.db` and `chromadb/`.
 2. Delete all rows from:
    - `strategies`
    - `trades`
@@ -38,7 +38,7 @@ Stop backend/frontend processes before reset to avoid write races.
 Optional custom backup location:
 
 ```powershell
-.venv\Scripts\python.exe scripts\reset_strategy_containers.py --yes --backup-dir C:\tmp\forven-reset-backup
+.venv\Scripts\python.exe scripts\reset_strategy_containers.py --yes --backup-dir C:\tmp\axiom-reset-backup
 ```
 
 ## 4) Verify Acceptance Gate
@@ -47,7 +47,7 @@ Check DB table counts + counters:
 
 ```powershell
 @'
-from forven.db import get_db
+from axiom.db import get_db
 tables = [
     "strategies",
     "trades",
@@ -74,7 +74,7 @@ Check Chroma collection:
 
 ```powershell
 @'
-from forven.vectordb import get_client
+from axiom.vectordb import get_client
 client = get_client()
 names = sorted([c.name for c in client.list_collections()])
 print("collections:", names)
@@ -93,6 +93,6 @@ Expected outcome:
 ## 5) Restore From Backup (If Needed)
 
 1. Stop services.
-2. Copy backup DB file back to `FORVEN_HOME\forven.db`.
-3. Replace `FORVEN_HOME\chromadb` with the backup copy.
+2. Copy backup DB file back to `AXIOM_HOME\axiom.db`.
+3. Replace `AXIOM_HOME\chromadb` with the backup copy.
 4. Restart services.

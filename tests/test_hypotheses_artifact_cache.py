@@ -1,9 +1,9 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import hashlib
 
-from forven.db import get_db
-from forven.hypotheses import add_hypothesis_artifact, create_hypothesis
+from axiom.db import get_db
+from axiom.hypotheses import add_hypothesis_artifact, create_hypothesis
 
 
 def _make_hypothesis():
@@ -15,13 +15,13 @@ def _make_hypothesis():
     )
 
 
-def test_artifact_cached_columns_exist(forven_db):
+def test_artifact_cached_columns_exist(AXIOM_db):
     with get_db() as conn:
         cols = {row["name"] for row in conn.execute("PRAGMA table_info(hypothesis_artifacts)")}
     assert {"cached_content", "cached_content_hash", "cached_at", "content_bytes"} <= cols
 
 
-def test_add_artifact_without_content_leaves_cache_columns_null(forven_db):
+def test_add_artifact_without_content_leaves_cache_columns_null(AXIOM_db):
     hyp = _make_hypothesis()
     art = add_hypothesis_artifact(
         hypothesis_id=hyp["id"], source_type="youtube", source_title="T",
@@ -38,7 +38,7 @@ def test_add_artifact_without_content_leaves_cache_columns_null(forven_db):
     assert row["content_bytes"] is None
 
 
-def test_add_artifact_persists_cached_content(forven_db):
+def test_add_artifact_persists_cached_content(AXIOM_db):
     hyp = _make_hypothesis()
     content = "long article body " * 50
     art = add_hypothesis_artifact(
@@ -57,7 +57,7 @@ def test_add_artifact_persists_cached_content(forven_db):
     assert row["cached_at"] is not None
 
 
-def test_cached_content_truncated_above_cap(forven_db):
+def test_cached_content_truncated_above_cap(AXIOM_db):
     hyp = _make_hypothesis()
     big = "x" * (600 * 1024)
     art = add_hypothesis_artifact(
@@ -75,7 +75,7 @@ def test_cached_content_truncated_above_cap(forven_db):
     assert row["content_bytes"] <= (500 * 1024) + 50
 
 
-def test_truncated_hash_matches_truncated_content(forven_db):
+def test_truncated_hash_matches_truncated_content(AXIOM_db):
     hyp = _make_hypothesis()
     big = "x" * (600 * 1024)
     art = add_hypothesis_artifact(

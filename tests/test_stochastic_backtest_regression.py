@@ -1,8 +1,8 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import pandas as pd
 
-from forven.strategies.backtest import _vectorized_signals
+from axiom.strategies.backtest import _vectorized_signals
 
 
 def _stochastic_signal_frame() -> pd.DataFrame:

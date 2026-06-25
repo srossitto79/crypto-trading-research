@@ -1,4 +1,4 @@
-"""Guard against gauntlet test-key / result-type alias drift.
+﻿"""Guard against gauntlet test-key / result-type alias drift.
 
 The robustness producers (gauntlet steps), the status reader, and the policy
 promotion gate must agree on how a result_type / step_key / required_test name
@@ -9,13 +9,13 @@ assertions so a future rename that breaks the contract fails in CI immediately.
 """
 from __future__ import annotations
 
-from forven.gauntlet.models import (
+from axiom.gauntlet.models import (
     ROBUSTNESS_STEP_KEYS,
     STEP_KEY_ALIASES,
     normalize_step_key,
 )
-from forven.gauntlet.settings import normalize_required_tests
-from forven.gauntlet.status import _RESULT_TYPE_TO_STEP, _STEP_TO_RESULT_TYPE
+from axiom.gauntlet.settings import normalize_required_tests
+from axiom.gauntlet.status import _RESULT_TYPE_TO_STEP, _STEP_TO_RESULT_TYPE
 
 
 def test_result_type_to_step_targets_are_real_robustness_keys():

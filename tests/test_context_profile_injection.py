@@ -1,4 +1,4 @@
-"""Phase 6 / P6-T02 — context-builder profile injection tests."""
+﻿"""Phase 6 / P6-T02 — context-builder profile injection tests."""
 from __future__ import annotations
 
 import pytest
@@ -8,23 +8,23 @@ import pytest
 def workspace(tmp_path, monkeypatch):
     ws = tmp_path / "ws"
     ws.mkdir()
-    from forven import config
+    from axiom import config
 
     monkeypatch.setattr(config, "WORKSPACE_DIR", ws, raising=False)
     monkeypatch.setattr(config, "LEGACY_WORKSPACE_DIR", ws, raising=False)
 
     # Patch the workspace module globals directly rather than importlib.reload:
-    # reload rebinds forven.workspace.WorkspacePathError to a new class object,
+    # reload rebinds Axiom.workspace.WorkspacePathError to a new class object,
     # which then leaks across the session and breaks unrelated tests that caught
     # the original class. The read_* helpers resolve WORKSPACE_DIR from the
     # module dict at call time, so monkeypatching the attributes is sufficient
     # and auto-restores on teardown.
-    import forven.workspace as ws_mod
+    import axiom.workspace as ws_mod
 
     monkeypatch.setattr(ws_mod, "WORKSPACE_DIR", ws, raising=False)
     monkeypatch.setattr(ws_mod, "LEGACY_WORKSPACE_DIR", ws, raising=False)
 
-    import forven.context as ctx_mod
+    import axiom.context as ctx_mod
 
     yield ctx_mod, ws
 

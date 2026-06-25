@@ -1,11 +1,11 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 from concurrent.futures import TimeoutError as FuturesTimeoutError
 from datetime import datetime, timezone
 
-from forven import api_core
-from forven.db import get_db
+from axiom import api_core
+from axiom.db import get_db
 
 
 def _insert_strategy(strategy_id: str) -> None:
@@ -49,7 +49,7 @@ def test_coalesce_ws_messages_batches_multiple_payloads():
     }
 
 
-def test_post_optimization_submit_uses_executor(monkeypatch, forven_db):
+def test_post_optimization_submit_uses_executor(monkeypatch, AXIOM_db):
     _insert_strategy("S30001")
     submitted: list[object] = []
 
@@ -67,7 +67,7 @@ def test_post_optimization_submit_uses_executor(monkeypatch, forven_db):
     assert len(submitted) == 1
 
 
-def test_post_optimization_submit_persists_named_failure_details(monkeypatch, forven_db):
+def test_post_optimization_submit_persists_named_failure_details(monkeypatch, AXIOM_db):
     _insert_strategy("S30002")
 
     class _ImmediateExecutor:
@@ -79,7 +79,7 @@ def test_post_optimization_submit_persists_named_failure_details(monkeypatch, fo
         raise FuturesTimeoutError()
 
     monkeypatch.setattr(api_core, "_OPTIMIZATION_EXECUTOR", _ImmediateExecutor())
-    monkeypatch.setattr("forven.strategies.optimizer.optimize_strategy", _raise_timeout)
+    monkeypatch.setattr("axiom.strategies.optimizer.optimize_strategy", _raise_timeout)
 
     result = api_core.post_optimization_submit(
         api_core.OptimizationSubmitBody(
@@ -107,7 +107,7 @@ def test_post_optimization_submit_persists_named_failure_details(monkeypatch, fo
     assert config["objective"] == "sharpe_ratio"
 
 
-def test_get_backtest_result_preserves_failed_optimization_status(forven_db):
+def test_get_backtest_result_preserves_failed_optimization_status(AXIOM_db):
     _insert_strategy("S30003")
     now = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:

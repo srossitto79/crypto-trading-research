@@ -1,4 +1,4 @@
-"""Unit tests for scanner indicator math and signal shims."""
+﻿"""Unit tests for scanner indicator math and signal shims."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ import math
 
 import pandas as pd
 
-import forven.scanner as scanner_mod
-from forven.scanner import (
+import axiom.scanner as scanner_mod
+from axiom.scanner import (
     _get_account_equity,
     adx,
     check_ema_cross_signal,
@@ -140,7 +140,7 @@ def test_fetch_candles_uses_stale_cache_when_direct_fetch_disabled(monkeypatch):
 
 def test_account_equity_reads_sim_state_when_sim_active(monkeypatch):
     """During simulation, _get_account_equity should prefer simulation_state equity."""
-    import forven.sim.clock as clock_mod
+    import axiom.sim.clock as clock_mod
 
     monkeypatch.setattr(clock_mod, "is_sim_active", lambda: True)
     monkeypatch.setattr(clock_mod, "sim_kv_key", lambda key: f"sim:{key}")
@@ -158,7 +158,7 @@ def test_account_equity_reads_sim_state_when_sim_active(monkeypatch):
 
 def test_account_equity_reads_sim_risk_state_hwm(monkeypatch):
     """During simulation, fall back to sim:risk_state HWM when no equity snapshot."""
-    import forven.sim.clock as clock_mod
+    import axiom.sim.clock as clock_mod
 
     monkeypatch.setattr(clock_mod, "is_sim_active", lambda: True)
     monkeypatch.setattr(clock_mod, "sim_kv_key", lambda key: f"sim:{key}")

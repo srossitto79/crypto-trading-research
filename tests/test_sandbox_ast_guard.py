@@ -1,4 +1,4 @@
-"""Tests for forven.sandbox.ast_guard (P2-T02).
+﻿"""Tests for Axiom.sandbox.ast_guard (P2-T02).
 
 Covers the 10 acceptance points from plan.md:
 clean strategy passes; `import os` blocked; `from os import path` blocked;
@@ -13,7 +13,7 @@ import textwrap
 from pathlib import Path
 
 
-from forven.sandbox.ast_guard import (
+from axiom.sandbox.ast_guard import (
     MAX_FILE_BYTES,
     MAX_LINES,
     AstReport,
@@ -28,7 +28,7 @@ CLEAN_STRATEGY = textwrap.dedent(
     import math
     import numpy as np
     import pandas as pd
-    from forven.market_data_view import get_ohlcv
+    from axiom.market_data_view import get_ohlcv
 
     def generate_signal(symbol: str, timeframe: str) -> dict:
         df = get_ohlcv(symbol, timeframe, bars=200)

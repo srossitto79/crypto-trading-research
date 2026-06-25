@@ -20,22 +20,22 @@ fi
 export PYTHONPATH="$DIR${PYTHONPATH:+:${PYTHONPATH}}"
 UVICORN_APP_DIR="$DIR"
 
-BACKEND_PORT="${FORVEN_PORT:-8003}"
-BACKEND_HOST="${FORVEN_BIND_HOST:-${FORVEN_HOST:-127.0.0.1}}"
+BACKEND_PORT="${AXIOM_PORT:-8003}"
+BACKEND_HOST="${AXIOM_BIND_HOST:-${AXIOM_HOST:-127.0.0.1}}"
 BACKEND_WORKERS="${BACKEND_WORKERS:-2}"
 FRONTEND_PORT="${FRONTEND_PORT:-5173}"
 START_BOT="${START_BOT:-1}"
-FORVEN_ENABLE_REGIME_LAB="${FORVEN_ENABLE_REGIME_LAB:-0}"
-case "${FORVEN_ENABLE_REGIME_LAB,,}" in
-	1|true|yes|on) FORVEN_ENABLE_REGIME_LAB="1" ;;
-	*) FORVEN_ENABLE_REGIME_LAB="0" ;;
+AXIOM_ENABLE_REGIME_LAB="${AXIOM_ENABLE_REGIME_LAB:-0}"
+case "${AXIOM_ENABLE_REGIME_LAB,,}" in
+	1|true|yes|on) AXIOM_ENABLE_REGIME_LAB="1" ;;
+	*) AXIOM_ENABLE_REGIME_LAB="0" ;;
 esac
-export FORVEN_ENABLE_REGIME_LAB
-export VITE_ENABLE_REGIME_LAB="${VITE_ENABLE_REGIME_LAB:-$FORVEN_ENABLE_REGIME_LAB}"
-START_LAB_WORKER="${START_LAB_WORKER:-$FORVEN_ENABLE_REGIME_LAB}"
+export AXIOM_ENABLE_REGIME_LAB
+export VITE_ENABLE_REGIME_LAB="${VITE_ENABLE_REGIME_LAB:-$AXIOM_ENABLE_REGIME_LAB}"
+START_LAB_WORKER="${START_LAB_WORKER:-$AXIOM_ENABLE_REGIME_LAB}"
 START_DAEMON="${START_DAEMON:-0}"
 FORCE_RESTART="${FORCE_RESTART:-1}"
-DB_PATH="${FORVEN_DB_PATH:-$DIR/data/forven.db}"
+DB_PATH="${AXIOM_DB_PATH:-$DIR/data/axiom.db}"
 TMP_DIR="$DIR/.tmp"
 LOG_DIR="$TMP_DIR/logs"
 
@@ -43,16 +43,16 @@ mkdir -p "$TMP_DIR" "$LOG_DIR"
 
 BACKEND_LOG="$LOG_DIR/unified_backend.log"
 FRONTEND_LOG="$LOG_DIR/unified_frontend.log"
-BOT_LOG="$LOG_DIR/forven_bot.log"
-LAB_WORKER_LOG="$LOG_DIR/forven_lab_worker.log"
-DAEMON_LOG="$LOG_DIR/forven_daemon.log"
+BOT_LOG="$LOG_DIR/axiom_bot.log"
+LAB_WORKER_LOG="$LOG_DIR/axiom_lab_worker.log"
+DAEMON_LOG="$LOG_DIR/axiom_daemon.log"
 
 BACKEND_HEALTH_URL="http://127.0.0.1:${BACKEND_PORT}/api/health"
 FRONTEND_HEALTH_URL="http://127.0.0.1:${FRONTEND_PORT}/api/health"
 FRONTEND_ROOT_URL="http://127.0.0.1:${FRONTEND_PORT}/"
-FORVEN_HEALTH_URL="http://127.0.0.1:${BACKEND_PORT}/api/health"
+AXIOM_HEALTH_URL="http://127.0.0.1:${BACKEND_PORT}/api/health"
 
-export FORVEN_CLIENT_BASE="${FORVEN_CLIENT_BASE:-http://127.0.0.1:${BACKEND_PORT}}"
+export AXIOM_CLIENT_BASE="${AXIOM_CLIENT_BASE:-http://127.0.0.1:${BACKEND_PORT}}"
 
 PIDS=()
 BOT_PID=""
@@ -163,7 +163,7 @@ clear_stale_db_locks() {
 }
 
 kill_stale_bot() {
-	local lock_file="${FORVEN_HOME:-$HOME/.forven}/bot.lock"
+	local lock_file="${AXIOM_HOME:-$HOME/.axiom}/bot.lock"
 	[[ -f "$lock_file" ]] || return 0
 	local pid
 	pid="$(cat "$lock_file" 2>/dev/null | tr -d '[:space:]')"
@@ -181,7 +181,7 @@ kill_stale_bot() {
 }
 
 get_lab_worker_status_line() {
-	python3 -c 'from forven.lab_worker_service import get_lab_worker_status; s = get_lab_worker_status(); w = s.get("worker") or {}; print(f"{1 if s.get(\"active\") else 0}|{w.get(\"pid\") or \"\"}")' 2>/dev/null || true
+	python3 -c 'from axiom.lab_worker_service import get_lab_worker_status; s = get_lab_worker_status(); w = s.get("worker") or {}; print(f"{1 if s.get(\"active\") else 0}|{w.get(\"pid\") or \"\"}")' 2>/dev/null || true
 }
 
 kill_stale_lab_worker() {
@@ -217,8 +217,8 @@ if [[ -n "$(lsof -t "$DB_PATH" 2>/dev/null || true)" ]]; then
 fi
 
 info "Starting backend on port ${BACKEND_PORT}..."
-BACKEND_MODULE="forven.api:app"
-if ! module_available "forven.api"; then
+BACKEND_MODULE="axiom.api:app"
+if ! module_available "axiom.api"; then
 	die "Required backend module not found: ${BACKEND_MODULE}"
 fi
 
@@ -235,12 +235,12 @@ info "Waiting 2s for backend warm-up..."
 sleep 2
 
 if [[ "$START_BOT" == "1" ]]; then
-	info "Starting Forven Discord Bot..."
-	BOT_MODULE="forven.bot"
+	info "Starting Axiom Discord Bot..."
+	BOT_MODULE="axiom.bot"
 	if ! module_available "$BOT_MODULE"; then
 		die "Required bot module not found: ${BOT_MODULE}"
 	fi
-	python3 -c "from forven.bot import run_bot; run_bot()" > "$BOT_LOG" 2>&1 &
+	python3 -c "from axiom.bot import run_bot; run_bot()" > "$BOT_LOG" 2>&1 &
 	BOT_PID=$!
 	PIDS+=("$BOT_PID")
 	sleep 1
@@ -263,7 +263,7 @@ if [[ "$START_LAB_WORKER" == "1" ]]; then
 			sleep 1
 		fi
 		info "Starting Regime Lab worker..."
-		python3 -m forven lab worker > "$LAB_WORKER_LOG" 2>&1 &
+		python3 -m axiom lab worker > "$LAB_WORKER_LOG" 2>&1 &
 		LAB_WORKER_PID=$!
 		PIDS+=("$LAB_WORKER_PID")
 		sleep 2
@@ -277,8 +277,8 @@ if [[ "$START_LAB_WORKER" == "1" ]]; then
 fi
 
 if [[ "$START_DAEMON" == "1" ]]; then
-	info "Starting Forven daemon (data/risk loop)..."
-	DAEMON_MODULE="forven"
+	info "Starting Axiom daemon (data/risk loop)..."
+	DAEMON_MODULE="axiom"
 	if ! module_available "$DAEMON_MODULE"; then
 		die "Required daemon module not found: ${DAEMON_MODULE}"
 	fi
@@ -311,7 +311,7 @@ if ! wait_for_http "$FRONTEND_HEALTH_URL" "Frontend->Backend proxy"; then
 	die "Frontend cannot reach backend via /api proxy"
 fi
 
-if ! wait_for_http "$FORVEN_HEALTH_URL" "Backend"; then
+if ! wait_for_http "$AXIOM_HEALTH_URL" "Backend"; then
 	tail -n 80 "$BACKEND_LOG" || true
 	die "Backend is not healthy"
 fi

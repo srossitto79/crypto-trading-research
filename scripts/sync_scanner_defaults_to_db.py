@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """Synchronize scanner defaults into SQLite strategy rows."""
 
 from __future__ import annotations
@@ -7,8 +7,8 @@ import argparse
 import json
 from datetime import datetime, timezone
 
-from forven.db import get_db, init_db
-from forven.scanner import STRATEGIES
+from axiom.db import get_db, init_db
+from axiom.scanner import STRATEGIES
 
 
 VALID_STATUSES = {"researching", "backtesting", "paper", "deployed", "retired", "rejected", "trash"}

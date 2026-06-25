@@ -1,12 +1,12 @@
-"""Regression tests for heartbeat/paper-session schema compatibility."""
+﻿"""Regression tests for heartbeat/paper-session schema compatibility."""
 
 from __future__ import annotations
 
 import sqlite3
 from contextlib import contextmanager
 
-from forven.api_domains import paper as paper_domain
-from forven.api_domains import trading as trading_domain
+from axiom.api_domains import paper as paper_domain
+from axiom.api_domains import trading as trading_domain
 
 
 def test_collect_compat_sessions_handles_missing_compatible_regimes_column(monkeypatch):

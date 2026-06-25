@@ -1,8 +1,8 @@
-import asyncio
+﻿import asyncio
 import json
 from datetime import datetime, timedelta, timezone
 
-from forven.runtime_worker import (
+from axiom.runtime_worker import (
     API_TASK_WORKER_HEARTBEAT_KEY,
     BOT_TASK_WORKER_HEARTBEAT_KEY,
     _bot_runtime_active,
@@ -40,29 +40,29 @@ def test_process_agent_tasks_once_claims_and_runs(monkeypatch):
         return {"ok": True}
 
     monkeypatch.setattr(
-        "forven.db.get_db",
+        "axiom.db.get_db",
         lambda: _Conn(),
     )
     monkeypatch.setattr(
-        "forven.db.claim_pending_agent_tasks",
+        "axiom.db.claim_pending_agent_tasks",
         lambda agent_id, limit=None: (
             claim_limits.append((agent_id, limit)) or claimed_by_agent.get(agent_id, [])[: limit or None]
         ),
     )
     monkeypatch.setattr(
-        "forven.runtime_worker._run_agent_task",
+        "axiom.runtime_worker._run_agent_task",
         _fake_run_agent_task,
     )
     monkeypatch.setattr(
-        "forven.runtime_worker._recover_durable_completed_develop_candidate_tasks",
+        "axiom.runtime_worker._recover_durable_completed_develop_candidate_tasks",
         lambda: 0,
     )
     monkeypatch.setattr(
-        "forven.runtime_worker._preempt_research_for_waiting_develop_candidate_tasks",
+        "axiom.runtime_worker._preempt_research_for_waiting_develop_candidate_tasks",
         lambda: 0,
     )
     monkeypatch.setattr(
-        "forven.runtime_worker._headless_task_processing_allowed",
+        "axiom.runtime_worker._headless_task_processing_allowed",
         lambda: True,
     )
 
@@ -74,7 +74,7 @@ def test_process_agent_tasks_once_claims_and_runs(monkeypatch):
 
 
 def test_process_agent_tasks_once_keeps_claiming_with_long_task(monkeypatch):
-    from forven import runtime_worker as rw
+    from axiom import runtime_worker as rw
 
     agents = [{"id": "strategy-developer"}, {"id": "simulation-agent"}]
     allow_sim_claim = False
@@ -120,19 +120,19 @@ def test_process_agent_tasks_once_keeps_claiming_with_long_task(monkeypatch):
         monkeypatch.setattr(rw, "_active_agent_tasks", set(), raising=False)
         monkeypatch.setattr(rw, "_agent_claim_lock", None, raising=False)
         monkeypatch.setattr(rw, "_agent_claim_cursor", 0, raising=False)
-        monkeypatch.setattr("forven.db.get_db", lambda: _Conn())
-        monkeypatch.setattr("forven.db.claim_pending_agent_tasks", _claim)
-        monkeypatch.setattr("forven.runtime_worker._run_agent_task", _fake_run_agent_task)
+        monkeypatch.setattr("axiom.db.get_db", lambda: _Conn())
+        monkeypatch.setattr("axiom.db.claim_pending_agent_tasks", _claim)
+        monkeypatch.setattr("axiom.runtime_worker._run_agent_task", _fake_run_agent_task)
         monkeypatch.setattr(
-            "forven.runtime_worker._recover_durable_completed_develop_candidate_tasks",
+            "axiom.runtime_worker._recover_durable_completed_develop_candidate_tasks",
             lambda: 0,
         )
         monkeypatch.setattr(
-            "forven.runtime_worker._preempt_research_for_waiting_develop_candidate_tasks",
+            "axiom.runtime_worker._preempt_research_for_waiting_develop_candidate_tasks",
             lambda: 0,
         )
-        monkeypatch.setattr("forven.runtime_worker._terminal_agent_task_ids", lambda _task_ids: set())
-        monkeypatch.setattr("forven.runtime_worker._headless_task_processing_allowed", lambda: True)
+        monkeypatch.setattr("axiom.runtime_worker._terminal_agent_task_ids", lambda _task_ids: set())
+        monkeypatch.setattr("axiom.runtime_worker._headless_task_processing_allowed", lambda: True)
 
         processed_first = await rw.process_agent_tasks_once(concurrency=2)
         assert processed_first == 1
@@ -152,7 +152,7 @@ def test_process_agent_tasks_once_keeps_claiming_with_long_task(monkeypatch):
 
 
 def test_process_agent_tasks_once_does_not_double_book_same_agent(monkeypatch):
-    from forven import runtime_worker as rw
+    from axiom import runtime_worker as rw
 
     agents = [{"id": "strategy-developer"}, {"id": "simulation-agent"}]
     allow_second_round = False
@@ -200,19 +200,19 @@ def test_process_agent_tasks_once_does_not_double_book_same_agent(monkeypatch):
         monkeypatch.setattr(rw, "_active_agent_tasks", set(), raising=False)
         monkeypatch.setattr(rw, "_agent_claim_lock", None, raising=False)
         monkeypatch.setattr(rw, "_agent_claim_cursor", 0, raising=False)
-        monkeypatch.setattr("forven.db.get_db", lambda: _Conn())
-        monkeypatch.setattr("forven.db.claim_pending_agent_tasks", _claim)
-        monkeypatch.setattr("forven.runtime_worker._run_agent_task", _fake_run_agent_task)
+        monkeypatch.setattr("axiom.db.get_db", lambda: _Conn())
+        monkeypatch.setattr("axiom.db.claim_pending_agent_tasks", _claim)
+        monkeypatch.setattr("axiom.runtime_worker._run_agent_task", _fake_run_agent_task)
         monkeypatch.setattr(
-            "forven.runtime_worker._recover_durable_completed_develop_candidate_tasks",
+            "axiom.runtime_worker._recover_durable_completed_develop_candidate_tasks",
             lambda: 0,
         )
         monkeypatch.setattr(
-            "forven.runtime_worker._preempt_research_for_waiting_develop_candidate_tasks",
+            "axiom.runtime_worker._preempt_research_for_waiting_develop_candidate_tasks",
             lambda: 0,
         )
-        monkeypatch.setattr("forven.runtime_worker._terminal_agent_task_ids", lambda _task_ids: set())
-        monkeypatch.setattr("forven.runtime_worker._headless_task_processing_allowed", lambda: True)
+        monkeypatch.setattr("axiom.runtime_worker._terminal_agent_task_ids", lambda _task_ids: set())
+        monkeypatch.setattr("axiom.runtime_worker._headless_task_processing_allowed", lambda: True)
 
         processed_first = await rw.process_agent_tasks_once(concurrency=2)
         assert processed_first == 1
@@ -232,9 +232,9 @@ def test_process_agent_tasks_once_does_not_double_book_same_agent(monkeypatch):
     assert claim_calls.count("strategy-developer") == 1
 
 
-def test_process_agent_tasks_once_recovers_completed_develop_candidate(forven_db, monkeypatch):
-    from forven import runtime_worker as rw
-    from forven.db import get_db
+def test_process_agent_tasks_once_recovers_completed_develop_candidate(AXIOM_db, monkeypatch):
+    from axiom import runtime_worker as rw
+    from axiom.db import get_db
 
     now = datetime.now(timezone.utc)
     started_at = (now - timedelta(minutes=10)).isoformat()
@@ -289,13 +289,13 @@ def test_process_agent_tasks_once_recovers_completed_develop_candidate(forven_db
             await blocker.wait()
 
         active = asyncio.create_task(_blocked_runner())
-        setattr(active, "_forven_agent_id", "strategy-developer")
-        setattr(active, "_forven_agent_task_id", 99002)
+        setattr(active, "_AXIOM_agent_id", "strategy-developer")
+        setattr(active, "_AXIOM_agent_task_id", 99002)
         monkeypatch.setattr(rw, "_active_agent_tasks", {active}, raising=False)
         monkeypatch.setattr(rw, "_agent_claim_lock", None, raising=False)
         monkeypatch.setattr(rw, "_agent_claim_cursor", 0, raising=False)
-        monkeypatch.setattr("forven.db.claim_pending_agent_tasks", lambda _agent_id, limit=None: [])
-        monkeypatch.setattr("forven.runtime_worker._headless_task_processing_allowed", lambda: True)
+        monkeypatch.setattr("axiom.db.claim_pending_agent_tasks", lambda _agent_id, limit=None: [])
+        monkeypatch.setattr("axiom.runtime_worker._headless_task_processing_allowed", lambda: True)
 
         processed = await rw.process_agent_tasks_once(concurrency=1)
         return processed, active.done(), len(rw._active_agent_tasks)
@@ -316,9 +316,9 @@ def test_process_agent_tasks_once_recovers_completed_develop_candidate(forven_db
     assert audit[-1]["execution"] == "durable_strategy_creation_recovery"
 
 
-def test_process_agent_tasks_once_preempts_stale_research_for_strategy_creation(forven_db, monkeypatch):
-    from forven import runtime_worker as rw
-    from forven.db import get_db
+def test_process_agent_tasks_once_preempts_stale_research_for_strategy_creation(AXIOM_db, monkeypatch):
+    from axiom import runtime_worker as rw
+    from axiom.db import get_db
 
     now = datetime.now(timezone.utc)
     old_started = (now - timedelta(minutes=5)).isoformat()
@@ -406,14 +406,14 @@ def test_process_agent_tasks_once_preempts_stale_research_for_strategy_creation(
             return {"ok": True}
 
         active = asyncio.create_task(_blocked_runner())
-        setattr(active, "_forven_agent_id", "strategy-developer")
-        setattr(active, "_forven_agent_task_id", 99003)
+        setattr(active, "_AXIOM_agent_id", "strategy-developer")
+        setattr(active, "_AXIOM_agent_task_id", 99003)
         monkeypatch.setattr(rw, "_active_agent_tasks", {active}, raising=False)
         monkeypatch.setattr(rw, "_agent_claim_lock", None, raising=False)
         monkeypatch.setattr(rw, "_agent_claim_cursor", 0, raising=False)
-        monkeypatch.setattr("forven.runtime_worker._run_agent_task", _fake_run_agent_task)
-        monkeypatch.setattr("forven.runtime_worker._headless_task_processing_allowed", lambda: True)
-        monkeypatch.setattr("forven.system_mode_policy.is_manual_mode", lambda: False)
+        monkeypatch.setattr("axiom.runtime_worker._run_agent_task", _fake_run_agent_task)
+        monkeypatch.setattr("axiom.runtime_worker._headless_task_processing_allowed", lambda: True)
+        monkeypatch.setattr("axiom.system_mode_policy.is_manual_mode", lambda: False)
 
         processed = await rw.process_agent_tasks_once(concurrency=1)
         if rw._active_agent_tasks:
@@ -433,12 +433,12 @@ def test_process_agent_tasks_once_preempts_stale_research_for_strategy_creation(
     assert develop["status"] == "done"
 
 
-def test_refine_crucible_research_is_not_preempted(forven_db):
+def test_refine_crucible_research_is_not_preempted(AXIOM_db):
     """refine_crucible feeds the develop_candidate stage — preempting it to make room
     for a waiting develop_candidate is self-defeating (it starves the funnel), so it
     must be exempt even when a higher-priority develop_candidate is pending."""
-    from forven import runtime_worker as rw
-    from forven.db import get_db
+    from axiom import runtime_worker as rw
+    from axiom.db import get_db
 
     now = datetime.now(timezone.utc)
     old_started = (now - timedelta(minutes=5)).isoformat()
@@ -478,9 +478,9 @@ def test_refine_crucible_research_is_not_preempted(forven_db):
     assert refine["status"] == "running"
 
 
-def test_crucible_planner_backtest_task_runs_deterministically(forven_db, monkeypatch):
-    from forven import runtime_worker as rw
-    from forven.db import get_db
+def test_crucible_planner_backtest_task_runs_deterministically(AXIOM_db, monkeypatch):
+    from axiom import runtime_worker as rw
+    from axiom.db import get_db
 
     now = datetime.now(timezone.utc).isoformat()
     payload = {
@@ -549,8 +549,8 @@ def test_crucible_planner_backtest_task_runs_deterministically(forven_db, monkey
     async def _unexpected_agent_runner(_agent, _task):
         raise AssertionError("planner backtests must not enter the agent tool loop")
 
-    monkeypatch.setattr("forven.evolution.run_backtest_validation", _fake_run_backtest_validation)
-    monkeypatch.setattr("forven.agents.runner.run_agent_task", _unexpected_agent_runner)
+    monkeypatch.setattr("axiom.evolution.run_backtest_validation", _fake_run_backtest_validation)
+    monkeypatch.setattr("axiom.agents.runner.run_agent_task", _unexpected_agent_runner)
 
     result = asyncio.run(
         rw._run_agent_task(
@@ -587,17 +587,17 @@ def test_process_brain_tasks_once_claims_and_runs(monkeypatch):
         seen.append(int(task["id"]))
 
     monkeypatch.setattr(
-        "forven.db.claim_pending_tasks",
+        "axiom.db.claim_pending_tasks",
         lambda task_type, limit=None, priority=True: [
             {"id": 11, "payload": '{"message":"Run cycle"}'}
         ] if task_type == "brain_invoke" else [],
     )
     monkeypatch.setattr(
-        "forven.runtime_worker._run_brain_task",
+        "axiom.runtime_worker._run_brain_task",
         _fake_run_brain_task,
     )
     monkeypatch.setattr(
-        "forven.runtime_worker._headless_task_processing_allowed",
+        "axiom.runtime_worker._headless_task_processing_allowed",
         lambda: True,
     )
 
@@ -616,11 +616,11 @@ def test_process_agent_tasks_once_skips_when_headless_processing_disallowed(monk
         return []
 
     monkeypatch.setattr(
-        "forven.runtime_worker._headless_task_processing_allowed",
+        "axiom.runtime_worker._headless_task_processing_allowed",
         lambda: False,
     )
     monkeypatch.setattr(
-        "forven.db.claim_pending_agent_tasks",
+        "axiom.db.claim_pending_agent_tasks",
         _claim_pending_agent_tasks,
     )
 
@@ -640,8 +640,8 @@ def test_process_brain_tasks_once_skips_when_bot_runtime_active(monkeypatch):
         claimed = True
         return []
 
-    monkeypatch.setattr("forven.runtime_worker._bot_runtime_active", lambda: True)
-    monkeypatch.setattr("forven.db.claim_pending_tasks", _claim_pending_tasks)
+    monkeypatch.setattr("axiom.runtime_worker._bot_runtime_active", lambda: True)
+    monkeypatch.setattr("axiom.db.claim_pending_tasks", _claim_pending_tasks)
 
     processed = asyncio.run(process_brain_tasks_once())
 
@@ -660,10 +660,10 @@ def test_process_brain_tasks_once_claims_operator_chat_when_autonomy_paused(monk
         claimed = True
         return []
 
-    monkeypatch.setattr("forven.runtime_worker._bot_runtime_active", lambda: False)
-    monkeypatch.setattr("forven.system_pause.is_autonomy_paused", lambda: True)
-    monkeypatch.setattr("forven.system_mode_policy.reconcile_manual_mode_backlog", lambda: None)
-    monkeypatch.setattr("forven.db.claim_pending_tasks", _claim_pending_tasks)
+    monkeypatch.setattr("axiom.runtime_worker._bot_runtime_active", lambda: False)
+    monkeypatch.setattr("axiom.system_pause.is_autonomy_paused", lambda: True)
+    monkeypatch.setattr("axiom.system_mode_policy.reconcile_manual_mode_backlog", lambda: None)
+    monkeypatch.setattr("axiom.db.claim_pending_tasks", _claim_pending_tasks)
 
     processed = asyncio.run(process_brain_tasks_once())
 
@@ -673,11 +673,11 @@ def test_process_brain_tasks_once_claims_operator_chat_when_autonomy_paused(monk
 
 def test_bot_runtime_active_requires_fresh_task_worker_heartbeat(monkeypatch):
     monkeypatch.setattr(
-        "forven.runtime_worker._get_bot_lock_status",
+        "axiom.runtime_worker._get_bot_lock_status",
         lambda: {"lock_held": True, "active_pid_running": True, "active_pid": 123},
     )
     monkeypatch.setattr(
-        "forven.db.kv_get",
+        "axiom.db.kv_get",
         lambda key, default=None: {
             "pid": 123,
             "loop": "ops",
@@ -694,11 +694,11 @@ def test_bot_runtime_active_requires_fresh_task_worker_heartbeat(monkeypatch):
 
 def test_bot_runtime_active_accepts_fresh_task_worker_heartbeat(monkeypatch):
     monkeypatch.setattr(
-        "forven.runtime_worker._get_bot_lock_status",
+        "axiom.runtime_worker._get_bot_lock_status",
         lambda: {"lock_held": True, "active_pid_running": True, "active_pid": 123},
     )
     monkeypatch.setattr(
-        "forven.db.kv_get",
+        "axiom.db.kv_get",
         lambda key, default=None: {
             "pid": 123,
             "loop": "brain",
@@ -714,7 +714,7 @@ def test_bot_runtime_active_accepts_fresh_task_worker_heartbeat(monkeypatch):
 
 
 def test_get_bot_task_worker_status_reports_missing_heartbeat(monkeypatch):
-    monkeypatch.setattr("forven.db.kv_get", lambda _key, default=None: default)
+    monkeypatch.setattr("axiom.db.kv_get", lambda _key, default=None: default)
 
     status = get_bot_task_worker_status()
 
@@ -732,7 +732,7 @@ def test_get_api_task_worker_status_requires_agent_and_brain_heartbeats(monkeypa
             return {"pid": 321, "loop": "agent", "updated_at": now}
         return default
 
-    monkeypatch.setattr("forven.db.kv_get", _kv_get)
+    monkeypatch.setattr("axiom.db.kv_get", _kv_get)
 
     status = get_api_task_worker_status()
 
@@ -753,7 +753,7 @@ def test_get_api_task_worker_status_accepts_fresh_loop_heartbeats(monkeypatch):
             return {"pid": 321, "loop": "brain", "updated_at": now}
         return default
 
-    monkeypatch.setattr("forven.db.kv_get", _kv_get)
+    monkeypatch.setattr("axiom.db.kv_get", _kv_get)
 
     status = get_api_task_worker_status()
 
@@ -764,11 +764,11 @@ def test_get_api_task_worker_status_accepts_fresh_loop_heartbeats(monkeypatch):
 
 def test_bot_runtime_active_rejects_ops_only_heartbeat(monkeypatch):
     monkeypatch.setattr(
-        "forven.runtime_worker._get_bot_lock_status",
+        "axiom.runtime_worker._get_bot_lock_status",
         lambda: {"lock_held": True, "active_pid_running": True, "active_pid": 123},
     )
     monkeypatch.setattr(
-        "forven.db.kv_get",
+        "axiom.db.kv_get",
         lambda key, default=None: {
             "pid": 123,
             "loop": "ops",
@@ -781,10 +781,10 @@ def test_bot_runtime_active_rejects_ops_only_heartbeat(monkeypatch):
 
 
 def test_agent_task_timeout_resolver_uses_shared_defaults(monkeypatch):
-    from forven.runtime_worker import _resolve_agent_task_timeout_seconds
+    from axiom.runtime_worker import _resolve_agent_task_timeout_seconds
 
-    monkeypatch.delenv("FORVEN_AGENT_TASK_TIMEOUT_SECONDS", raising=False)
-    monkeypatch.setattr("forven.db.kv_get", lambda _key, default=None: default)
+    monkeypatch.delenv("AXIOM_AGENT_TASK_TIMEOUT_SECONDS", raising=False)
+    monkeypatch.setattr("axiom.db.kv_get", lambda _key, default=None: default)
 
     assert _resolve_agent_task_timeout_seconds({"type": "develop_candidate"}) == 900
     assert _resolve_agent_task_timeout_seconds({"type": "backtest"}) == 1800
@@ -792,15 +792,15 @@ def test_agent_task_timeout_resolver_uses_shared_defaults(monkeypatch):
 
 
 def test_agent_task_timeout_resolver_honors_settings(monkeypatch):
-    from forven.runtime_worker import _resolve_agent_task_timeout_seconds
+    from axiom.runtime_worker import _resolve_agent_task_timeout_seconds
 
-    monkeypatch.delenv("FORVEN_AGENT_TASK_TIMEOUT_SECONDS", raising=False)
+    monkeypatch.delenv("AXIOM_AGENT_TASK_TIMEOUT_SECONDS", raising=False)
     monkeypatch.setattr(
-        "forven.db.kv_get",
+        "axiom.db.kv_get",
         lambda key, default=None: {
             "agent_task_timeout_seconds": 1200,
             "backtest_agent_task_timeout_seconds": 2400,
-        } if key == "forven:settings" else default,
+        } if key == "axiom:settings" else default,
     )
 
     assert _resolve_agent_task_timeout_seconds({"type": "develop_candidate"}) == 1200

@@ -42,7 +42,7 @@ Updated as experiments complete. Read this before designing any new strategy.
 
 ### Finding 1: Strategy File EXISTS
 The strategy type `funding_mean_reversion_v2` exists at:
-`forven/strategies/custom/funding_mean_reversion_v2.py`
+`axiom/strategies/custom/funding_mean_reversion_v2.py`
 
 This is NOT the same issue as S50147 (strategy type doesn't exist).
 
@@ -68,7 +68,7 @@ Running backtest on `funding_mean_reversion_v2` produces `'timestamp'` error, su
 
 ### Finding 1: Strategy File EXISTS
 The strategy type `funding_mean_reversion_v2` exists at:
-`forven/strategies/custom/funding_mean_reversion_v2.py`
+`axiom/strategies/custom/funding_mean_reversion_v2.py`
 
 This is NOT the same issue as S50147 (strategy type doesn't exist).
 

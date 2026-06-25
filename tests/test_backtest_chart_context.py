@@ -1,18 +1,18 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 from pathlib import Path
 
 import pandas as pd
 
-from forven.api_core import BacktestSubmitBody, post_backtest_submit
-from forven.db import create_strategy_container, get_db
-from forven.routers import strategies as strategies_router
+from axiom.api_core import BacktestSubmitBody, post_backtest_submit
+from axiom.db import create_strategy_container, get_db
+from axiom.routers import strategies as strategies_router
 
 
 def _configure_chart_paths(home: Path, monkeypatch) -> Path:
-	import forven.api_core as api_core
-	import forven.data as data_mod
+	import axiom.api_core as api_core
+	import axiom.data as data_mod
 
 	data_dir = home / "data"
 	results_dir = data_dir / "results"
@@ -38,7 +38,7 @@ def _seed_strategy(symbol: str = "BTC", strategy_type: str = "macd", params: dic
 
 
 def _seed_local_candles(symbol: str = "BTC", timeframe: str = "1h") -> None:
-	import forven.data as data_mod
+	import axiom.data as data_mod
 
 	timestamps = pd.date_range("2025-01-01T00:00:00+00:00", periods=600, freq="h", tz="UTC")
 	frame = pd.DataFrame(
@@ -129,13 +129,13 @@ def _insert_result_row(
 		)
 
 
-def test_chart_context_returns_artifact_for_new_backtests(forven_db, _isolate_forven_home, monkeypatch):
-	results_dir = _configure_chart_paths(_isolate_forven_home, monkeypatch)
+def test_chart_context_returns_artifact_for_new_backtests(AXIOM_db, _isolate_AXIOM_home, monkeypatch):
+	results_dir = _configure_chart_paths(_isolate_AXIOM_home, monkeypatch)
 	_seed_local_candles()
 	strategy_id = _seed_strategy()
 
-	import forven.strategies.backtest as backtest_mod
-	import forven.vectordb as vectordb_mod
+	import axiom.strategies.backtest as backtest_mod
+	import axiom.vectordb as vectordb_mod
 
 	monkeypatch.setattr(vectordb_mod, "store_backtest_result", lambda **_kwargs: None)
 	monkeypatch.setattr(
@@ -180,11 +180,11 @@ def test_chart_context_returns_artifact_for_new_backtests(forven_db, _isolate_fo
 	assert context["strategy_params"]["fast"] == 12
 
 
-def test_chart_context_recomputes_for_snapshotless_builtin_run(forven_db, _isolate_forven_home, monkeypatch):
-	_configure_chart_paths(_isolate_forven_home, monkeypatch)
+def test_chart_context_recomputes_for_snapshotless_builtin_run(AXIOM_db, _isolate_AXIOM_home, monkeypatch):
+	_configure_chart_paths(_isolate_AXIOM_home, monkeypatch)
 	_seed_local_candles()
 
-	import forven.api_core as api_core
+	import axiom.api_core as api_core
 
 	strategy_id = _seed_strategy(strategy_type="macd", params={"fast": 8, "slow": 21, "signal": 5})
 	_insert_result_row(
@@ -206,11 +206,11 @@ def test_chart_context_recomputes_for_snapshotless_builtin_run(forven_db, _isola
 	assert context["warnings"] == []
 
 
-def test_chart_context_skips_audit_lookup_when_result_payload_already_resolves_context(forven_db, _isolate_forven_home, monkeypatch):
-	_configure_chart_paths(_isolate_forven_home, monkeypatch)
+def test_chart_context_skips_audit_lookup_when_result_payload_already_resolves_context(AXIOM_db, _isolate_AXIOM_home, monkeypatch):
+	_configure_chart_paths(_isolate_AXIOM_home, monkeypatch)
 	_seed_local_candles()
 
-	import forven.api_core as api_core
+	import axiom.api_core as api_core
 
 	strategy_id = _seed_strategy(strategy_type="macd", params={"fast": 8, "slow": 21, "signal": 5})
 	_insert_result_row(
@@ -235,11 +235,11 @@ def test_chart_context_skips_audit_lookup_when_result_payload_already_resolves_c
 	assert context["warnings"] == []
 
 
-def test_chart_context_gracefully_falls_back_for_unsupported_strategy(forven_db, _isolate_forven_home, monkeypatch):
-	_configure_chart_paths(_isolate_forven_home, monkeypatch)
+def test_chart_context_gracefully_falls_back_for_unsupported_strategy(AXIOM_db, _isolate_AXIOM_home, monkeypatch):
+	_configure_chart_paths(_isolate_AXIOM_home, monkeypatch)
 	_seed_local_candles()
 
-	import forven.api_core as api_core
+	import axiom.api_core as api_core
 
 	strategy_id = _seed_strategy(strategy_type="custom_alpha", params={"threshold": 1.5})
 	_insert_result_row(
@@ -261,10 +261,10 @@ def test_chart_context_gracefully_falls_back_for_unsupported_strategy(forven_db,
 	assert any("unavailable" in warning.lower() for warning in context["warnings"])
 
 
-def test_chart_context_warns_when_local_ohlcv_is_missing(forven_db, _isolate_forven_home, monkeypatch):
-	_configure_chart_paths(_isolate_forven_home, monkeypatch)
+def test_chart_context_warns_when_local_ohlcv_is_missing(AXIOM_db, _isolate_AXIOM_home, monkeypatch):
+	_configure_chart_paths(_isolate_AXIOM_home, monkeypatch)
 
-	import forven.api_core as api_core
+	import axiom.api_core as api_core
 
 	strategy_id = _seed_strategy(strategy_type="macd", params={"fast": 12, "slow": 26, "signal": 9})
 	_insert_result_row(
@@ -284,11 +284,11 @@ def test_chart_context_warns_when_local_ohlcv_is_missing(forven_db, _isolate_for
 	assert any("no local ohlcv" in warning.lower() for warning in context["warnings"])
 
 
-def test_chart_context_fast_fails_when_pyarrow_is_unavailable_for_parquet(forven_db, _isolate_forven_home, monkeypatch):
-	_configure_chart_paths(_isolate_forven_home, monkeypatch)
+def test_chart_context_fast_fails_when_pyarrow_is_unavailable_for_parquet(AXIOM_db, _isolate_AXIOM_home, monkeypatch):
+	_configure_chart_paths(_isolate_AXIOM_home, monkeypatch)
 
-	import forven.api_core as api_core
-	import forven.data as data_mod
+	import axiom.api_core as api_core
+	import axiom.data as data_mod
 
 	monkeypatch.setattr(data_mod, "pa", None)
 	monkeypatch.setattr(data_mod, "pq", None)
@@ -315,11 +315,11 @@ def test_chart_context_fast_fails_when_pyarrow_is_unavailable_for_parquet(forven
 	assert any("pyarrow" in warning.lower() for warning in context["warnings"])
 
 
-def test_chart_context_fetches_remote_ohlcv_when_local_dataset_is_unreadable(forven_db, _isolate_forven_home, monkeypatch):
-	_configure_chart_paths(_isolate_forven_home, monkeypatch)
+def test_chart_context_fetches_remote_ohlcv_when_local_dataset_is_unreadable(AXIOM_db, _isolate_AXIOM_home, monkeypatch):
+	_configure_chart_paths(_isolate_AXIOM_home, monkeypatch)
 
-	import forven.api_core as api_core
-	import forven.data as data_mod
+	import axiom.api_core as api_core
+	import axiom.data as data_mod
 
 	monkeypatch.setattr(data_mod, "pa", None)
 	monkeypatch.setattr(data_mod, "pq", None)

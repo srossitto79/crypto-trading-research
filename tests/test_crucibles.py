@@ -1,14 +1,14 @@
-import pytest
+﻿import pytest
 
-from forven.crucibles import (
+from axiom.crucibles import (
     get_crucible,
     is_crucible_protected,
     mark_crucible_viable,
     request_dethrone_approval,
 )
-from forven.db import _backfill_proven_hypothesis_protection, get_approval, get_db
-from forven.hypothesis_graduation import graduate_hypothesis
-from forven.hypotheses import create_hypothesis, update_hypothesis_status
+from axiom.db import _backfill_proven_hypothesis_protection, get_approval, get_db
+from axiom.hypothesis_graduation import graduate_hypothesis
+from axiom.hypotheses import create_hypothesis, update_hypothesis_status
 
 
 def _make_crucible() -> dict:
@@ -26,7 +26,7 @@ def _make_crucible() -> dict:
     )
 
 
-def test_created_hypothesis_has_default_crucible_protection_fields(forven_db):
+def test_created_hypothesis_has_default_crucible_protection_fields(AXIOM_db):
     hypothesis = _make_crucible()
 
     crucible = get_crucible(hypothesis["id"])
@@ -40,7 +40,7 @@ def test_created_hypothesis_has_default_crucible_protection_fields(forven_db):
     assert is_crucible_protected(crucible) is False
 
 
-def test_mark_crucible_viable_sets_protection_fields(forven_db):
+def test_mark_crucible_viable_sets_protection_fields(AXIOM_db):
     hypothesis = _make_crucible()
 
     updated = mark_crucible_viable(
@@ -59,7 +59,7 @@ def test_mark_crucible_viable_sets_protection_fields(forven_db):
     assert is_crucible_protected(updated) is True
 
 
-def test_update_hypothesis_status_to_proven_protects_crucible(forven_db):
+def test_update_hypothesis_status_to_proven_protects_crucible(AXIOM_db):
     hypothesis = _make_crucible()
 
     update_hypothesis_status(
@@ -79,7 +79,7 @@ def test_update_hypothesis_status_to_proven_protects_crucible(forven_db):
     assert crucible["initial_viability_evidence_id"] == "BT-456"
 
 
-def test_graduate_hypothesis_protects_viable_crucible(forven_db):
+def test_graduate_hypothesis_protects_viable_crucible(AXIOM_db):
     hypothesis = _make_crucible()
 
     graduate_hypothesis(hypothesis["id"])
@@ -93,7 +93,7 @@ def test_graduate_hypothesis_protects_viable_crucible(forven_db):
     assert crucible["protected_by"] == "graduation"
 
 
-def test_migration_backfills_existing_proven_crucibles_as_protected(forven_db):
+def test_migration_backfills_existing_proven_crucibles_as_protected(AXIOM_db):
     hypothesis = _make_crucible()
 
     with get_db() as conn:
@@ -127,7 +127,7 @@ def test_migration_backfills_existing_proven_crucibles_as_protected(forven_db):
     assert crucible["initial_viability_evidence_id"] == "BT-789"
 
 
-def test_request_dethrone_approval_marks_contested_and_creates_approval(forven_db):
+def test_request_dethrone_approval_marks_contested_and_creates_approval(AXIOM_db):
     hypothesis = _make_crucible()
     mark_crucible_viable(
         hypothesis["id"],
@@ -160,7 +160,7 @@ def test_request_dethrone_approval_marks_contested_and_creates_approval(forven_d
     assert crucible["contested_at"]
 
 
-def test_request_dethrone_approval_reuses_existing_pending_approval(forven_db):
+def test_request_dethrone_approval_reuses_existing_pending_approval(AXIOM_db):
     hypothesis = _make_crucible()
     mark_crucible_viable(
         hypothesis["id"],
@@ -198,7 +198,7 @@ def test_request_dethrone_approval_reuses_existing_pending_approval(forven_db):
     assert approval_count == 1
 
 
-def test_request_dethrone_approval_rejects_unprotected_crucible(forven_db):
+def test_request_dethrone_approval_rejects_unprotected_crucible(AXIOM_db):
     hypothesis = _make_crucible()
 
     with pytest.raises(ValueError, match="requires a viable protected crucible"):
@@ -218,7 +218,7 @@ def test_request_dethrone_approval_rejects_unprotected_crucible(forven_db):
     assert approval_count == 0
 
 
-def test_strategy_table_has_crucible_provenance_columns(forven_db):
+def test_strategy_table_has_crucible_provenance_columns(AXIOM_db):
     with get_db() as conn:
         columns = {row["name"] for row in conn.execute("PRAGMA table_info(strategies)").fetchall()}
 
@@ -230,7 +230,7 @@ def test_strategy_table_has_crucible_provenance_columns(forven_db):
 
 def test_derive_crucible_status_lifecycle():
     """Derived user-facing lifecycle: proposed->testing->viable->expanded (+failed)."""
-    from forven.crucibles import EXPANDED_MIN_STRATEGIES, derive_crucible_status
+    from axiom.crucibles import EXPANDED_MIN_STRATEGIES, derive_crucible_status
 
     assert derive_crucible_status(status="proposed") == "proposed"
     assert derive_crucible_status(status="researching") == "testing"
@@ -253,14 +253,14 @@ def test_derive_crucible_status_lifecycle():
     )
 
 
-def test_detail_and_summary_payloads_expose_crucible_status_and_protection(forven_db):
+def test_detail_and_summary_payloads_expose_crucible_status_and_protection(AXIOM_db):
     """1a: API payloads surface the derived lifecycle + protection fields."""
-    from forven.api_domains.hypotheses import (
+    from axiom.api_domains.hypotheses import (
         get_hypothesis_detail_payload,
         list_hypotheses_summary,
     )
-    from forven.crucibles import mark_crucible_viable
-    from forven.hypotheses import create_hypothesis
+    from axiom.crucibles import mark_crucible_viable
+    from axiom.hypotheses import create_hypothesis
 
     hyp = create_hypothesis(
         title="Expanded thesis",
@@ -301,11 +301,11 @@ def test_detail_and_summary_payloads_expose_crucible_status_and_protection(forve
     assert row["protection_status"] == "protected"
 
 
-def test_detail_payload_includes_child_gauntlet_status(forven_db):
+def test_detail_payload_includes_child_gauntlet_status(AXIOM_db):
     """1c/Phase-2: Forge rows show each candidate's real gauntlet (proof) status."""
-    from forven.api_domains.hypotheses import get_hypothesis_detail_payload
-    from forven.gauntlet.store import init_gauntlet_schema
-    from forven.hypotheses import create_hypothesis
+    from axiom.api_domains.hypotheses import get_hypothesis_detail_payload
+    from axiom.gauntlet.store import init_gauntlet_schema
+    from axiom.hypotheses import create_hypothesis
 
     hyp = create_hypothesis(
         title="t", market_thesis="m", mechanism="x", why_now=None,

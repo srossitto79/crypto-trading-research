@@ -5,7 +5,7 @@
 	// every navigation for users who already dismissed it.
 	let acknowledged = true;
 
-	const STORAGE_KEY = 'forven.risk_disclaimer.ack';
+	const STORAGE_KEY = 'axiom.risk_disclaimer.ack';
 	const DISCLAIMER_URL = 'https://github.com/srossitto79/axiom/blob/main/DISCLAIMER.md';
 
 	function acknowledge() {

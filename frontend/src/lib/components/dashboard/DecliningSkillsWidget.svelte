@@ -3,7 +3,7 @@
 	 * Phase 3 / P3-T15 — Dashboard widget that surfaces quant skills whose
 	 * confidence has trended down over the last N days (default 14).
 	 *
-	 * Data source: GET /api/skills/declining (see ``forven/routers/skills.py``).
+	 * Data source: GET /api/skills/declining (see ``axiom/routers/skills.py``).
 	 * The endpoint aggregates `skill_outcome_events.confidence_delta` server-
 	 * side, so this widget never has to walk per-skill outcomes itself.
 	 *

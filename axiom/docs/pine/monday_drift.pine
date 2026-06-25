@@ -1,0 +1,98 @@
+// ============================================================================
+// Monday Drift — TradingView clone of Axiom S01512
+// ============================================================================
+// Purpose: cross-validate a pure calendar strategy against TradingView, and
+// give you a visual of WHEN it trades (once a week, 24-hour hold).
+//
+// Axiom side
+//   strategy_id : S01512  (monday_drift)
+//   dataset     : BTC/USDT-1h  (binance)
+//   window      : 2023-12-31 00:00 UTC  →  2026-04-19 23:00 UTC  (~2y 3m)
+//   leverage    : 1x
+//   fee model   : ~11 bps round-trip (5.5 bps per side)
+//   entry       : Monday  00:00 UTC  (open a long)
+//   exit        : Tuesday 00:00 UTC  (close the long — 24 bars held)
+//
+// Expected Axiom numbers (BTC, long-only, single-side, ~2y 3m window)
+//                   trades   win_rate    CAGR    sharpe   max_dd   profit_factor
+//   Full run         118      0.542    +94.45%   1.41     44.33%      1.70
+//   OOS segment       —        —       +58.39%   1.24       —           —
+//
+// Sanity-check 1-year slice (2025-04-20 → 2026-04-19, same Pine via input change)
+//                   trades   win_rate    return    profit_factor
+//   TradingView       53      0.491     +18.77%       1.60
+//   Axiom            50      0.460     +14.50%        —
+//
+// Robustness
+//   OOS Sharpe 1.24 on a 70/30 split over ~118 trades is not a lucky streak.
+//   The effect held across BTC and SOL. Still deploy with a WR kill-switch
+//   (< 55% over 5 live trades).
+//
+// Math note
+//   Pine's dayofweek constants are 1=Sunday, 2=Monday, 3=Tuesday, ...
+//   pandas weekday is 0=Monday, so Axiom entry `weekday==0` ≡ Pine
+//   `dayofweek == dayofweek.monday` (both with `hour == 0`).
+// ============================================================================
+
+//@version=6
+strategy(
+     title              = "Axiom S01512 — Monday Drift",
+     shorttitle         = "S01512",
+     overlay            = true,
+     pyramiding         = 0,
+     initial_capital    = 10000,
+     default_qty_type   = strategy.percent_of_equity,
+     default_qty_value  = 100,
+     commission_type    = strategy.commission.percent,
+     commission_value   = 0.055,
+     slippage           = 0,
+     calc_on_every_tick = false,
+     process_orders_on_close = true)
+
+// ---- Inputs ----------------------------------------------------------------
+entry_dow  = input.int(2, "Entry day of week  (1=Sun..7=Sat)", minval = 1, maxval = 7, group = "Schedule")
+entry_hour = input.int(0, "Entry hour (UTC, 0–23)",            minval = 0, maxval = 23, group = "Schedule")
+exit_dow   = input.int(3, "Exit day of week   (1=Sun..7=Sat)", minval = 1, maxval = 7, group = "Schedule")
+exit_hour  = input.int(0, "Exit hour (UTC, 0–23)",             minval = 0, maxval = 23, group = "Schedule")
+
+use_window = input.bool(true, "Restrict to Axiom window", group = "Date range")
+// Hardcoded epoch ms:
+//   1703980800000 = 2023-12-31 00:00:00 UTC
+//   1776675600000 = 2026-04-19 23:00:00 UTC
+start_ts   = input.time(1703980800000, "Window start (UTC)", group = "Date range")
+end_ts     = input.time(1776675600000, "Window end (UTC)",   group = "Date range")
+
+// ---- Time gate -------------------------------------------------------------
+// Chart timezone for dayofweek/hour is UTC to match Axiom's pd.to_datetime(utc=True).
+dow  = dayofweek(time, "UTC")
+hr   = hour(time, "UTC")
+in_window = not use_window or (time >= start_ts and time <= end_ts)
+
+// ---- Signals ---------------------------------------------------------------
+is_entry_bar = (dow == entry_dow) and (hr == entry_hour)
+is_exit_bar  = (dow == exit_dow)  and (hr == exit_hour)
+
+if in_window and is_entry_bar
+    strategy.entry("MondayLong", strategy.long)
+
+if is_exit_bar
+    strategy.close("MondayLong")
+
+// Force-flat at window end so totals line up with Axiom.
+if use_window and (time > end_ts)
+    strategy.close_all()
+
+// ---- Visuals ---------------------------------------------------------------
+plotshape(is_entry_bar and in_window, title = "Monday entry",
+     style = shape.triangleup,   location = location.belowbar,
+     color = color.new(color.green, 0), size = size.small)
+
+plotshape(is_exit_bar, title = "Tuesday exit",
+     style = shape.triangledown, location = location.abovebar,
+     color = color.new(color.red, 0),   size = size.small)
+
+bgcolor(in_window ? color.new(color.blue, 92) : na, title = "In-window shading")
+
+// Subtle band highlighting "in a Monday trade" bars.
+in_trade = strategy.position_size > 0
+bgcolor(in_trade and in_window ? color.new(color.green, 90) : na, title = "In-trade shading")

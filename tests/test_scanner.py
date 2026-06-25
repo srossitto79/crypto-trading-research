@@ -1,4 +1,4 @@
-"""Deterministic scanner signal tests using mocked OHLCV arrays."""
+﻿"""Deterministic scanner signal tests using mocked OHLCV arrays."""
 
 from __future__ import annotations
 
@@ -7,10 +7,10 @@ from types import SimpleNamespace
 
 import pandas as pd
 
-import forven.scanner as scanner_mod
-from forven.db import get_db
-from forven.strategies.base import Signal
-from forven.scanner import (
+import axiom.scanner as scanner_mod
+from axiom.db import get_db
+from axiom.strategies.base import Signal
+from axiom.scanner import (
     _build_entry_signal_fingerprint,
     _is_asset_same_bar_reentry_locked,
     _is_same_bar_reentry_locked,
@@ -32,7 +32,7 @@ from forven.scanner import (
     manage_positions,
     rsi_momentum_thresholds,
 )
-from forven.trade_state import mark_trade_pending_close_reconcile
+from axiom.trade_state import mark_trade_pending_close_reconcile
 
 
 def _ohlcv_from_close(close_values: list[float]) -> pd.DataFrame:
@@ -216,7 +216,7 @@ def test_manage_positions_closes_on_take_profit_without_exit_signal(monkeypatch)
             }
         ),
     )
-    monkeypatch.setattr("forven.config.get_execution_mode", lambda: "paper")
+    monkeypatch.setattr("axiom.config.get_execution_mode", lambda: "paper")
 
     actions = manage_positions(
         "S-TP",
@@ -278,7 +278,7 @@ def test_manage_positions_leaves_trade_open_when_close_execution_fails(monkeypat
         "release",
         lambda _trade_id: released.update({"called": True}),
     )
-    monkeypatch.setattr("forven.config.get_execution_mode", lambda: "paper")
+    monkeypatch.setattr("axiom.config.get_execution_mode", lambda: "paper")
 
     actions = manage_positions(
         "S-CLOSE-FAIL",
@@ -336,7 +336,7 @@ def test_manage_positions_marks_close_pending_reconcile_when_fill_is_unconfirmed
         "release",
         lambda _trade_id: released.update({"called": True}),
     )
-    monkeypatch.setattr("forven.config.get_execution_mode", lambda: "paper")
+    monkeypatch.setattr("axiom.config.get_execution_mode", lambda: "paper")
 
     actions = manage_positions(
         "S-CLOSE-PENDING",
@@ -396,7 +396,7 @@ def test_manage_positions_retires_reduce_only_orders_on_confirmed_close(monkeypa
         "_update_trade_signal_data",
         lambda trade_id, payload: signal_updates.update({"trade_id": trade_id, **payload}),
     )
-    monkeypatch.setattr("forven.config.get_execution_mode", lambda: "paper")
+    monkeypatch.setattr("axiom.config.get_execution_mode", lambda: "paper")
 
     actions = manage_positions(
         "S-CLOSE-RETIRE",
@@ -423,7 +423,7 @@ def test_manage_positions_retires_reduce_only_orders_on_confirmed_close(monkeypa
     assert any(action.startswith("CLOSED BTC") for action in actions)
 
 
-def test_execute_trade_intent_keeps_trade_open_when_close_fill_is_unconfirmed(forven_db, monkeypatch):
+def test_execute_trade_intent_keeps_trade_open_when_close_fill_is_unconfirmed(AXIOM_db, monkeypatch):
     with get_db() as conn:
         conn.execute(
             """
@@ -530,7 +530,7 @@ def test_manage_positions_skips_duplicate_entry_signal_on_same_bar(monkeypatch):
         "kv_set",
         lambda key, value: kv_state.__setitem__(key, value),
     )
-    monkeypatch.setattr("forven.config.get_execution_mode", lambda: "paper")
+    monkeypatch.setattr("axiom.config.get_execution_mode", lambda: "paper")
 
     signal = {
         "price": 100.0,
@@ -643,7 +643,7 @@ def test_asset_same_bar_reentry_lock_blocks_serial_reopen_across_strategies(monk
     ) is False
 
 
-def test_manage_positions_blocks_same_bar_reopen_from_recent_closed_trade_in_db(forven_db, monkeypatch):
+def test_manage_positions_blocks_same_bar_reopen_from_recent_closed_trade_in_db(AXIOM_db, monkeypatch):
     with get_db() as conn:
         conn.execute(
             """
@@ -677,7 +677,7 @@ def test_manage_positions_blocks_same_bar_reopen_from_recent_closed_trade_in_db(
     monkeypatch.setattr(scanner_mod, "log_activity", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(scanner_mod, "kv_get", lambda key, default=None: default)
     monkeypatch.setattr(scanner_mod, "kv_set", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr("forven.config.get_execution_mode", lambda: "paper")
+    monkeypatch.setattr("axiom.config.get_execution_mode", lambda: "paper")
 
     actions = manage_positions(
         "S-NEW",
@@ -751,7 +751,7 @@ def test_manage_positions_opens_short_and_derives_short_stop_above_entry(monkeyp
         "_update_trade_fill",
         lambda **kwargs: fills.append(dict(kwargs)),
     )
-    monkeypatch.setattr("forven.config.get_execution_mode", lambda: "paper")
+    monkeypatch.setattr("axiom.config.get_execution_mode", lambda: "paper")
 
     actions = manage_positions(
         "S-SHORT",
@@ -831,7 +831,7 @@ def test_manage_positions_records_paper_trading_stage_as_paper_challenger(monkey
     monkeypatch.setattr(scanner_mod, "log_activity", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(scanner_mod, "kv_get", lambda _key, default=None: default)
     monkeypatch.setattr(scanner_mod, "_execute_direct", lambda **_kwargs: {"status": "ok"})
-    monkeypatch.setattr("forven.config.get_execution_mode", lambda: "paper")
+    monkeypatch.setattr("axiom.config.get_execution_mode", lambda: "paper")
 
     actions = manage_positions(
         "S-PAPER-TRADING",
@@ -921,7 +921,7 @@ def test_manage_positions_reverses_opposite_side_before_opening_new_trade(monkey
     monkeypatch.setattr(scanner_mod, "register", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(scanner_mod, "log_activity", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(scanner_mod, "kv_get", lambda _key, default=None: default)
-    monkeypatch.setattr("forven.config.get_execution_mode", lambda: "paper")
+    monkeypatch.setattr("axiom.config.get_execution_mode", lambda: "paper")
 
     actions = manage_positions(
         "S-REV",
@@ -990,7 +990,7 @@ def test_manage_positions_uses_dynamic_position_sizing(monkeypatch):
         "_update_trade_fill",
         lambda **kwargs: fills.append(dict(kwargs)),
     )
-    monkeypatch.setattr("forven.config.get_execution_mode", lambda: "paper")
+    monkeypatch.setattr("axiom.config.get_execution_mode", lambda: "paper")
 
     actions = manage_positions(
         "S-DYN",
@@ -1061,7 +1061,7 @@ def test_manage_positions_derives_stop_from_sizing_when_strategy_has_no_stop(mon
         "_update_trade_fill",
         lambda **kwargs: fills.append(dict(kwargs)),
     )
-    monkeypatch.setattr("forven.config.get_execution_mode", lambda: "paper")
+    monkeypatch.setattr("axiom.config.get_execution_mode", lambda: "paper")
 
     actions = manage_positions(
         "S-ATR-STOP",
@@ -1119,7 +1119,7 @@ def test_manage_positions_uses_explicit_stop_and_take_profit_prices(monkeypatch)
         "_update_trade_fill",
         lambda **kwargs: fills.append(dict(kwargs)),
     )
-    monkeypatch.setattr("forven.config.get_execution_mode", lambda: "paper")
+    monkeypatch.setattr("axiom.config.get_execution_mode", lambda: "paper")
 
     manage_positions(
         "S-EXPLICIT-STOP",
@@ -1202,7 +1202,7 @@ def test_manage_positions_marks_trade_pending_reconcile_when_open_execution_fail
     monkeypatch.setattr(scanner_mod, "_paper_stage_local_execution_only_enabled", lambda: False)
     monkeypatch.setattr(scanner_mod, "_paper_test_mode_enabled", lambda: False)
     monkeypatch.setattr(scanner_mod, "_execution_fast_path_enabled", lambda: True)
-    monkeypatch.setattr("forven.config.get_execution_mode", lambda: "paper")
+    monkeypatch.setattr("axiom.config.get_execution_mode", lambda: "paper")
 
     actions = manage_positions(
         "S-FAIL",
@@ -1512,10 +1512,10 @@ def test_scan_asset_group_does_not_apply_regime_param_overlays(monkeypatch):
     assert seen["params"] == {"adx_min": 7}
 
 
-def test_run_scan_bypasses_regime_filters_in_paper_mode(monkeypatch, forven_db):
-    import forven.config as config_mod
-    import forven.regime as regime_mod
-    import forven.strategies.registry as registry_mod
+def test_run_scan_bypasses_regime_filters_in_paper_mode(monkeypatch, AXIOM_db):
+    import axiom.config as config_mod
+    import axiom.regime as regime_mod
+    import axiom.strategies.registry as registry_mod
 
     seen: dict[str, bool] = {}
     monkeypatch.setattr(config_mod, "get_execution_mode", lambda: "paper")
@@ -1583,8 +1583,8 @@ def test_get_signal_instantiates_registered_type_when_strategy_id_is_not_active(
             assert not frame.empty
             return _FakeSignal()
 
-    monkeypatch.setattr("forven.strategies.registry.get_active", lambda: {})
-    monkeypatch.setattr("forven.strategies.registry._TYPE_MAP", {"fake": _FakeStrategy})
+    monkeypatch.setattr("axiom.strategies.registry.get_active", lambda: {})
+    monkeypatch.setattr("axiom.strategies.registry._TYPE_MAP", {"fake": _FakeStrategy})
 
     signal = get_signal(
         "S-TYPE",
@@ -1712,7 +1712,7 @@ def test_manage_positions_bypasses_stage_and_risk_gates_in_paper_test(monkeypatc
     monkeypatch.setattr(scanner_mod, "register", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(scanner_mod, "log_activity", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(scanner_mod, "_update_trade_fill", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr("forven.config.get_execution_mode", lambda: "paper")
+    monkeypatch.setattr("axiom.config.get_execution_mode", lambda: "paper")
     monkeypatch.setattr(
         scanner_mod,
         "_scanner_bool_setting",
@@ -1777,7 +1777,7 @@ def test_manage_positions_defaults_leverage_when_missing(monkeypatch):
         "_execute_direct",
         lambda **_kwargs: {"status": "ok"},
     )
-    monkeypatch.setattr("forven.config.get_execution_mode", lambda: "paper")
+    monkeypatch.setattr("axiom.config.get_execution_mode", lambda: "paper")
 
     manage_positions(
         "S-NO-LEV",
@@ -1824,11 +1824,11 @@ def test_manage_positions_blocks_when_min_risk_reward_ratio_not_met(monkeypatch)
         "kv_get",
         lambda key, default=None: (
             {"min_risk_reward_ratio": 2.0, "risk_fee_bps": 0.0, "risk_slippage_bps": 0.0}
-            if key == "forven:settings"
+            if key == "axiom:settings"
             else default
         ),
     )
-    monkeypatch.setattr("forven.config.get_execution_mode", lambda: "paper")
+    monkeypatch.setattr("axiom.config.get_execution_mode", lambda: "paper")
 
     actions = manage_positions(
         "S-RR-BLOCK",
@@ -1876,11 +1876,11 @@ def test_manage_positions_blocks_when_min_risk_reward_ratio_requires_take_profit
         "kv_get",
         lambda key, default=None: (
             {"min_risk_reward_ratio": 2.0, "risk_fee_bps": 0.0, "risk_slippage_bps": 0.0}
-            if key == "forven:settings"
+            if key == "axiom:settings"
             else default
         ),
     )
-    monkeypatch.setattr("forven.config.get_execution_mode", lambda: "paper")
+    monkeypatch.setattr("axiom.config.get_execution_mode", lambda: "paper")
 
     actions = manage_positions(
         "S-RR-TP",
@@ -1927,8 +1927,8 @@ def test_get_signal_price_falls_back_to_candle_close_for_zero_price_signal(monke
         def generate_signal(self, frame):
             return _FakeSignal()
 
-    monkeypatch.setattr("forven.strategies.registry.get_active", lambda: {})
-    monkeypatch.setattr("forven.strategies.registry._TYPE_MAP", {"fake": _FakeStrategy})
+    monkeypatch.setattr("axiom.strategies.registry.get_active", lambda: {})
+    monkeypatch.setattr("axiom.strategies.registry._TYPE_MAP", {"fake": _FakeStrategy})
 
     signal = get_signal("S-PRICE0", {"type": "fake", "asset": "BTC", "params": {}}, df)
 
@@ -1997,8 +1997,8 @@ def test_enrich_scan_frame_passes_pair_form_to_data_manager(monkeypatch):
     """data_manager.enrich resolves the order-flow parquet via symbol_to_fs, which needs
     the PAIR form (BTC/USDT -> BTC-USDT/). Passing the bare token silently no-ops the join
     and dead-ends taker_flow/obi strategies in paper. Regression for the overnight finding."""
-    import forven.strategies.backtest as bt_mod
-    from forven.data_manager import data_manager as dm
+    import axiom.strategies.backtest as bt_mod
+    from axiom.data_manager import data_manager as dm
 
     df = _ohlcv_from_close([100.0, 101.0, 102.0])
     monkeypatch.setattr(bt_mod, "_enrich_with_market_data", lambda frame, asset: frame)
@@ -2021,8 +2021,8 @@ def test_enrich_scan_frame_passes_pair_form_to_data_manager(monkeypatch):
 
 
 def test_enrich_scan_frame_preserves_explicit_pair_symbol(monkeypatch):
-    import forven.strategies.backtest as bt_mod
-    from forven.data_manager import data_manager as dm
+    import axiom.strategies.backtest as bt_mod
+    from axiom.data_manager import data_manager as dm
 
     df = _ohlcv_from_close([100.0, 101.0])
     monkeypatch.setattr(bt_mod, "_enrich_with_market_data", lambda frame, asset: frame)

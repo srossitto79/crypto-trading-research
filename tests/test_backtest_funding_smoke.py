@@ -1,4 +1,4 @@
-"""Smoke test: funding enrichment → signal check end-to-end.
+﻿"""Smoke test: funding enrichment → signal check end-to-end.
 
 Verifies that when funding/OI parquet files are present, data_manager.enrich()
 correctly adds funding_rate and open_interest columns, and a funding_direction
@@ -13,8 +13,8 @@ import pandas as pd
 import pytest
 from unittest.mock import patch
 
-from forven.data_manager import DataManager, _save_stream_parquet
-from forven.strategies import backtest as backtest_mod
+from axiom.data_manager import DataManager, _save_stream_parquet
+from axiom.strategies import backtest as backtest_mod
 
 
 def _make_ohlcv(n: int = 100) -> pd.DataFrame:
@@ -56,8 +56,8 @@ def test_enrich_adds_funding_and_oi_columns(tmp_path):
     oi_path = tmp_path / "oi" / "ETH-USDT" / "1h.parquet"
     _save_stream_parquet(_make_oi(100), oi_path, "oi", "ETH-USDT")
 
-    with patch("forven.data_manager.FUNDING_DIR", tmp_path / "funding"):
-        with patch("forven.data_manager.OI_DIR", tmp_path / "oi"):
+    with patch("axiom.data_manager.FUNDING_DIR", tmp_path / "funding"):
+        with patch("axiom.data_manager.OI_DIR", tmp_path / "oi"):
             enriched = dm.enrich(ohlcv, "ETH-USDT", "1h")
 
     assert "funding_rate" in enriched.columns, "funding_rate column missing after enrich"
@@ -76,16 +76,16 @@ def test_funding_direction_signal_runs_on_enriched_df(tmp_path):
     oi_path = tmp_path / "oi" / "BTC-USDT" / "1h.parquet"
     _save_stream_parquet(_make_oi(100), oi_path, "oi", "BTC-USDT")
 
-    with patch("forven.data_manager.FUNDING_DIR", tmp_path / "funding"), \
-         patch("forven.data_manager.OI_DIR", tmp_path / "oi"), \
-         patch("forven.data_manager.DERIVATIVES_DIR", tmp_path / "derivatives"), \
-         patch("forven.data_manager.MACRO_DIR", tmp_path / "macro"):
+    with patch("axiom.data_manager.FUNDING_DIR", tmp_path / "funding"), \
+         patch("axiom.data_manager.OI_DIR", tmp_path / "oi"), \
+         patch("axiom.data_manager.DERIVATIVES_DIR", tmp_path / "derivatives"), \
+         patch("axiom.data_manager.MACRO_DIR", tmp_path / "macro"):
         enriched = dm.enrich(ohlcv, "BTC-USDT", "1h")
 
     assert enriched["funding_rate"].notna().any(), "expected non-null funding_rate values"
 
-    with patch("forven.scanner.fetch_hyperliquid_funding_rate", return_value=0.0001):
-        from forven.scanner import check_funding_direction_signal
+    with patch("axiom.scanner.fetch_hyperliquid_funding_rate", return_value=0.0001):
+        from axiom.scanner import check_funding_direction_signal
         result = check_funding_direction_signal(enriched, {}, coin="BTC")
 
     assert isinstance(result, dict), "signal checker must return a dict"
@@ -98,8 +98,8 @@ def test_enrich_with_no_parquet_files_does_not_raise(tmp_path):
     dm = DataManager()
     ohlcv = _make_ohlcv(50)
 
-    with patch("forven.data_manager.FUNDING_DIR", tmp_path / "funding"):
-        with patch("forven.data_manager.OI_DIR", tmp_path / "oi"):
+    with patch("axiom.data_manager.FUNDING_DIR", tmp_path / "funding"):
+        with patch("axiom.data_manager.OI_DIR", tmp_path / "oi"):
             result = dm.enrich(ohlcv, "BTC-USDT", "1h")
 
     assert len(result) == len(ohlcv)
@@ -107,14 +107,14 @@ def test_enrich_with_no_parquet_files_does_not_raise(tmp_path):
     assert "open_interest" not in result.columns
 
 
-def test_backtest_strategy_accepts_datetime_index_for_funding(forven_db, monkeypatch):
+def test_backtest_strategy_accepts_datetime_index_for_funding(AXIOM_db, monkeypatch):
     """Funding backtests should accept normalized candle frames indexed by timestamp."""
     candles = _make_ohlcv(240).set_index("timestamp")
     observed: dict[str, object] = {}
 
     monkeypatch.setattr(backtest_mod, "_should_use_process_isolation", lambda: False)
     monkeypatch.setattr(
-        "forven.strategies.sentiment.get_funding_for_backtest",
+        "axiom.strategies.sentiment.get_funding_for_backtest",
         lambda *_args, **_kwargs: 0.0001,
     )
 

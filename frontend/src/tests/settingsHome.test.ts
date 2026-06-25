@@ -1,14 +1,14 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { mount, unmount } from 'svelte';
 
-const { getSettingsAuditLogMock, getForvenDashboardMock } = vi.hoisted(() => ({
+const { getSettingsAuditLogMock, getAxiomDashboardMock } = vi.hoisted(() => ({
 	getSettingsAuditLogMock: vi.fn(),
-	getForvenDashboardMock: vi.fn(),
+	getAxiomDashboardMock: vi.fn(),
 }));
 
 vi.mock('$lib/api', () => ({
 	getSettingsAuditLog: getSettingsAuditLogMock,
-	getForvenDashboard: getForvenDashboardMock,
+	getAxiomDashboard: getAxiomDashboardMock,
 }));
 
 import SettingsHome from '../lib/components/settings/sections/SettingsHome.svelte';
@@ -26,9 +26,9 @@ afterEach(() => {
 
 beforeEach(() => {
 	getSettingsAuditLogMock.mockReset();
-	getForvenDashboardMock.mockReset();
+	getAxiomDashboardMock.mockReset();
 	getSettingsAuditLogMock.mockResolvedValue([]);
-	getForvenDashboardMock.mockResolvedValue({ execution_mode: 'paper' });
+	getAxiomDashboardMock.mockResolvedValue({ execution_mode: 'paper' });
 });
 
 async function flush(): Promise<void> {

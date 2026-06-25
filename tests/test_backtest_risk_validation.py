@@ -1,7 +1,7 @@
-from forven.strategies.backtest import backtest_strategy, walk_forward
+﻿from axiom.strategies.backtest import backtest_strategy, walk_forward
 
 
-def test_backtest_strategy_rejects_unsupported_risk_controls(forven_db):
+def test_backtest_strategy_rejects_unsupported_risk_controls(AXIOM_db):
     result = backtest_strategy(
         strategy_id="bt-risk-validation",
         asset="BTC",
@@ -15,7 +15,7 @@ def test_backtest_strategy_rejects_unsupported_risk_controls(forven_db):
     assert "risk_pct" in warning
 
 
-def test_walk_forward_rejects_unsupported_risk_controls(forven_db):
+def test_walk_forward_rejects_unsupported_risk_controls(AXIOM_db):
     result = walk_forward(
         strategy_id="wf-risk-validation",
         asset="BTC",

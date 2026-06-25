@@ -19,7 +19,7 @@
 		type ApprovalRecord,
 		type ApprovalTaskDetail,
 		type ApprovalTaskSummary,
-	} from '$lib/api/forven';
+	} from '$lib/api/axiom';
 	import SkillUpdateProposalCard from '$lib/components/approvals/SkillUpdateProposalCard.svelte';
 
 	type PendingDecision = 'approve' | 'deny' | 'revise';
@@ -570,8 +570,8 @@
 				void loadApprovals(true);
 			}
 		};
-		window.addEventListener('forven:event', handler);
-		wsCleanup = () => window.removeEventListener('forven:event', handler);
+		window.addEventListener('axiom:event', handler);
+		wsCleanup = () => window.removeEventListener('axiom:event', handler);
 	}
 
 	onMount(() => {

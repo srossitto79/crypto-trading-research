@@ -1,6 +1,6 @@
 # External Research Sources — Operator Guide
 
-The hypothesis-first research pipeline can pull evidence from five source types: **YouTube** (shipped earlier), **Reddit**, **blog/RSS feeds**, **GitHub**, and **forums**. Each is opt-in and configured via `forven_settings`.
+The hypothesis-first research pipeline can pull evidence from five source types: **YouTube** (shipped earlier), **Reddit**, **blog/RSS feeds**, **GitHub**, and **forums**. Each is opt-in and configured via `axiom_settings`.
 
 This guide covers: enabling each source, adding API credentials when useful, tuning registries, and troubleshooting.
 
@@ -20,7 +20,7 @@ Failing the gate returns a structured error envelope to the agent (`{"ok": false
 
 ## Settings shape
 
-All source configuration lives under `forven_settings.research_settings.research_sources`. The DB key is `forven:settings`. Defaults are:
+All source configuration lives under `axiom_settings.research_settings.research_sources`. The DB key is `axiom:settings`. Defaults are:
 
 ```json
 {
@@ -129,7 +129,7 @@ Set `research_sources.forum.enabled = true`. Default `sites` include Elite Trade
 
 ### Adapter model
 
-Forums have no standard schema. Each supported site ships with a per-site adapter in `forven/research_sources/forum.py::ADAPTERS` that declares:
+Forums have no standard schema. Each supported site ships with a per-site adapter in `axiom/research_sources/forum.py::ADAPTERS` that declares:
 - search URL template
 - CSS selector for result list items
 - CSS selector for result link (usually `a.thread-link`)
@@ -174,24 +174,24 @@ Each `inspect_*` tool returns a `content` string. When the agent calls `attach_h
 
 ## Security notes
 
-- Credentials (Reddit `client_secret`, GitHub `personal_access_token`) are read from `forven_settings` and injected into request headers. They are never logged or serialized into API responses.
+- Credentials (Reddit `client_secret`, GitHub `personal_access_token`) are read from `axiom_settings` and injected into request headers. They are never logged or serialized into API responses.
 - Never commit real credentials to the repo; use the settings DB as the source of truth.
-- HTTP User-Agent is `forven-research-sources/1.0` with a project URL. If you need to identify the instance differently, edit `forven/research_sources/_http.py::USER_AGENT`.
+- HTTP User-Agent is `axiom-research-sources/1.0` with a project URL. If you need to identify the instance differently, edit `axiom/research_sources/_http.py::USER_AGENT`.
 
 ---
 
 ## Enabling via settings DB
 
-All settings live in the SQLite key `forven:settings`. A minimal enable-everything block for testing:
+All settings live in the SQLite key `axiom:settings`. A minimal enable-everything block for testing:
 
 ```python
-from forven.db import kv_get, kv_set
+from axiom.db import kv_get, kv_set
 
-s = kv_get("forven:settings", {})
+s = kv_get("axiom:settings", {})
 s.setdefault("research_settings", {}).setdefault("research_sources", {})
 for src in ("reddit", "blog", "github", "forum"):
     s["research_settings"]["research_sources"].setdefault(src, {})["enabled"] = True
-kv_set("forven:settings", s)
+kv_set("axiom:settings", s)
 ```
 
 Restart any long-running agent process after a settings change — the research contract is resolved per-task but the registry is read on each tool call, so changes take effect on the next hypothesis research task.

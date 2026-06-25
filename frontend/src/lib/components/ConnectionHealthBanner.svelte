@@ -17,7 +17,7 @@
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 	const POLL_MS = 30_000;
-	const SESSION_KEY = 'forven.connection_health_banner.dismissed';
+	const SESSION_KEY = 'axiom.connection_health_banner.dismissed';
 
 	async function refresh() {
 		try {

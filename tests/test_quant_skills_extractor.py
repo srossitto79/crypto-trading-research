@@ -1,8 +1,8 @@
-"""2026-06-13 — extract_insight dropped 100% of insights (165/165 one night) when the
+﻿"""2026-06-13 — extract_insight dropped 100% of insights (165/165 one night) when the
 model's JSON was fenced, prefixed with prose, or truncated. _parse_insight_json now
 tolerates fences and recovers the outermost {...} object; the action allowlist still
 gates partial dicts."""
-import forven.quant_skills_extractor as qse
+import axiom.quant_skills_extractor as qse
 
 
 def test_parse_clean_json():
@@ -32,11 +32,11 @@ def test_parse_non_dict_json_returns_none():
 
 def test_extract_insight_recovers_prose_wrapped_response(monkeypatch):
     monkeypatch.setattr(
-        "forven.model_routing.get_auxiliary_routing",
+        "axiom.model_routing.get_auxiliary_routing",
         lambda _task: {"provider": "openai", "model_id": "gpt-x"},
     )
     monkeypatch.setattr(
-        "forven.ai.call_ai_sync",
+        "axiom.ai.call_ai_sync",
         lambda **_kwargs: 'Sure!\n{"action": "skip", "observation": "unremarkable"}\n',
     )
     out = qse.extract_insight({"metrics": {"total_trades": 5}}, [])
@@ -46,11 +46,11 @@ def test_extract_insight_recovers_prose_wrapped_response(monkeypatch):
 
 def test_extract_insight_rejects_bad_action_after_recovery(monkeypatch):
     monkeypatch.setattr(
-        "forven.model_routing.get_auxiliary_routing",
+        "axiom.model_routing.get_auxiliary_routing",
         lambda _task: {"provider": "openai", "model_id": "gpt-x"},
     )
     monkeypatch.setattr(
-        "forven.ai.call_ai_sync",
+        "axiom.ai.call_ai_sync",
         lambda **_kwargs: '{"action": "delete_everything", "pattern": "evil"}',
     )
     # Recovered dict carries an action outside the allowlist -> rejected.
@@ -59,8 +59,8 @@ def test_extract_insight_rejects_bad_action_after_recovery(monkeypatch):
 
 def test_extract_insight_returns_none_on_unparseable(monkeypatch):
     monkeypatch.setattr(
-        "forven.model_routing.get_auxiliary_routing",
+        "axiom.model_routing.get_auxiliary_routing",
         lambda _task: {"provider": "openai", "model_id": "gpt-x"},
     )
-    monkeypatch.setattr("forven.ai.call_ai_sync", lambda **_kwargs: "not json at all, sorry")
+    monkeypatch.setattr("axiom.ai.call_ai_sync", lambda **_kwargs: "not json at all, sorry")
     assert qse.extract_insight({"metrics": {"total_trades": 5}}, []) is None

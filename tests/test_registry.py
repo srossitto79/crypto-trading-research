@@ -1,15 +1,15 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
 
 import pandas as pd
 
-import forven.strategies.registry as registry_mod
-from forven.db import get_db
-from forven.strategies.base import BaseStrategy, Signal
-from forven.strategies.catalog import get_prebuilt_catalog
-from forven.strategies.custom_catalog import custom_strategy_status
+import axiom.strategies.registry as registry_mod
+from axiom.db import get_db
+from axiom.strategies.base import BaseStrategy, Signal
+from axiom.strategies.catalog import get_prebuilt_catalog
+from axiom.strategies.custom_catalog import custom_strategy_status
 
 
 class DummyStrategy(BaseStrategy):
@@ -174,7 +174,7 @@ def test_discover_skips_bad_builtin_module_and_continues(monkeypatch):
     assert "good_builtin" in registry_mod._TYPE_MAP
 
 
-def test_get_active_skips_bad_row_and_loads_non_execution_owner(forven_db):
+def test_get_active_skips_bad_row_and_loads_non_execution_owner(AXIOM_db):
     registry_mod.reset()
     registry_mod.register_type("macd", DummyStrategy)
 
@@ -208,7 +208,7 @@ def test_get_active_skips_bad_row_and_loads_non_execution_owner(forven_db):
     assert row["runtime_type"] == "macd"
 
 
-def test_get_active_backfills_runtime_type_from_unique_prefix_match(forven_db):
+def test_get_active_backfills_runtime_type_from_unique_prefix_match(AXIOM_db):
     registry_mod.reset()
     registry_mod.register_type("bb_fade_s00194", DummyStrategy)
 

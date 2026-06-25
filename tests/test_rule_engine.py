@@ -1,12 +1,12 @@
-"""Unit tests for the no-code rule-engine strategy (forven.strategies.builtin.rule_engine)."""
+﻿"""Unit tests for the no-code rule-engine strategy (Axiom.strategies.builtin.rule_engine)."""
 from __future__ import annotations
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from forven.strategies.builtin import rule_engine as re
-from forven.strategies.base import DirectionalSignals
+from axiom.strategies.builtin import rule_engine as re
+from axiom.strategies.base import DirectionalSignals
 
 
 def _df(closes, *, highs=None, lows=None, opens=None, vols=None) -> pd.DataFrame:

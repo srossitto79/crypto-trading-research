@@ -1,4 +1,4 @@
-"""Regression tests for AST-guard bypasses found in the 2026-06-22 security audit.
+﻿"""Regression tests for AST-guard bypasses found in the 2026-06-22 security audit.
 
 Each `BYPASS_*` payload previously returned `scan_source(...).ok == True` and then
 executed in-process. They must now all be rejected. The `LEGIT_*` payloads are
@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from forven.sandbox.ast_guard import scan_source
+from axiom.sandbox.ast_guard import scan_source
 
 
 BYPASS_PAYLOADS = {

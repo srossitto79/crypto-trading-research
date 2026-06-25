@@ -36,7 +36,7 @@
 		OpenManualPaperPositionOptions,
 		LifecycleStrategy,
 		LifecycleEvent,
-		ForvenDashboardResponse
+		AxiomDashboardResponse
 	} from '$lib/api';
 	import type { IndicatorConfig, SignalMarker } from '$lib/stores/chartStore';
 	import type { ChartDrawing, ChartDrawingPoint, ChartDrawingTool } from '$lib/components/chart/types';
@@ -45,13 +45,13 @@
 	import DataTable from '$lib/components/DataTable.svelte';
 	import { ORDERED_TIMEFRAME_VALUES } from '$lib/config/timeframes';
 	import { workspaceContext, selectedDataset as selectedDatasetStore } from '$lib/stores';
-	import { forvenLivePrices } from '$lib/stores/forvenWebSocket';
+	import { axiomLivePrices } from '$lib/stores/axiomWebSocket';
 	import { setPageContext } from '$lib/stores/pageContext';
 	import { createPoller, type Poller } from '$lib/utils/polling';
 
 	type SessionView = 'paper' | 'live' | 'all';
 	export let view: SessionView = 'paper';
-	export let dashboard: ForvenDashboardResponse | null = null;
+	export let dashboard: AxiomDashboardResponse | null = null;
 
 	// Trading gates — runtime checks that can block new trades
 	$: gates = (() => {
@@ -233,14 +233,14 @@
 	let liveChartRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 	let selectedSessionRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 	let livePriceUnsubscribe: (() => void) | null = null;
-	let forvenEventUnsubscribe: (() => void) | null = null;
+	let axiomEventUnsubscribe: (() => void) | null = null;
 	let latestLivePrices: Record<string, number> = {};
 	const compatSessionPrefix = 'compat:strategy:';
 
 	function getSelectedSessionStorageKey(): string {
-		if (view === 'live') return 'forven.live.selectedSessionId';
-		if (view === 'all') return 'forven.sessions.selectedSessionId';
-		return 'forven.paper.selectedSessionId';
+		if (view === 'live') return 'axiom.live.selectedSessionId';
+		if (view === 'all') return 'axiom.sessions.selectedSessionId';
+		return 'axiom.paper.selectedSessionId';
 	}
 
 	function isCompatSessionId(sessionId: string | null | undefined): boolean {
@@ -878,7 +878,7 @@
 		}
 	}
 
-	function handleForvenRealtimeEvent(): void {
+	function handleAxiomRealtimeEvent(): void {
 		if (!selectedSession || selectedSession.mode === 'replay') return;
 		scheduleSelectedSessionRefresh(900);
 		if (showVisualReplay) {
@@ -887,13 +887,13 @@
 	}
 
 	onMount(async () => {
-		livePriceUnsubscribe = forvenLivePrices.subscribe((priceMap) => {
+		livePriceUnsubscribe = axiomLivePrices.subscribe((priceMap) => {
 			applyRealtimePriceSnapshot(priceMap ?? {});
 		});
 		if (typeof window !== 'undefined') {
-			const eventHandler = () => handleForvenRealtimeEvent();
-			window.addEventListener('forven:event', eventHandler);
-			forvenEventUnsubscribe = () => window.removeEventListener('forven:event', eventHandler);
+			const eventHandler = () => handleAxiomRealtimeEvent();
+			window.addEventListener('axiom:event', eventHandler);
+			axiomEventUnsubscribe = () => window.removeEventListener('axiom:event', eventHandler);
 		}
 
 		const strategyParam = $page.url.searchParams.get('strategy');
@@ -951,8 +951,8 @@
 	onDestroy(() => {
 		livePriceUnsubscribe?.();
 		livePriceUnsubscribe = null;
-		forvenEventUnsubscribe?.();
-		forvenEventUnsubscribe = null;
+		axiomEventUnsubscribe?.();
+		axiomEventUnsubscribe = null;
 		stopLiveChartPolling();
 		stopSelectedSessionSync();
 		if (typeof window !== 'undefined') {

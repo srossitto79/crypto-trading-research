@@ -7,7 +7,7 @@ labels: bug
 
 <!--
 SECURITY: do not file vulnerabilities here. See SECURITY.md for private reporting.
-Forven is paper + testnet by default; do not paste API keys, secrets, or wallet
+Axiom is paper + testnet by default; do not paste API keys, secrets, or wallet
 addresses into this issue.
 -->
 
@@ -24,7 +24,7 @@ A clear description of the bug.
 **Environment**
 - OS:
 - Python version (`python --version`):
-- Forven version/commit (`git rev-parse --short HEAD`):
+- Axiom version/commit (`git rev-parse --short HEAD`):
 - How you run it (start_all script / uvicorn / Docker):
 
 **Logs / output**

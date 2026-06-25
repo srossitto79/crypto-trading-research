@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """Nuclear reset for strategy containers and related backtest metadata."""
 
 from __future__ import annotations
@@ -16,9 +16,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from forven.config import FORVEN_DB, FORVEN_HOME, ensure_dirs  # noqa: E402
-from forven.db import get_db, init_db  # noqa: E402
-from forven.vectordb import CHROMA_DIR, wipe_collections  # noqa: E402
+from axiom.config import AXIOM_DB, AXIOM_HOME, ensure_dirs  # noqa: E402
+from axiom.db import get_db, init_db  # noqa: E402
+from axiom.vectordb import CHROMA_DIR, wipe_collections  # noqa: E402
 
 
 RESET_TABLES = (
@@ -40,7 +40,7 @@ def _utc_stamp() -> str:
 
 
 def _default_backup_dir() -> Path:
-    return FORVEN_HOME / "backups" / f"container-reset-{_utc_stamp()}"
+    return AXIOM_HOME / "backups" / f"container-reset-{_utc_stamp()}"
 
 
 def _table_exists(conn: sqlite3.Connection, table_name: str) -> bool:
@@ -63,8 +63,8 @@ def _backup_sqlite(src: Path, dst: Path) -> None:
 def backup_state(backup_dir: Path) -> dict[str, str | None]:
     backup_dir.mkdir(parents=True, exist_ok=True)
 
-    db_backup_path = backup_dir / FORVEN_DB.name
-    _backup_sqlite(FORVEN_DB, db_backup_path)
+    db_backup_path = backup_dir / AXIOM_DB.name
+    _backup_sqlite(AXIOM_DB, db_backup_path)
 
     chroma_backup_path = backup_dir / CHROMA_DIR.name
     if CHROMA_DIR.exists():
@@ -115,7 +115,7 @@ def parse_args() -> argparse.Namespace:
         "--backup-dir",
         type=Path,
         default=None,
-        help="Optional backup directory. Default: <FORVEN_HOME>/backups/container-reset-<UTC timestamp>",
+        help="Optional backup directory. Default: <AXIOM_HOME>/backups/container-reset-<UTC timestamp>",
     )
     return parser.parse_args()
 
@@ -127,7 +127,7 @@ def main() -> int:
 
     backup_dir = (args.backup_dir or _default_backup_dir()).resolve()
     print("Container reset plan")
-    print(f"- SQLite DB: {FORVEN_DB}")
+    print(f"- SQLite DB: {AXIOM_DB}")
     print(f"- Chroma dir: {CHROMA_DIR}")
     print(f"- Backup dir: {backup_dir}")
     print(f"- Tables: {', '.join(RESET_TABLES)}")

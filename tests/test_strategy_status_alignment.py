@@ -1,9 +1,9 @@
-"""Tests for strategy status normalization and scanner-active loading."""
+﻿"""Tests for strategy status normalization and scanner-active loading."""
 
 from datetime import datetime, timezone
 
-from forven.db import get_db, init_db
-from forven.scanner import _load_deployed_strategies
+from axiom.db import get_db, init_db
+from axiom.scanner import _load_deployed_strategies
 
 
 def _insert_strategy(
@@ -35,7 +35,7 @@ def _insert_strategy(
         )
 
 
-def test_scanner_loads_active_statuses(forven_db):
+def test_scanner_loads_active_statuses(AXIOM_db):
     # Use canonical S-prefixed IDs so ID normalization migration doesn't rename them.
     # The scanner deploys on the `stage` column (paper%/live%/deploy%), so set it
     # explicitly — status alone is not the deployment signal.

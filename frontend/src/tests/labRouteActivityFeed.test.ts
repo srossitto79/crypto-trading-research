@@ -4,7 +4,7 @@ import { mount, tick, unmount } from 'svelte';
 import LabPage from '../routes/lab/+page.svelte';
 
 const apiMocks = vi.hoisted(() => ({
-	getForvenStrategiesQuery: vi.fn(),
+	getAxiomStrategiesQuery: vi.fn(),
 	getNowWorking: vi.fn(),
 	getGraveyard: vi.fn(),
 	transitionStage: vi.fn(),
@@ -27,7 +27,7 @@ vi.mock('$app/navigation', () => ({
 }));
 
 vi.mock('$lib/api', () => apiMocks);
-vi.mock('$lib/api/forven', () => healthMocks);
+vi.mock('$lib/api/axiom', () => healthMocks);
 vi.mock('$lib/utils/realtime', () => ({
 	createRealtimeRefresh: vi.fn(() => realtimeController),
 }));
@@ -51,7 +51,7 @@ describe('/lab activity feed', () => {
 	beforeEach(() => {
 		target = document.createElement('div');
 		document.body.appendChild(target);
-		apiMocks.getForvenStrategiesQuery.mockResolvedValue([]);
+		apiMocks.getAxiomStrategiesQuery.mockResolvedValue([]);
 		apiMocks.getGraveyard.mockResolvedValue({ archived: [] });
 		apiMocks.getNowWorking.mockResolvedValue([
 			{
@@ -60,7 +60,7 @@ describe('/lab activity feed', () => {
 				stage: 'quick_screen',
 				since: '2026-03-21T18:00:00Z',
 				current_task: {
-					type: 'forven-testing-cycle',
+					type: 'axiom-testing-cycle',
 					status: 'running',
 					started_at: '2026-03-21T18:00:00Z',
 					stalled: false,

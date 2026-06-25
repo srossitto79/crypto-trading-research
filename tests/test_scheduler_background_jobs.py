@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 import concurrent.futures
@@ -8,8 +8,8 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from forven import scheduler
-from forven.db import get_db
+from axiom import scheduler
+from axiom.db import get_db
 
 
 def _insert_scheduler_job(job_id: str, next_run_at: str, payload: dict) -> None:
@@ -34,7 +34,7 @@ def _read_scheduler_job(job_id: str) -> dict:
     return dict(row)
 
 
-def test_tick_does_not_block_due_queue_on_long_evolution_job(monkeypatch, forven_db):
+def test_tick_does_not_block_due_queue_on_long_evolution_job(monkeypatch, AXIOM_db):
     now = datetime.now(timezone.utc)
     _insert_scheduler_job(
         "test-slow-evolution",
@@ -105,7 +105,7 @@ def test_tick_does_not_block_due_queue_on_long_evolution_job(monkeypatch, forven
     asyncio.run(scenario())
 
 
-def test_tick_does_not_block_due_queue_on_promotion_loop(monkeypatch, forven_db):
+def test_tick_does_not_block_due_queue_on_promotion_loop(monkeypatch, AXIOM_db):
     now = datetime.now(timezone.utc)
     _insert_scheduler_job(
         "test-promotion-loop",
@@ -187,7 +187,7 @@ def _clear_zombie_state() -> None:
         scheduler._ZOMBIE_LOCKED_JOB_IDS.clear()
 
 
-def test_run_sync_job_timeout_registers_zombie_thread(forven_db):
+def test_run_sync_job_timeout_registers_zombie_thread(AXIOM_db):
     """A timed-out worker thread is tracked as a zombie until it really exits."""
     _clear_zombie_state()
     release = threading.Event()
@@ -220,7 +220,7 @@ def test_run_sync_job_timeout_registers_zombie_thread(forven_db):
         _clear_zombie_state()
 
 
-def test_timed_out_job_keeps_lock_until_thread_exits(forven_db):
+def test_timed_out_job_keeps_lock_until_thread_exits(AXIOM_db):
     """End-to-end: the inner sync timeout fires, the worker thread is still
     alive — running_since must stay held; once the thread exits the lock is
     released by the done_callback."""
@@ -297,7 +297,7 @@ def test_timed_out_job_keeps_lock_until_thread_exits(forven_db):
         _clear_zombie_state()
 
 
-def test_completed_job_with_no_zombie_clears_lock_normally(forven_db):
+def test_completed_job_with_no_zombie_clears_lock_normally(AXIOM_db):
     """Regression guard: the keep-lock path only engages for zombie timeouts."""
     _clear_zombie_state()
     now = datetime.now(timezone.utc)
@@ -337,7 +337,7 @@ def test_completed_job_with_no_zombie_clears_lock_normally(forven_db):
         _clear_zombie_state()
 
 
-def test_absolute_recovery_ceiling_covers_largest_per_kind_window(forven_db):
+def test_absolute_recovery_ceiling_covers_largest_per_kind_window(AXIOM_db):
     """Informational B-30 finding: the absolute force-recovery ceiling must be
     >= every per-kind stale window + hard-timeout headroom, or it force-clears
     locks for jobs (evolution_testing) still inside their own budget."""
@@ -352,7 +352,7 @@ def test_absolute_recovery_ceiling_covers_largest_per_kind_window(forven_db):
     assert scheduler._ABSOLUTE_MAX_RUNNING_SECONDS >= scheduler._job_hard_timeout_seconds(job)
 
 
-def test_skip_due_job_preserves_zombie_held_lock(forven_db):
+def test_skip_due_job_preserves_zombie_held_lock(AXIOM_db):
     """Pause/saturation skip paths must not clear a zombie-held lock either."""
     _clear_zombie_state()
     now = datetime.now(timezone.utc)
@@ -403,7 +403,7 @@ def test_skip_due_job_preserves_zombie_held_lock(forven_db):
 # ---------------------------------------------------------------------------
 
 
-def test_gauntlet_step_loop_runs_via_tracked_sync_job(monkeypatch, forven_db):
+def test_gauntlet_step_loop_runs_via_tracked_sync_job(monkeypatch, AXIOM_db):
     """The gauntlet tick must dispatch through _run_sync_job (under the job-id
     contextvar) so its timed-out worker thread is registered as a zombie —
     that is what makes the B-30 lock-holding apply to gauntlet tick overlap."""
@@ -417,7 +417,7 @@ def test_gauntlet_step_loop_runs_via_tracked_sync_job(monkeypatch, forven_db):
 
     monkeypatch.setattr(scheduler, "_run_sync_job", fake_run_sync_job)
     job = {
-        "id": "forven-gauntlet-step-loop",
+        "id": "Axiom-gauntlet-step-loop",
         "name": "Gauntlet step loop",
         "command": "gauntlet_step_loop",
         "payload": json.dumps({"kind": "gauntlet_step_loop", "max_workflows": 7}),
@@ -425,7 +425,7 @@ def test_gauntlet_step_loop_runs_via_tracked_sync_job(monkeypatch, forven_db):
 
     status, error = asyncio.run(scheduler.run_job(job))
 
-    from forven.gauntlet.engine import tick_active_gauntlet_workflows
+    from axiom.gauntlet.engine import tick_active_gauntlet_workflows
 
     assert (status, error) == ("ok", None)
     assert captured["fn"] is tick_active_gauntlet_workflows
@@ -433,13 +433,13 @@ def test_gauntlet_step_loop_runs_via_tracked_sync_job(monkeypatch, forven_db):
     assert captured["kwargs"].get("max_workflows") == 7
 
 
-def test_tick_skips_due_gauntlet_job_while_zombie_thread_alive(monkeypatch, forven_db):
+def test_tick_skips_due_gauntlet_job_while_zombie_thread_alive(monkeypatch, AXIOM_db):
     """A due gauntlet_step_loop tick must NOT be claimed (not even via the
     stale takeover in _try_mark_job_running) while a previous tick's worker
     thread is provably still alive in this process."""
     _clear_zombie_state()
     now = datetime.now(timezone.utc)
-    job_id = "forven-gauntlet-step-loop"
+    job_id = "Axiom-gauntlet-step-loop"
     _insert_scheduler_job(
         job_id, (now - timedelta(minutes=5)).isoformat(), {"kind": "gauntlet_step_loop"}
     )

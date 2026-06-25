@@ -1,13 +1,13 @@
 import { getSystemHeartbeat } from '$lib/api';
 import type { SystemHeartbeatResponse, SystemNavIndicator } from '$lib/api';
 import {
-	forvenDashboard,
-	forvenRisk,
-	forvenSentiment,
-	forvenRegime,
-	forvenOpenTrades,
-	forvenScannerState,
-} from '$lib/stores/forven';
+	axiomDashboard,
+	axiomRisk,
+	axiomSentiment,
+	axiomRegime,
+	axiomOpenTrades,
+	axiomScannerState,
+} from '$lib/stores/axiom';
 import { setNavIndicators } from '$lib/stores/navMetrics';
 import { createRealtimeRefresh, type RealtimeRefreshController } from '$lib/utils/realtime';
 
@@ -215,12 +215,12 @@ async function refreshHeartbeat(): Promise<void> {
 	try {
 		const heartbeat = await getSystemHeartbeat();
 
-		if (heartbeat.dashboard) forvenDashboard.set(heartbeat.dashboard);
-		if (heartbeat.risk) forvenRisk.set(heartbeat.risk);
-		if (heartbeat.sentiment) forvenSentiment.set(heartbeat.sentiment);
-		if (heartbeat.regime) forvenRegime.set(heartbeat.regime);
-		if (Array.isArray(heartbeat.open_trades)) forvenOpenTrades.set(heartbeat.open_trades);
-		if (heartbeat.scanner_state) forvenScannerState.set(heartbeat.scanner_state);
+		if (heartbeat.dashboard) axiomDashboard.set(heartbeat.dashboard);
+		if (heartbeat.risk) axiomRisk.set(heartbeat.risk);
+		if (heartbeat.sentiment) axiomSentiment.set(heartbeat.sentiment);
+		if (heartbeat.regime) axiomRegime.set(heartbeat.regime);
+		if (Array.isArray(heartbeat.open_trades)) axiomOpenTrades.set(heartbeat.open_trades);
+		if (heartbeat.scanner_state) axiomScannerState.set(heartbeat.scanner_state);
 		setNavIndicators(
 			heartbeat.nav_indicators && Object.keys(heartbeat.nav_indicators).length > 0
 				? heartbeat.nav_indicators

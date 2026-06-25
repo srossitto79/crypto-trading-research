@@ -1,4 +1,4 @@
-"""An active-stage strategy whose file uses an archived-style name (..._sNNNNN.py)
+﻿"""An active-stage strategy whose file uses an archived-style name (..._sNNNNN.py)
 and whose TYPE_NAME differs from the filename must still get its runtime class
 registered — otherwise it is blocked at runtime as "runtime type not registered"
 after a restart (the bug that blocked the paper roster on 2026-06-15)."""
@@ -8,24 +8,24 @@ import textwrap
 from datetime import datetime, timezone
 from pathlib import Path
 
-import forven.strategies.custom as custom_pkg
-import forven.strategies.registry as reg
-from forven.db import get_db
-from forven.strategies.custom_catalog import custom_strategy_status
+import axiom.strategies.custom as custom_pkg
+import axiom.strategies.registry as reg
+from axiom.db import get_db
+from axiom.strategies.custom_catalog import custom_strategy_status
 
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def test_archived_named_active_strategy_is_registered(forven_db):
+def test_archived_named_active_strategy_is_registered(AXIOM_db):
     custom_dir = Path(custom_pkg.__file__).resolve().parent
     modname = "zz_sweeptest_s99991"          # archived-style filename (ends in _sNNNNN)
     type_name = "zz_sweeptest_type_xyz"      # TYPE_NAME intentionally differs from the filename
     src = custom_dir / f"{modname}.py"
     src.write_text(textwrap.dedent(f'''
         import pandas as pd  # noqa: F401
-        from forven.strategies.base import BaseStrategy, Signal
+        from axiom.strategies.base import BaseStrategy, Signal
 
         TYPE_NAME = "{type_name}"
 
@@ -79,7 +79,7 @@ def test_archived_named_active_strategy_is_registered(forven_db):
             pass
 
 
-def test_sweep_is_noop_when_no_source_ref(forven_db):
+def test_sweep_is_noop_when_no_source_ref(AXIOM_db):
     """A strategy row with no source_ref must not break the sweep (best-effort)."""
     with get_db() as conn:
         conn.execute(

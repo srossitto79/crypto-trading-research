@@ -1,4 +1,4 @@
-"""Scheduler tests for scanner signal/execution split jobs."""
+﻿"""Scheduler tests for scanner signal/execution split jobs."""
 
 from __future__ import annotations
 
@@ -6,14 +6,14 @@ import asyncio
 import json
 from datetime import datetime, timezone
 
-from forven.db import kv_set
-from forven.scheduler import (
+from axiom.db import kv_set
+from axiom.scheduler import (
     apply_runtime_scheduler_overrides,
     add_job,
     get_jobs,
-    reconcile_forven_jobs,
+    reconcile_AXIOM_jobs,
     run_job,
-    seed_forven_jobs,
+    seed_AXIOM_jobs,
 )
 
 
@@ -22,7 +22,7 @@ def _job_map() -> dict[str, dict]:
 
 
 def _insert_failed_agent_tasks(count: int, error: str) -> None:
-    from forven.db import get_db
+    from axiom.db import get_db
 
     now = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
@@ -38,25 +38,25 @@ def _insert_failed_agent_tasks(count: int, error: str) -> None:
             )
 
 
-def test_seed_jobs_include_signal_and_execution_scanners(forven_db):
+def test_seed_jobs_include_signal_and_execution_scanners(AXIOM_db):
     kv_set(
-        "forven:settings",
+        "axiom:settings",
         {
             "throughput_auto_scheduler_control": True,
             "scanner_signal_interval_minutes": 3,
             "scanner_execution_interval_minutes": 11,
         },
     )
-    seed_forven_jobs()
+    seed_AXIOM_jobs()
     jobs = _job_map()
 
-    assert "forven-scanner-signal" in jobs
-    assert "forven-scanner-hourly" in jobs
-    assert "forven-crucible-planner" in jobs
+    assert "Axiom-scanner-signal" in jobs
+    assert "Axiom-scanner-hourly" in jobs
+    assert "Axiom-crucible-planner" in jobs
 
-    signal_job = jobs["forven-scanner-signal"]
-    exec_job = jobs["forven-scanner-hourly"]
-    crucible_job = jobs["forven-crucible-planner"]
+    signal_job = jobs["Axiom-scanner-signal"]
+    exec_job = jobs["Axiom-scanner-hourly"]
+    crucible_job = jobs["Axiom-crucible-planner"]
 
     assert str(signal_job.get("schedule_type")) == "interval"
     assert str(signal_job.get("schedule_expr")) == str(3 * 60 * 1000)
@@ -71,23 +71,23 @@ def test_seed_jobs_include_signal_and_execution_scanners(forven_db):
     assert crucible_job.get("enabled") == 1
     # The Daily Coding Cycle was retired (autonomous code-modification path
     # intentionally not registered) — it must not be seeded at all.
-    assert "forven-coding-daily" not in jobs
-    assert jobs["forven-ideation-daily"].get("enabled") == 0
+    assert "Axiom-coding-daily" not in jobs
+    assert jobs["Axiom-ideation-daily"].get("enabled") == 0
 
 
-def test_runtime_overrides_update_scanner_cadence(forven_db):
+def test_runtime_overrides_update_scanner_cadence(AXIOM_db):
     kv_set(
-        "forven:settings",
+        "axiom:settings",
         {
             "throughput_auto_scheduler_control": True,
             "scanner_signal_interval_minutes": 5,
             "scanner_execution_interval_minutes": 15,
         },
     )
-    seed_forven_jobs()
+    seed_AXIOM_jobs()
 
     kv_set(
-        "forven:settings",
+        "axiom:settings",
         {
             "throughput_auto_scheduler_control": True,
             "scanner_signal_interval_minutes": 7,
@@ -97,20 +97,20 @@ def test_runtime_overrides_update_scanner_cadence(forven_db):
     apply_runtime_scheduler_overrides()
 
     jobs = _job_map()
-    assert str(jobs["forven-scanner-signal"].get("schedule_expr")) == str(7 * 60 * 1000)
-    assert str(jobs["forven-scanner-hourly"].get("schedule_expr")) == str(21 * 60 * 1000)
+    assert str(jobs["Axiom-scanner-signal"].get("schedule_expr")) == str(7 * 60 * 1000)
+    assert str(jobs["Axiom-scanner-hourly"].get("schedule_expr")) == str(21 * 60 * 1000)
 
 
-def test_runtime_overrides_only_touch_managed_jobs(forven_db):
+def test_runtime_overrides_only_touch_managed_jobs(AXIOM_db):
     kv_set(
-        "forven:settings",
+        "axiom:settings",
         {
             "throughput_auto_scheduler_control": True,
             "scanner_signal_interval_minutes": 4,
             "scanner_execution_interval_minutes": 9,
         },
     )
-    seed_forven_jobs()
+    seed_AXIOM_jobs()
 
     add_job(
         job_id="custom-monitoring",
@@ -121,13 +121,13 @@ def test_runtime_overrides_only_touch_managed_jobs(forven_db):
         payload={"kind": "custom_monitor"},
     )
 
-    from forven.db import get_db
+    from axiom.db import get_db
 
     with get_db() as conn:
         # A MANAGED job manually mis-set: apply_runtime must reset it from settings.
         conn.execute(
             "UPDATE scheduler_jobs SET schedule_type = 'interval', schedule_expr = '660000' WHERE id = ?",
-            ("forven-scanner-signal",),
+            ("Axiom-scanner-signal",),
         )
         # A CUSTOM (unmanaged) job: apply_runtime must leave it untouched.
         conn.execute(
@@ -138,13 +138,13 @@ def test_runtime_overrides_only_touch_managed_jobs(forven_db):
     apply_runtime_scheduler_overrides()
 
     jobs = _job_map()
-    assert str(jobs["forven-scanner-signal"].get("schedule_expr")) == str(4 * 60 * 1000)
-    assert str(jobs["forven-scanner-hourly"].get("schedule_expr")) == str(9 * 60 * 1000)
+    assert str(jobs["Axiom-scanner-signal"].get("schedule_expr")) == str(4 * 60 * 1000)
+    assert str(jobs["Axiom-scanner-hourly"].get("schedule_expr")) == str(9 * 60 * 1000)
     assert str(jobs["custom-monitoring"].get("schedule_expr")) == "123000"
 
 
-def test_reconcile_forven_jobs_removes_legacy_juddex_jobs(forven_db):
-    seed_forven_jobs()
+def test_reconcile_AXIOM_jobs_removes_legacy_juddex_jobs(AXIOM_db):
+    seed_AXIOM_jobs()
     add_job(
         job_id="juddex-testing-cycle",
         name="Validation Cycle",
@@ -164,44 +164,44 @@ def test_reconcile_forven_jobs_removes_legacy_juddex_jobs(forven_db):
 
     assert "juddex-testing-cycle" in _job_map()
 
-    result = reconcile_forven_jobs()
+    result = reconcile_AXIOM_jobs()
 
     jobs = _job_map()
     assert result["removed"] >= 1
     assert "juddex-testing-cycle" not in jobs
-    assert "forven-testing-cycle" in jobs
+    assert "Axiom-testing-cycle" in jobs
     assert "custom-monitoring" in jobs
 
 
-def test_reconcile_forven_jobs_is_stable_after_seed(forven_db):
-    seed_forven_jobs()
+def test_reconcile_AXIOM_jobs_is_stable_after_seed(AXIOM_db):
+    seed_AXIOM_jobs()
 
-    result = reconcile_forven_jobs()
+    result = reconcile_AXIOM_jobs()
 
     assert result == {"removed": 0, "added": 0}
-    assert "forven-orphan-type-scan" in _job_map()
+    assert "Axiom-orphan-type-scan" in _job_map()
 
 
-def test_seed_jobs_keeps_single_daily_learning_schedule(forven_db):
-    kv_set("forven:settings", {"throughput_auto_scheduler_control": True})
-    seed_forven_jobs()
+def test_seed_jobs_keeps_single_daily_learning_schedule(AXIOM_db):
+    kv_set("axiom:settings", {"throughput_auto_scheduler_control": True})
+    seed_AXIOM_jobs()
 
     jobs = _job_map()
-    daily_learning = jobs["forven-daily-learning"]
+    daily_learning = jobs["Axiom-daily-learning"]
 
     assert str(daily_learning.get("schedule_type")) == "cron"
     assert str(daily_learning.get("schedule_expr")) == "0 8 * * *"
     assert str(daily_learning.get("timezone")) == "America/Halifax"
 
 
-def test_run_job_dispatches_scanner_signal_kind(monkeypatch, forven_db):
+def test_run_job_dispatches_scanner_signal_kind(monkeypatch, AXIOM_db):
     calls = {"count": 0}
 
     def _stub_signal_scan():
         calls["count"] += 1
         return {"ok": True}
 
-    import forven.scanner as scanner_mod
+    import axiom.scanner as scanner_mod
 
     monkeypatch.setattr(scanner_mod, "run_signal_scan", _stub_signal_scan)
 
@@ -218,8 +218,8 @@ def test_run_job_dispatches_scanner_signal_kind(monkeypatch, forven_db):
     assert calls["count"] == 1
 
 
-def test_autonomy_backpressure_ignores_restart_recovery_failures(forven_db):
-    import forven.scheduler as scheduler_mod
+def test_autonomy_backpressure_ignores_restart_recovery_failures(AXIOM_db):
+    import axiom.scheduler as scheduler_mod
 
     _insert_failed_agent_tasks(
         scheduler_mod._AUTONOMY_RECENT_FAILURE_LIMIT + 4,
@@ -232,8 +232,8 @@ def test_autonomy_backpressure_ignores_restart_recovery_failures(forven_db):
     assert reason == ""
 
 
-def test_autonomy_backpressure_counts_genuine_recent_agent_failures(forven_db):
-    import forven.scheduler as scheduler_mod
+def test_autonomy_backpressure_counts_genuine_recent_agent_failures(AXIOM_db):
+    import axiom.scheduler as scheduler_mod
 
     _insert_failed_agent_tasks(
         scheduler_mod._AUTONOMY_RECENT_FAILURE_LIMIT,
@@ -247,12 +247,12 @@ def test_autonomy_backpressure_counts_genuine_recent_agent_failures(forven_db):
 
 
 def test_scanner_jobs_are_exempt_from_backpressure_gate():
-    import forven.scheduler as scheduler_mod
+    import axiom.scheduler as scheduler_mod
 
     # Scanner jobs manage open paper positions (exits/stops) — they must
     # NEVER be paused by backpressure, which only gates work-creating jobs.
-    assert "forven-scanner-signal" not in scheduler_mod._AUTONOMY_BACKPRESSURE_JOB_IDS
-    assert "forven-scanner-hourly" not in scheduler_mod._AUTONOMY_BACKPRESSURE_JOB_IDS
+    assert "Axiom-scanner-signal" not in scheduler_mod._AUTONOMY_BACKPRESSURE_JOB_IDS
+    assert "Axiom-scanner-hourly" not in scheduler_mod._AUTONOMY_BACKPRESSURE_JOB_IDS
     # Pipeline-intake (work-creating) jobs stay gated.
     assert scheduler_mod._PIPELINE_INTAKE_JOB_IDS <= scheduler_mod._AUTONOMY_BACKPRESSURE_JOB_IDS
 
@@ -293,14 +293,14 @@ def _stub_tick_environment(monkeypatch, scheduler_mod, job, now, skipped, marked
     monkeypatch.setattr(scheduler_mod, "_try_mark_job_running", _record_try_mark)
 
 
-def test_tick_runs_scanner_jobs_despite_active_autonomy_backpressure(monkeypatch, forven_db):
+def test_tick_runs_scanner_jobs_despite_active_autonomy_backpressure(monkeypatch, AXIOM_db):
     """B-29: scanner jobs (position management) must NOT pause under backpressure."""
-    import forven.scheduler as scheduler_mod
+    import axiom.scheduler as scheduler_mod
 
     now = datetime.now(timezone.utc)
     jobs = [
         {
-            "id": "forven-scanner-signal",
+            "id": "Axiom-scanner-signal",
             "name": "Live Scanner Signal Worker",
             "schedule_type": "interval",
             "schedule_expr": "60000",
@@ -309,7 +309,7 @@ def test_tick_runs_scanner_jobs_despite_active_autonomy_backpressure(monkeypatch
             "payload": json.dumps({"kind": "scanner_signal_run"}),
         },
         {
-            "id": "forven-scanner-hourly",
+            "id": "Axiom-scanner-hourly",
             "name": "Live Scanner Execution Worker",
             "schedule_type": "interval",
             "schedule_expr": "300000",
@@ -330,12 +330,12 @@ def test_tick_runs_scanner_jobs_despite_active_autonomy_backpressure(monkeypatch
         assert marked_running == [job["id"]]
 
 
-def test_tick_skips_intake_job_when_autonomy_backpressure_is_active(monkeypatch, forven_db):
-    import forven.scheduler as scheduler_mod
+def test_tick_skips_intake_job_when_autonomy_backpressure_is_active(monkeypatch, AXIOM_db):
+    import axiom.scheduler as scheduler_mod
 
     now = datetime.now(timezone.utc)
     job = {
-        "id": "forven-auto-intake",
+        "id": "Axiom-auto-intake",
         "name": "Auto Intake",
         "schedule_type": "interval",
         "schedule_expr": "60000",
@@ -352,7 +352,7 @@ def test_tick_skips_intake_job_when_autonomy_backpressure_is_active(monkeypatch,
     assert marked_running == []
     assert skipped == [
         (
-            "forven-auto-intake",
+            "Axiom-auto-intake",
             {
                 "status": "backpressure",
                 "reason": "Autonomy backpressure: recent SQLite lock failures detected",

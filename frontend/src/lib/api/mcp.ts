@@ -5,7 +5,7 @@
  *   - /integrations/mcp page (P4-T10)
  *   - Agents page MCP grants UI (P4-T12)
  *
- * Contract is fixed by ``forven/routers/mcp.py``. If the backend payload
+ * Contract is fixed by ``axiom/routers/mcp.py``. If the backend payload
  * shape changes, update these interfaces in lockstep.
  */
 

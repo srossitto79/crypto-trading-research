@@ -1,13 +1,13 @@
-import asyncio
+﻿import asyncio
 from datetime import datetime, timedelta, timezone
 
-from forven.bot import (
-    ForvenBot,
+from axiom.bot import (
+    AxiomBot,
     _stale_recovery_interval_seconds,
     _stale_recovery_minutes,
     should_queue_bootstrap_brain_cycle,
 )
-from forven.task_timeouts import recommended_stale_recovery_minutes
+from axiom.task_timeouts import recommended_stale_recovery_minutes
 
 
 def test_stale_recovery_interval_has_minimum_floor():
@@ -18,24 +18,24 @@ def test_stale_recovery_interval_has_minimum_floor():
 
 def test_stale_recovery_minutes_clamps_below_safe_runtime(monkeypatch):
     monkeypatch.setattr(
-        "forven.db.kv_get",
-        lambda key, default=None: {"task_stale_recovery_minutes": 7} if key == "forven:settings" else default,
+        "axiom.db.kv_get",
+        lambda key, default=None: {"task_stale_recovery_minutes": 7} if key == "axiom:settings" else default,
     )
-    monkeypatch.setattr("forven.bot.load_config", lambda: {})
+    monkeypatch.setattr("axiom.bot.load_config", lambda: {})
 
     assert _stale_recovery_minutes() == recommended_stale_recovery_minutes({})
 
 
 def test_maybe_recover_stale_tasks_skips_when_inflight(monkeypatch):
-    bot = ForvenBot(agent_id=None)
+    bot = AxiomBot(agent_id=None)
     calls: list[dict] = []
 
     def fake_recover_stale_running_tasks(stale_minutes: int = 10, **kwargs):
         calls.append({"stale_minutes": int(stale_minutes), "kwargs": kwargs})
         return {"agent_requeued": 0, "agent_failed": 0, "brain_requeued": 0}
 
-    monkeypatch.setattr("forven.bot._stale_recovery_minutes", lambda: 10)
-    monkeypatch.setattr("forven.db.recover_stale_running_tasks", fake_recover_stale_running_tasks)
+    monkeypatch.setattr("axiom.bot._stale_recovery_minutes", lambda: 10)
+    monkeypatch.setattr("axiom.db.recover_stale_running_tasks", fake_recover_stale_running_tasks)
 
     bot._last_stale_recovery_at = 0.0
     bot._active_agent_task_ids.add(123)
@@ -45,7 +45,7 @@ def test_maybe_recover_stale_tasks_skips_when_inflight(monkeypatch):
 
 
 def test_maybe_recover_stale_tasks_throttles(monkeypatch):
-    bot = ForvenBot(agent_id=None)
+    bot = AxiomBot(agent_id=None)
     calls: list[dict] = []
     clock = {"now": 1000.0}
 
@@ -53,10 +53,10 @@ def test_maybe_recover_stale_tasks_throttles(monkeypatch):
         calls.append({"stale_minutes": int(stale_minutes), "kwargs": kwargs})
         return {"agent_requeued": 1, "agent_failed": 0, "brain_requeued": 0}
 
-    monkeypatch.setattr("forven.bot._stale_recovery_minutes", lambda: 1)
-    monkeypatch.setattr("forven.bot.time.time", lambda: clock["now"])
-    monkeypatch.setattr("forven.db.recover_stale_running_tasks", fake_recover_stale_running_tasks)
-    monkeypatch.setattr("forven.db.STALE_RECOVERY_FAIL_AGENTS", ("execution-trader",))
+    monkeypatch.setattr("axiom.bot._stale_recovery_minutes", lambda: 1)
+    monkeypatch.setattr("axiom.bot.time.time", lambda: clock["now"])
+    monkeypatch.setattr("axiom.db.recover_stale_running_tasks", fake_recover_stale_running_tasks)
+    monkeypatch.setattr("axiom.db.STALE_RECOVERY_FAIL_AGENTS", ("execution-trader",))
 
     bot._last_stale_recovery_at = 0.0
     asyncio.run(bot._maybe_recover_stale_tasks("agent"))
@@ -74,8 +74,8 @@ def test_maybe_recover_stale_tasks_throttles(monkeypatch):
     ]
 
 
-def test_should_queue_bootstrap_brain_cycle_skips_recent_bootstrap_tasks(forven_db):
-    from forven.db import get_db
+def test_should_queue_bootstrap_brain_cycle_skips_recent_bootstrap_tasks(AXIOM_db):
+    from axiom.db import get_db
 
     now = datetime(2026, 4, 14, 19, 10, 0, tzinfo=timezone.utc)
     fresh_created = (now - timedelta(seconds=30)).isoformat()
@@ -94,8 +94,8 @@ def test_should_queue_bootstrap_brain_cycle_skips_recent_bootstrap_tasks(forven_
     assert should_queue_bootstrap_brain_cycle(now=now) is False
 
 
-def test_should_queue_bootstrap_brain_cycle_allows_new_task_after_cooldown(forven_db):
-    from forven.db import get_db
+def test_should_queue_bootstrap_brain_cycle_allows_new_task_after_cooldown(AXIOM_db):
+    from axiom.db import get_db
 
     now = datetime(2026, 4, 14, 19, 10, 0, tzinfo=timezone.utc)
     stale_created = (now - timedelta(minutes=10)).isoformat()
@@ -126,18 +126,18 @@ def test_bot_pid_probe_tolerates_windows_access_denied(monkeypatch):
         def GetLastError():
             return 5
 
-    monkeypatch.setattr("forven.bot.os.name", "nt")
+    monkeypatch.setattr("axiom.bot.os.name", "nt")
     monkeypatch.setitem(sys.modules, "ctypes", _Ctypes)
 
-    from forven import bot as bot_mod
+    from axiom import bot as bot_mod
 
     assert bot_mod._is_pid_running(12345) is True
 
 
-def test_bot_process_pending_tasks_bootstrap_dispatches_strategy_developer_research_without_llm(forven_db, monkeypatch):
-    from forven.db import get_db
+def test_bot_process_pending_tasks_bootstrap_dispatches_strategy_developer_research_without_llm(AXIOM_db, monkeypatch):
+    from axiom.db import get_db
 
-    bot = ForvenBot(agent_id=None)
+    bot = AxiomBot(agent_id=None)
 
     with get_db() as conn:
         conn.execute(
@@ -147,7 +147,7 @@ def test_bot_process_pending_tasks_bootstrap_dispatches_strategy_developer_resea
             """,
             (
                 501,
-                '{"source":"bootstrap","message":"Forven just started."}',
+                '{"source":"bootstrap","message":"axiom just started."}',
                 datetime.now(timezone.utc).isoformat(),
             ),
         )
@@ -161,9 +161,9 @@ def test_bot_process_pending_tasks_bootstrap_dispatches_strategy_developer_resea
         raise AssertionError("bootstrap should not invoke the Brain LLM")
 
     monkeypatch.setattr(bot, "_maybe_recover_stale_tasks", _noop_recovery)
-    monkeypatch.setattr("forven.db.claim_pending_tasks", lambda *args, **kwargs: [{"id": 501, "payload": '{"source":"bootstrap","message":"Forven just started."}'}])
-    monkeypatch.setattr("forven.brain.assign_research_cycle", lambda: delegated.append("research"))
-    monkeypatch.setattr("forven.agents.runner._call_with_tools", _unexpected_call)
+    monkeypatch.setattr("axiom.db.claim_pending_tasks", lambda *args, **kwargs: [{"id": 501, "payload": '{"source":"bootstrap","message":"axiom just started."}'}])
+    monkeypatch.setattr("axiom.brain.assign_research_cycle", lambda: delegated.append("research"))
+    monkeypatch.setattr("axiom.agents.runner._call_with_tools", _unexpected_call)
 
     asyncio.run(bot._process_pending_tasks())
 

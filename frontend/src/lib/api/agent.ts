@@ -1,9 +1,9 @@
 /**
- * Forven agent client (TypeScript) — a first-class typed client so the in-app
- * (Tauri) AI assistant or any browser/Node agent can drive the full Forven
+ * Axiom agent client (TypeScript) — a first-class typed client so the in-app
+ * (Tauri) AI assistant or any browser/Node agent can drive the full Axiom
  * strategy lifecycle over the same REST API the rest of the UI uses.
  *
- * This is the TS sibling of `forven/agent/client.py`. It reuses `fetchApi`
+ * This is the TS sibling of `axiom/agent/client.py`. It reuses `fetchApi`
  * from ./core (auth headers + base discovery + fallback) so it works in the
  * Tauri desktop app, the browser, and tests with no extra config.
  *
@@ -57,7 +57,7 @@ export interface EnqueueVerdict {
 	error?: string;
 }
 
-/** Quick-screen gate thresholds (mirrors forven/agent/client.py). */
+/** Quick-screen gate thresholds (mirrors axiom/agent/client.py). */
 export const QUICK_SCREEN_THRESHOLDS = {
 	min_profit_factor: 1.05,
 	min_sharpe: 0.0,
@@ -86,7 +86,7 @@ function get<T>(endpoint: string, timeoutMs = 60_000): Promise<T> {
 	return fetchApi<T>(endpoint, { method: 'GET', timeoutMs });
 }
 
-export const ForvenAgent = {
+export const AxiomAgent = {
 	// ── read ─────────────────────────────────────────────────────────
 	health: () => get<Record<string, unknown>>('/health', 15_000),
 	getContext: () => get<Record<string, unknown>>('/ai-dropzone/context'),
@@ -144,7 +144,7 @@ export const ForvenAgent = {
 		if (opts.leverage != null) body.leverage = opts.leverage;
 		if (opts.sessionId) body.session_id = opts.sessionId;
 		const res = await post<Record<string, unknown>>('/backtesting/run', body);
-		return opts.compact ? ForvenAgent.compactResult(res) : res;
+		return opts.compact ? AxiomAgent.compactResult(res) : res;
 	},
 	runOptimization: (strategyId: string, datasetId: string, opts: { nTrials?: number; objective?: string; parameterRanges?: Record<string, unknown> } = {}) =>
 		post('/backtesting/optimize', {
@@ -225,4 +225,4 @@ export const ForvenAgent = {
 	},
 };
 
-export default ForvenAgent;
+export default AxiomAgent;

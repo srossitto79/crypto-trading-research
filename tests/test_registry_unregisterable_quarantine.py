@@ -1,4 +1,4 @@
-"""2026-06-13 — a custom strategy class that fails the abstract-method contract must
+﻿"""2026-06-13 — a custom strategy class that fails the abstract-method contract must
 be quarantined after ONE warning, not re-attempted (and re-warned) on every discover.
 Overnight, 3 broken generated modules each logged ~932x. The committed fix is the
 registry guard; the 3 gitignored broken files are moved aside as runtime cleanup."""
@@ -8,9 +8,9 @@ import logging
 
 import pytest
 
-from forven.strategies import base as base_mod
-from forven.strategies import custom as custom_pkg
-from forven.strategies import registry
+from axiom.strategies import base as base_mod
+from axiom.strategies import custom as custom_pkg
+from axiom.strategies import registry
 
 
 def _point_custom_dir(monkeypatch, tmp_path):
@@ -23,7 +23,7 @@ def _point_custom_dir(monkeypatch, tmp_path):
 
 # Missing the required generate_signal abstract method -> unregisterable.
 _BROKEN = (
-    "from forven.strategies.base import BaseStrategy\n"
+    "from axiom.strategies.base import BaseStrategy\n"
     "import pandas as pd\n"
     "class BrokenStrat(BaseStrategy):\n"
     "    TYPE_NAME = 'broken_quarantine_type'\n"
@@ -37,7 +37,7 @@ _BROKEN = (
 
 # A complete contract -> registers normally.
 _COMPLETE = (
-    "from forven.strategies.base import BaseStrategy, Signal\n"
+    "from axiom.strategies.base import BaseStrategy, Signal\n"
     "import pandas as pd\n"
     "class GoodStrat(BaseStrategy):\n"
     "    TYPE_NAME = 'good_quarantine_type'\n"
@@ -67,7 +67,7 @@ class _BadCls(base_mod.BaseStrategy):
 
 def test_register_type_default_logs_and_skips(monkeypatch, caplog):
     monkeypatch.setattr(registry, "_TYPE_MAP", {})
-    with caplog.at_level(logging.WARNING, logger="forven.strategies.registry"):
+    with caplog.at_level(logging.WARNING, logger="axiom.strategies.registry"):
         registry.register_type("unit_bad", _BadCls)  # no raise_on_skip
     assert "unit_bad" not in registry._TYPE_MAP
     assert any("Skipping strategy type registration" in r.message for r in caplog.records)
@@ -83,7 +83,7 @@ def test_broken_custom_module_quarantined_and_warns_once(monkeypatch, tmp_path, 
     (d / "broken_q.py").write_text(_BROKEN, encoding="utf-8")
     registry.reset()
 
-    with caplog.at_level(logging.WARNING, logger="forven.strategies.registry"):
+    with caplog.at_level(logging.WARNING, logger="axiom.strategies.registry"):
         registry.discover()
         assert "broken_quarantine_type" not in registry._TYPE_MAP
         assert "broken_q" in registry._FAILED_CUSTOM_MODULES

@@ -1,20 +1,20 @@
 <script lang="ts">
-	import type { ForvenAgentTask } from '$lib/api';
+	import type { AxiomAgentTask } from '$lib/api';
 
 	type DateDisplayMode = 'relative' | 'absolute';
 	type AccentColor = 'cyan' | 'green' | 'amber' | 'rose';
-	type NormalizedTask = ForvenAgentTask & {
+	type NormalizedTask = AxiomAgentTask & {
 		_agentId: string;
 		_id: string;
 	};
 
-	export let tasks: ForvenAgentTask[] = [];
+	export let tasks: AxiomAgentTask[] = [];
 	export let visibleCount = 15;
 	export let dateFormat: DateDisplayMode = 'absolute';
 	export let accentColor: AccentColor = 'cyan';
 	export let agentNamesById: Record<string, string> = {};
 	export let onAgentClick: (agentId: string) => void = () => {};
-	export let onDismissTask: (task: ForvenAgentTask) => void | Promise<void> = () => {};
+	export let onDismissTask: (task: AxiomAgentTask) => void | Promise<void> = () => {};
 
 	function displayAgentName(agentId: string): string {
 		const trimmed = agentId.trim();

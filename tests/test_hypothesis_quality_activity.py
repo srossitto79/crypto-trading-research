@@ -1,4 +1,4 @@
-"""Tests for the hypothesis manager upgrade:
+﻿"""Tests for the hypothesis manager upgrade:
 - quality signal (placeholder/researching/enriched/productive) on list + detail
 - agent_activity task history on detail
 - POST /hypotheses/{id}/update operator edit
@@ -13,8 +13,8 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from forven.api import app
-from forven.api_domains.hypotheses import (
+from axiom.api import app
+from axiom.api_domains.hypotheses import (
     QUALITY_ENRICHED,
     QUALITY_PLACEHOLDER,
     QUALITY_PRODUCTIVE,
@@ -22,8 +22,8 @@ from forven.api_domains.hypotheses import (
     _compute_hypothesis_quality,
     _is_placeholder_hypothesis,
 )
-from forven.db import get_db
-from forven.hypotheses import (
+from axiom.db import get_db
+from axiom.hypotheses import (
     add_hypothesis_artifact,
     create_hypothesis,
     update_hypothesis,
@@ -61,12 +61,12 @@ def _real_hyp(source_type: str = "agent_original"):
 # ---- placeholder detection ----
 
 
-def test_is_placeholder_operator_seed_with_unspecified(forven_db):
+def test_is_placeholder_operator_seed_with_unspecified(AXIOM_db):
     hyp = _placeholder_hyp()
     assert _is_placeholder_hypothesis(hyp) is True
 
 
-def test_is_placeholder_after_enrichment_false(forven_db):
+def test_is_placeholder_after_enrichment_false(AXIOM_db):
     hyp = _placeholder_hyp()
     updated = update_hypothesis(
         hyp["id"],
@@ -78,7 +78,7 @@ def test_is_placeholder_after_enrichment_false(forven_db):
     assert _is_placeholder_hypothesis(updated) is False
 
 
-def test_is_placeholder_non_operator_seed_never_placeholder(forven_db):
+def test_is_placeholder_non_operator_seed_never_placeholder(AXIOM_db):
     hyp = _real_hyp(source_type="agent_original")
     assert _is_placeholder_hypothesis(hyp) is False
 
@@ -86,22 +86,22 @@ def test_is_placeholder_non_operator_seed_never_placeholder(forven_db):
 # ---- quality computation ----
 
 
-def test_quality_researching_beats_everything_else(forven_db):
+def test_quality_researching_beats_everything_else(AXIOM_db):
     hyp = _placeholder_hyp()
     assert _compute_hypothesis_quality(hyp, strategy_count=5, has_active_task=True) == QUALITY_RESEARCHING
 
 
-def test_quality_productive_with_strategies(forven_db):
+def test_quality_productive_with_strategies(AXIOM_db):
     hyp = _real_hyp()
     assert _compute_hypothesis_quality(hyp, strategy_count=1, has_active_task=False) == QUALITY_PRODUCTIVE
 
 
-def test_quality_placeholder_when_stub_and_no_strategies(forven_db):
+def test_quality_placeholder_when_stub_and_no_strategies(AXIOM_db):
     hyp = _placeholder_hyp()
     assert _compute_hypothesis_quality(hyp, strategy_count=0, has_active_task=False) == QUALITY_PLACEHOLDER
 
 
-def test_quality_enriched_when_real_content_no_strategies(forven_db):
+def test_quality_enriched_when_real_content_no_strategies(AXIOM_db):
     hyp = _real_hyp()
     assert _compute_hypothesis_quality(hyp, strategy_count=0, has_active_task=False) == QUALITY_ENRICHED
 
@@ -109,7 +109,7 @@ def test_quality_enriched_when_real_content_no_strategies(forven_db):
 # ---- list surface includes quality ----
 
 
-def test_list_surface_exposes_quality_field(forven_db):
+def test_list_surface_exposes_quality_field(AXIOM_db):
     _placeholder_hyp()
     _real_hyp()
     client = TestClient(app)
@@ -121,7 +121,7 @@ def test_list_surface_exposes_quality_field(forven_db):
     assert QUALITY_ENRICHED in qualities
 
 
-def test_list_filter_by_quality_placeholder(forven_db):
+def test_list_filter_by_quality_placeholder(AXIOM_db):
     _placeholder_hyp()
     _real_hyp()
     client = TestClient(app)
@@ -131,7 +131,7 @@ def test_list_filter_by_quality_placeholder(forven_db):
     assert rows[0]["quality"] == QUALITY_PLACEHOLDER
 
 
-def test_list_unknown_quality_filter_ignored(forven_db):
+def test_list_unknown_quality_filter_ignored(AXIOM_db):
     _placeholder_hyp()
     _real_hyp()
     client = TestClient(app)
@@ -144,7 +144,7 @@ def test_list_unknown_quality_filter_ignored(forven_db):
 # ---- detail surface ----
 
 
-def test_detail_exposes_quality_and_agent_activity_empty(forven_db):
+def test_detail_exposes_quality_and_agent_activity_empty(AXIOM_db):
     hyp = _real_hyp()
     client = TestClient(app)
     r = client.get(f"/api/hypotheses/{hyp['id']}")
@@ -154,13 +154,13 @@ def test_detail_exposes_quality_and_agent_activity_empty(forven_db):
     assert body["research_task"] is None
 
 
-def test_detail_agent_activity_lists_recent_task(forven_db):
-    from forven.system_pause import set_system_mode
+def test_detail_agent_activity_lists_recent_task(AXIOM_db):
+    from axiom.system_pause import set_system_mode
 
     set_system_mode("auto")
     hyp = _placeholder_hyp()
     # Manually insert a pending strategy-developer task pointing at this hypothesis
-    import forven.db as db_mod
+    import axiom.db as db_mod
     with db_mod.get_db() as conn:
         db_mod.create_task_container(
             conn=conn,
@@ -182,7 +182,7 @@ def test_detail_agent_activity_lists_recent_task(forven_db):
 # ---- update endpoint (operator inline edit) ----
 
 
-def test_update_endpoint_overwrites_fields(forven_db):
+def test_update_endpoint_overwrites_fields(AXIOM_db):
     hyp = _placeholder_hyp()
     client = TestClient(app)
     r = client.post(
@@ -203,13 +203,13 @@ def test_update_endpoint_overwrites_fields(forven_db):
     assert body["hypothesis"]["operator_notes"] == "This creator is reliable; keep eye out."
 
 
-def test_update_endpoint_unknown_id_returns_404(forven_db):
+def test_update_endpoint_unknown_id_returns_404(AXIOM_db):
     client = TestClient(app)
     r = client.post("/api/hypotheses/HYP-fake/update", json={"title": "x"})
     assert r.status_code == 404
 
 
-def test_update_endpoint_rejects_empty_required_field(forven_db):
+def test_update_endpoint_rejects_empty_required_field(AXIOM_db):
     hyp = _placeholder_hyp()
     client = TestClient(app)
     r = client.post(f"/api/hypotheses/{hyp['id']}/update", json={"title": "   "})
@@ -219,7 +219,7 @@ def test_update_endpoint_rejects_empty_required_field(forven_db):
 # ---- re-research endpoint ----
 
 
-def test_research_endpoint_enqueues_new_task(forven_db):
+def test_research_endpoint_enqueues_new_task(AXIOM_db):
     hyp = _placeholder_hyp()
     add_hypothesis_artifact(
         hypothesis_id=hyp["id"],
@@ -247,13 +247,13 @@ def test_research_endpoint_enqueues_new_task(forven_db):
     assert input_data["hypothesis_id"] == hyp["id"]
 
 
-def test_research_endpoint_idempotent_when_task_already_running(forven_db):
-    from forven.system_pause import set_system_mode
+def test_research_endpoint_idempotent_when_task_already_running(AXIOM_db):
+    from axiom.system_pause import set_system_mode
 
     set_system_mode("auto")
     hyp = _placeholder_hyp()
     # Pre-insert a pending task
-    import forven.db as db_mod
+    import axiom.db as db_mod
     with db_mod.get_db() as conn:
         db_mod.create_task_container(
             conn=conn,
@@ -276,7 +276,7 @@ def test_research_endpoint_idempotent_when_task_already_running(forven_db):
     assert count == 1
 
 
-def test_research_endpoint_unknown_id_returns_404(forven_db):
+def test_research_endpoint_unknown_id_returns_404(AXIOM_db):
     client = TestClient(app)
     r = client.post("/api/hypotheses/HYP-missing/research")
     assert r.status_code == 404
@@ -285,7 +285,7 @@ def test_research_endpoint_unknown_id_returns_404(forven_db):
 # ---- strategy outcome rollup ----
 
 
-def test_list_summary_exposes_artifact_source_tags(forven_db):
+def test_list_summary_exposes_artifact_source_tags(AXIOM_db):
     hyp = _real_hyp()
     add_hypothesis_artifact(
         hypothesis_id=hyp["id"], source_type="youtube", source_title="vid",
@@ -305,14 +305,14 @@ def test_list_summary_exposes_artifact_source_tags(forven_db):
     assert row["source_tags"] == ["youtube", "reddit"]  # canonical order, deduped
 
 
-def test_list_summary_source_tags_empty_when_no_artifacts(forven_db):
+def test_list_summary_source_tags_empty_when_no_artifacts(AXIOM_db):
     hyp = _real_hyp()
     client = TestClient(app)
     row = [r for r in client.get("/api/hypotheses").json()["hypotheses"] if r["id"] == hyp["id"]][0]
     assert row["source_tags"] == []
 
 
-def test_detail_exposes_source_tags_from_artifacts(forven_db):
+def test_detail_exposes_source_tags_from_artifacts(AXIOM_db):
     hyp = _real_hyp()
     add_hypothesis_artifact(
         hypothesis_id=hyp["id"], source_type="github", source_title="repo",
@@ -328,7 +328,7 @@ def test_detail_exposes_source_tags_from_artifacts(forven_db):
     assert body["hypothesis"]["source_tags"] == ["github", "forum"]
 
 
-def test_detail_includes_latest_result_from_backtest(forven_db):
+def test_detail_includes_latest_result_from_backtest(AXIOM_db):
     """Strategies with backtest results surface the most recent one as latest_result.
 
     We bypass brain.create_strategy (which requires a runtime-registered family)

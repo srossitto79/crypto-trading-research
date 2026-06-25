@@ -1,4 +1,4 @@
-"""Phase 3 schema migration tests — quant_skills_history, skill_outcome_events,
+﻿"""Phase 3 schema migration tests — quant_skills_history, skill_outcome_events,
 brain_lessons, brain_lessons_fts.
 
 Verifies the Phase 3 (P3-T01) DDL applies cleanly on a fresh DB, indexes are
@@ -12,19 +12,19 @@ import tempfile
 
 import pytest
 
-from forven import db as forven_db
+from axiom import db as AXIOM_db
 
 
 @pytest.fixture
 def fresh_db(monkeypatch):
     with tempfile.TemporaryDirectory() as td:
-        monkeypatch.setenv("FORVEN_HOME", td)
-        if hasattr(forven_db, "_DB_PATH"):
-            forven_db._DB_PATH = None  # type: ignore[attr-defined]
-        if hasattr(forven_db, "_init_db_done"):
-            forven_db._init_db_done = False  # type: ignore[attr-defined]
-        forven_db.init_db()
-        with forven_db.get_db() as conn:
+        monkeypatch.setenv("AXIOM_HOME", td)
+        if hasattr(AXIOM_db, "_DB_PATH"):
+            AXIOM_db._DB_PATH = None  # type: ignore[attr-defined]
+        if hasattr(AXIOM_db, "_init_db_done"):
+            AXIOM_db._init_db_done = False  # type: ignore[attr-defined]
+        AXIOM_db.init_db()
+        with AXIOM_db.get_db() as conn:
             yield conn
 
 
@@ -211,9 +211,9 @@ def test_schema_version_is_at_least_26(fresh_db):
 
 
 def test_phase3_migration_idempotent(fresh_db):
-    if hasattr(forven_db, "_init_db_done"):
-        forven_db._init_db_done = False  # type: ignore[attr-defined]
-    forven_db.init_db()
+    if hasattr(AXIOM_db, "_init_db_done"):
+        AXIOM_db._init_db_done = False  # type: ignore[attr-defined]
+    AXIOM_db.init_db()
     assert _table_exists(fresh_db, "quant_skills_history")
     assert _table_exists(fresh_db, "skill_outcome_events")
     assert _table_exists(fresh_db, "brain_lessons")

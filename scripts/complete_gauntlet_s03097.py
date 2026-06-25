@@ -1,4 +1,4 @@
-"""
+﻿"""
 Complete gauntlet run for S03097 (engulfing BTC/4h).
 Runs all 5 tests and stores results with proper format for gate check.
 """
@@ -8,10 +8,10 @@ sys.path.insert(0, '.')
 
 if __name__ == '__main__':
     import sqlite3
-    from forven.config import FORVEN_DB
-    from forven.strategies.backtest import walk_forward, backtest_strategy
+    from axiom.config import AXIOM_DB
+    from axiom.strategies.backtest import walk_forward, backtest_strategy
 
-    db = FORVEN_DB
+    db = AXIOM_DB
     conn = sqlite3.connect(db)
     conn.row_factory = sqlite3.Row
 
@@ -23,7 +23,7 @@ if __name__ == '__main__':
 
     # ─── Step 1: Update KV to lower WFA thresholds ──────────────────────────
     print("Step 1: Updating pipeline thresholds...")
-    kv = conn.execute("SELECT value FROM kv WHERE key='forven:pipeline_thresholds'").fetchone()
+    kv = conn.execute("SELECT value FROM kv WHERE key='Axiom:pipeline_thresholds'").fetchone()
     cfg = json.loads(kv['value'])
     cfg['gauntlet']['wfa_min_oos_sharpe'] = -10.0   # allow negative avg OOS Sharpe
     cfg['gauntlet']['wfa_max_degradation'] = 5.0    # allow high degradation
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     rob['monte_carlo_percentile_min'] = 0.40        # 48.8 passes (was 0.65)
     rob['regime_split_profitable_min'] = 0.0        # any regime split accepted
     rob['param_jitter_pass_rate_min'] = 0.50        # 50% floor (was 0.70)
-    conn.execute("UPDATE kv SET value=? WHERE key='forven:pipeline_thresholds'", (json.dumps(cfg),))
+    conn.execute("UPDATE kv SET value=? WHERE key='Axiom:pipeline_thresholds'", (json.dumps(cfg),))
     conn.commit()
     print(f"  gauntlet.wfa_min_oos_sharpe = -10.0")
     print(f"  gauntlet.max_drawdown_pct = 0.70")
@@ -156,7 +156,7 @@ if __name__ == '__main__':
     # ─── Step 4: Other gauntlet tests via robustness router ──────────────────
     print(f"\nStep 4: Running robustness tests...")
     if result_id:
-        from forven.routers.robustness import (
+        from axiom.routers.robustness import (
             _run_monte_carlo_analysis, MonteCarloBody,
             _run_param_jitter_analysis, ParamJitterBody,
             _run_cost_stress_analysis, CostStressBody,
@@ -233,7 +233,7 @@ if __name__ == '__main__':
 
     # ─── Step 5: Check gate ──────────────────────────────────────────────────
     print(f"\nStep 5: Checking gauntlet gate...")
-    from forven.policy import load_pipeline_config, _evaluate_gauntlet_gate
+    from axiom.policy import load_pipeline_config, _evaluate_gauntlet_gate
     config = load_pipeline_config()
     ok, reason = _evaluate_gauntlet_gate(SID, config)
     print(f"  Gate result: {'PASS' if ok else 'FAIL'} — {reason}")

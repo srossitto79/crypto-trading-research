@@ -22,7 +22,7 @@
 		type DataEngineBackfillPlan,
 		type DataEngineBackfillResult,
 		type IngestionRun,
-		type ForvenSettings,
+		type AxiomSettings,
 	} from '$lib/api';
 	import { dataFetchState, clearDataFetchTask } from '$lib/stores/dataFetch';
 	import { page } from '$app/stores';
@@ -175,7 +175,7 @@
 		]);
 
 		if (settingsResult.status === 'fulfilled') {
-			const settings = settingsResult.value as ForvenSettings;
+			const settings = settingsResult.value as AxiomSettings;
 			const remoteUrl = String(settings.remote_engine_url || '').trim();
 			remoteDataConfigured = Boolean(settings.remote_engine_enabled && remoteUrl);
 			remoteDataUrl = remoteUrl || null;
@@ -444,7 +444,7 @@
 </script>
 
 <svelte:head>
-	<title>Data Manager | Forven</title>
+	<title>Data Manager | Axiom</title>
 	<meta
 		name="description"
 		content="Download market data, inspect datasets, and review historical ingestion runs."

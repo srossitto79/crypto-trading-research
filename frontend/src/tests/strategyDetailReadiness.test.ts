@@ -10,7 +10,7 @@ const apiMocks = vi.hoisted(() => ({
 	getResult: vi.fn(),
 	getResultChartContext: vi.fn(),
 	getStrategyContainer: vi.fn(),
-	promoteForvenStrategy: vi.fn(),
+	promoteAxiomStrategy: vi.fn(),
 	submitBacktest: vi.fn(),
 	submitOptimization: vi.fn(),
 }));
@@ -258,7 +258,7 @@ describe('Strategy detail promotion readiness routing', () => {
 		apiMocks.getResult.mockReset();
 		apiMocks.getResultChartContext.mockReset();
 		apiMocks.getStrategyContainer.mockReset();
-		apiMocks.promoteForvenStrategy.mockReset();
+		apiMocks.promoteAxiomStrategy.mockReset();
 		apiMocks.submitBacktest.mockReset();
 		apiMocks.submitOptimization.mockReset();
 		backtestingMocks.updateStrategyDefaultParams.mockReset();

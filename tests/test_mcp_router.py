@@ -1,4 +1,4 @@
-"""Phase 4 / P4-T07 — /api/mcp/* router tests.
+﻿"""Phase 4 / P4-T07 — /api/mcp/* router tests.
 
 Exercises CRUD on `mcp_servers` and `agent_mcp_grants`, and confirms
 ``POST /api/mcp/servers/{name}/test`` surfaces a clear error message
@@ -14,9 +14,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from forven.api_security import require_operator_access
-from forven.db import get_db, init_db
-from forven.routers.mcp import router as mcp_router
+from axiom.api_security import require_operator_access
+from axiom.db import get_db, init_db
+from axiom.routers.mcp import router as mcp_router
 
 
 FAKE_SERVER = Path(__file__).parent / "fake_mcp_stdio_server.py"
@@ -296,7 +296,7 @@ def test_update_toggling_enabled_re_registers(client):
             "args": [str(FAKE_SERVER)],
             "enabled": False,
         })
-        from forven.agents.tool_registry import _REGISTRY
+        from axiom.agents.tool_registry import _REGISTRY
         assert not any(k.startswith(f"mcp_{name}_") for k in _REGISTRY)
 
         # Enable -> tools register

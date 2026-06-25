@@ -1,11 +1,11 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import numpy as np
 import pandas as pd
 
-from forven.lab_db import get_model_version, upsert_lab_experiment
-from forven.lab_models import ModelRebuildRequest
-from forven.lab_regime_engine import (
+from axiom.lab_db import get_model_version, upsert_lab_experiment
+from axiom.lab_models import ModelRebuildRequest
+from axiom.lab_regime_engine import (
     apply_hysteresis,
     build_historical_snapshot,
     build_regime_segments,
@@ -165,9 +165,9 @@ def test_snapshot_rebuilds_when_experiment_window_changes(monkeypatch, tmp_path)
     source_path = tmp_path / "source_snapshot.parquet"
     frame.to_parquet(source_path, index=False)
 
-    monkeypatch.setattr("forven.lab_regime_engine.parquet_path", lambda *_args, **_kwargs: source_path)
-    monkeypatch.setattr("forven.lab_regime_engine.compute_checksum", lambda *_args, **_kwargs: "checksum-test")
-    monkeypatch.setattr("forven.lab_regime_engine.load_parquet", lambda *_args, **_kwargs: frame.copy())
+    monkeypatch.setattr("axiom.lab_regime_engine.parquet_path", lambda *_args, **_kwargs: source_path)
+    monkeypatch.setattr("axiom.lab_regime_engine.compute_checksum", lambda *_args, **_kwargs: "checksum-test")
+    monkeypatch.setattr("axiom.lab_regime_engine.load_parquet", lambda *_args, **_kwargs: frame.copy())
 
     experiment = upsert_lab_experiment(
         experiment_id="exp_snapshot_window",
@@ -208,9 +208,9 @@ def test_model_rebuild_persists_classifier_metadata(monkeypatch, tmp_path):
     source_path = tmp_path / "source_snapshot.parquet"
     frame.to_parquet(source_path, index=False)
 
-    monkeypatch.setattr("forven.lab_regime_engine.parquet_path", lambda *_args, **_kwargs: source_path)
-    monkeypatch.setattr("forven.lab_regime_engine.compute_checksum", lambda *_args, **_kwargs: "checksum-gmm")
-    monkeypatch.setattr("forven.lab_regime_engine.load_parquet", lambda *_args, **_kwargs: frame.copy())
+    monkeypatch.setattr("axiom.lab_regime_engine.parquet_path", lambda *_args, **_kwargs: source_path)
+    monkeypatch.setattr("axiom.lab_regime_engine.compute_checksum", lambda *_args, **_kwargs: "checksum-gmm")
+    monkeypatch.setattr("axiom.lab_regime_engine.load_parquet", lambda *_args, **_kwargs: frame.copy())
 
     experiment = upsert_lab_experiment(
         experiment_id="exp_gmm_rebuild",

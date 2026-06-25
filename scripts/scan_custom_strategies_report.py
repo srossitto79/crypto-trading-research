@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """Report-only AST-guard inventory of existing custom strategy modules.
 
 Lead-2 follow-up: F3 added the AST guard to the code-INGRESS path
@@ -24,11 +24,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from forven.sandbox.ast_guard import scan_source  # noqa: E402
+from axiom.sandbox.ast_guard import scan_source  # noqa: E402
 
 
 def _default_custom_dir() -> Path:
-    return REPO_ROOT / "forven" / "strategies" / "custom"
+    return REPO_ROOT / "Axiom" / "strategies" / "custom"
 
 
 def main() -> int:

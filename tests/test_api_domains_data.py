@@ -1,9 +1,9 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import pytest
 from fastapi import HTTPException
 
-from forven.api_domains import data as data_domain
+from axiom.api_domains import data as data_domain
 
 
 class _LanHealthResponse:
@@ -23,11 +23,11 @@ class _LanHealthResponse:
 def test_get_data_ingestion_runs_local_merges_and_normalizes(monkeypatch):
     monkeypatch.setattr(data_domain, "_remote_data_engine_config", lambda: (False, ""))
     monkeypatch.setattr(
-        "forven.data.get_active_ingestion_runs",
+        "axiom.data.get_active_ingestion_runs",
         lambda: [{"id": "run-1", "symbol": "BTC-USD", "status": "running", "started_at": "2026-03-06T00:05:00+00:00"}],
     )
     monkeypatch.setattr(
-        "forven.data.scan_datasets",
+        "axiom.data.scan_datasets",
         lambda: [{"symbol": "ETH-USD", "timeframe": "1h", "source": "local", "row_count": 120, "start_ts": "2026-03-05T00:00:00+00:00", "end_ts": "2026-03-06T00:00:00+00:00"}],
     )
 
@@ -53,7 +53,7 @@ def test_get_data_ingestion_runs_remote_delegates(monkeypatch):
 def test_get_datasets_stub_preserves_market_metadata(monkeypatch):
     monkeypatch.setattr(data_domain, "_remote_data_engine_config", lambda: (False, ""))
     monkeypatch.setattr(
-        "forven.data.scan_datasets",
+        "axiom.data.scan_datasets",
         lambda: [
             {
                 "symbol": "AAPL",
@@ -87,11 +87,11 @@ def test_get_datasets_stub_preserves_market_metadata(monkeypatch):
 
 def test_get_data_health_includes_stream_freshness(monkeypatch):
     monkeypatch.setattr(
-        "forven.data.compute_data_health",
+        "axiom.data.compute_data_health",
         lambda: {"ok": True, "datasets": [], "coverage": {}},
     )
     monkeypatch.setattr(
-        "forven.data_manager.data_manager_stats",
+        "axiom.data_manager.data_manager_stats",
         lambda: {
             "funding": {
                 "total_calls": 1,
@@ -102,7 +102,7 @@ def test_get_data_health_includes_stream_freshness(monkeypatch):
             }
         },
     )
-    monkeypatch.setattr("forven.data_manager._now_iso", lambda: "2026-04-23T00:01:00+00:00")
+    monkeypatch.setattr("axiom.data_manager._now_iso", lambda: "2026-04-23T00:01:00+00:00")
 
     payload = data_domain.get_data_health()
 
@@ -178,7 +178,7 @@ def test_probe_lan_health_marks_stale_latest_rows_recovering(monkeypatch):
 
 def test_get_dataset_detail_stub_translates_missing_file(monkeypatch):
     monkeypatch.setattr(data_domain, "_remote_data_engine_config", lambda: (False, ""))
-    monkeypatch.setattr("forven.data.get_dataset_detail", lambda symbol, timeframe: (_ for _ in ()).throw(FileNotFoundError("missing dataset")))
+    monkeypatch.setattr("axiom.data.get_dataset_detail", lambda symbol, timeframe: (_ for _ in ()).throw(FileNotFoundError("missing dataset")))
 
     with pytest.raises(HTTPException) as exc_info:
         data_domain.get_dataset_detail_stub("BTC/USD", "1h")
@@ -188,7 +188,7 @@ def test_get_dataset_detail_stub_translates_missing_file(monkeypatch):
 
 def test_post_upload_csv_normalizes_symbol(monkeypatch):
     monkeypatch.setattr(
-        "forven.data.process_csv_upload",
+        "axiom.data.process_csv_upload",
         lambda **kwargs: {"symbol": "BTC-USD", "rows_imported": 42},
     )
 
@@ -206,11 +206,11 @@ def test_post_upload_csv_normalizes_symbol(monkeypatch):
 def test_export_and_ohlcv_wrappers_preserve_payload_shape(monkeypatch):
     monkeypatch.setattr(data_domain, "_remote_data_engine_config", lambda: (False, ""))
     monkeypatch.setattr(
-        "forven.data.export_dataset_bytes",
+        "axiom.data.export_dataset_bytes",
         lambda **kwargs: (b"csv-data", "text/csv", "btc-1h.csv"),
     )
     monkeypatch.setattr(
-        "forven.data.dataset_ohlcv",
+        "axiom.data.dataset_ohlcv",
         lambda **kwargs: {"symbol": "BTC-USD", "row_count": 2, "data": []},
     )
 

@@ -1,4 +1,4 @@
-"""End-to-end spend-safety invariant at the real call boundary.
+﻿"""End-to-end spend-safety invariant at the real call boundary.
 
 Proves the chokepoint in ai._call_single fails closed: when enforcement is on,
 a (provider, model) that is not connected+selected raises UnconfiguredRouteError
@@ -12,9 +12,9 @@ import asyncio
 
 import pytest
 
-from forven import ai
-from forven import model_selection as ms
-from forven.db import kv_set
+from axiom import ai
+from axiom import model_selection as ms
+from axiom.db import kv_set
 
 _MSG = [{"role": "user", "content": "hi"}]
 
@@ -28,7 +28,7 @@ def _no_http_guard(monkeypatch):
     monkeypatch.setattr(ai, "get_token", _boom)
 
 
-def test_call_single_fails_closed_when_nothing_connected(forven_db, monkeypatch):
+def test_call_single_fails_closed_when_nothing_connected(AXIOM_db, monkeypatch):
     ms.enable_enforcement()
     kv_set(ms._CONNECTED_PROVIDERS_KEY, [])
     kv_set(ms._SETTINGS_STORAGE_KEY, {"agent_model_keys": []})
@@ -37,7 +37,7 @@ def test_call_single_fails_closed_when_nothing_connected(forven_db, monkeypatch)
         asyncio.run(ai._call_single("openai", "gpt-5.2", _MSG, 16, 0.7, None))
 
 
-def test_call_single_blocks_other_provider_when_one_connected(forven_db, monkeypatch):
+def test_call_single_blocks_other_provider_when_one_connected(AXIOM_db, monkeypatch):
     ms.enable_enforcement()
     kv_set(ms._CONNECTED_PROVIDERS_KEY, ["gemini"])
     kv_set(ms._SETTINGS_STORAGE_KEY, {"agent_model_keys": ["gemini:gemini-2.5-flash-lite"]})
@@ -48,7 +48,7 @@ def test_call_single_blocks_other_provider_when_one_connected(forven_db, monkeyp
         asyncio.run(ai._call_single("openai", "gpt-5.2", _MSG, 16, 0.7, None))
 
 
-def test_enforcement_off_does_not_block(forven_db, monkeypatch):
+def test_enforcement_off_does_not_block(AXIOM_db, monkeypatch):
     # Un-migrated process (enforcement off): the chokepoint is a no-op so the
     # call proceeds to token resolution (which we intercept here).
     ms.disable_enforcement()

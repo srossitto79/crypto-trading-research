@@ -1,4 +1,4 @@
-"""Regression coverage for HyperLiquid Info bootstrap fallbacks."""
+﻿"""Regression coverage for HyperLiquid Info bootstrap fallbacks."""
 
 from __future__ import annotations
 
@@ -64,24 +64,24 @@ def hl_module(monkeypatch):
     monkeypatch.setitem(sys.modules, "hyperliquid.utils", utils_mod)
     monkeypatch.setitem(sys.modules, "hyperliquid.utils.constants", constants_mod)
 
-    sys.modules.pop("forven.exchange.hyperliquid", None)
-    import forven.exchange.hyperliquid as hl
+    sys.modules.pop("axiom.exchange.hyperliquid", None)
+    import axiom.exchange.hyperliquid as hl
 
     module = importlib.reload(hl)
     yield module
-    sys.modules.pop("forven.exchange.hyperliquid", None)
+    sys.modules.pop("axiom.exchange.hyperliquid", None)
 
 
 def test_get_account_value_uses_direct_info_fallback_when_sdk_bootstrap_breaks(hl_module, monkeypatch):
     hl = hl_module
 
     def _kv_get(key, default=None):
-        if key == "forven:settings":
+        if key == "axiom:settings":
             return {
                 "hyperliquid_wallet": "0xabc123",
                 "hyperliquid_testnet": True,
             }
-        if key == "forven:settings:secrets":
+        if key == "axiom:settings:secrets":
             return {}
         return default
 
@@ -107,7 +107,7 @@ def test_get_account_value_uses_direct_info_fallback_when_sdk_bootstrap_breaks(h
             return _DummyHttpResponse({"tokens": [], "universe": []})
         raise AssertionError(f"Unexpected HyperLiquid info payload: {payload}")
 
-    monkeypatch.setattr("forven.sim.clock.is_sim_active", lambda: False)
+    monkeypatch.setattr("axiom.sim.clock.is_sim_active", lambda: False)
     monkeypatch.setattr(hl, "kv_get", _kv_get)
     monkeypatch.setattr(hl, "_with_breaker", lambda _name, _breaker, fn, *a, **k: fn(*a, **k))
     monkeypatch.setattr(hl.urllib.request, "urlopen", _fake_urlopen)

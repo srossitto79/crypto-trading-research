@@ -1,8 +1,8 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import threading
 
-from forven.circuit_breaker import CircuitBreaker, State
+from axiom.circuit_breaker import CircuitBreaker, State
 
 
 def test_half_open_can_execute_is_capped_under_concurrency():

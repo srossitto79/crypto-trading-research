@@ -1,13 +1,13 @@
-from pathlib import Path
+﻿from pathlib import Path
 
-from forven.migration.juddex_to_forven import migrate_home_directory
+from axiom.migration.juddex_to_axiom import migrate_home_directory
 
 
 def _fake_home(tmp_path, monkeypatch) -> Path:
     """Create an isolated fake home dir and redirect Path.home() to it.
 
     Using a tmp_path subdir avoids collision with conftest's autouse
-    `_isolate_forven_home` fixture, which creates `tmp_path/.forven`.
+    `_isolate_AXIOM_home` fixture, which creates `tmp_path/.Axiom`.
     """
     fake = tmp_path / "fake_home"
     fake.mkdir()
@@ -27,16 +27,16 @@ def test_migration_moves_legacy_home(tmp_path, monkeypatch):
     moved = migrate_home_directory()
 
     assert moved is True
-    current = home / ".forven"
-    assert (current / "forven.duckdb").read_bytes() == b"dbdata"
-    assert (current / ".forven_key").read_text() == "key"
-    assert (home / ".juddex" / "LEGACY_MOVED_TO_FORVEN").exists()
+    current = home / ".Axiom"
+    assert (current / "axiom.duckdb").read_bytes() == b"dbdata"
+    assert (current / ".axiom_key").read_text() == "key"
+    assert (home / ".juddex" / "LEGACY_JUddEX_MOVED_TO_AXIOM").exists()
 
 
-def test_migration_skips_when_forven_home_exists(tmp_path, monkeypatch):
+def test_migration_skips_when_AXIOM_home_exists(tmp_path, monkeypatch):
     home = _fake_home(tmp_path, monkeypatch)
     (home / ".juddex").mkdir()
-    current = home / ".forven"
+    current = home / ".Axiom"
     current.mkdir()
     (current / "sentinel").write_text("already here")
 

@@ -1,4 +1,4 @@
-"""Family-name guardrail: create_strategy rejections suggest real alternatives.
+﻿"""Family-name guardrail: create_strategy rejections suggest real alternatives.
 
 When an agent invents an unregistered TYPE_NAME (e.g. `rsi_atr_regime_momentum`),
 the rejection message now names close-matching existing families so the agent
@@ -6,8 +6,8 @@ has a concrete next step instead of making up another new name.
 """
 from __future__ import annotations
 
-from forven.agents.tools_brain import _suggest_known_families
-from forven.strategies.params import SUPPORTED_PARAM_FAMILIES
+from axiom.agents.tools_brain import _suggest_known_families
+from axiom.strategies.params import SUPPORTED_PARAM_FAMILIES
 
 
 def test_empty_input_returns_no_suggestions():

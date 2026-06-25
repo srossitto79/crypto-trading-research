@@ -1,7 +1,7 @@
-import json
+﻿import json
 
-from forven.db import get_db
-from forven.exchange import risk as risk_mod
+from axiom.db import get_db
+from axiom.exchange import risk as risk_mod
 
 
 def _insert_open_trade(
@@ -50,7 +50,7 @@ def _insert_open_trade(
         )
 
 
-def test_reconcile_exchange_positions_closes_ghost_trade_with_price(forven_db, monkeypatch):
+def test_reconcile_exchange_positions_closes_ghost_trade_with_price(AXIOM_db, monkeypatch):
     _insert_open_trade(
         "t-risk-reconcile-1",
         asset="BTC",
@@ -60,8 +60,8 @@ def test_reconcile_exchange_positions_closes_ghost_trade_with_price(forven_db, m
         leverage=2.0,
     )
 
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_positions", lambda testnet=True: {"positions": []})
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 110.0})
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_positions", lambda testnet=True: {"positions": []})
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 110.0})
     monkeypatch.setattr(risk_mod, "log_activity", lambda *_args, **_kwargs: None)
 
     result = risk_mod.reconcile_exchange_positions()
@@ -86,7 +86,7 @@ def test_reconcile_exchange_positions_closes_ghost_trade_with_price(forven_db, m
     assert int(remaining["count"]) == 0
 
 
-def test_reconcile_exchange_positions_marks_incomplete_when_price_missing(forven_db, monkeypatch):
+def test_reconcile_exchange_positions_marks_incomplete_when_price_missing(AXIOM_db, monkeypatch):
     _insert_open_trade(
         "t-risk-reconcile-2",
         asset="ETH",
@@ -96,8 +96,8 @@ def test_reconcile_exchange_positions_marks_incomplete_when_price_missing(forven
         leverage=1.0,
     )
 
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_positions", lambda testnet=True: {"positions": []})
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_all_mids", lambda testnet=True: {})
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_positions", lambda testnet=True: {"positions": []})
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_all_mids", lambda testnet=True: {})
     monkeypatch.setattr(risk_mod, "log_activity", lambda *_args, **_kwargs: None)
 
     risk_mod.reconcile_exchange_positions()
@@ -118,7 +118,7 @@ def test_reconcile_exchange_positions_marks_incomplete_when_price_missing(forven
     assert signal_data["close_reason"] == "reconcile_missing_on_exchange"
 
 
-def test_reconcile_exchange_positions_confirms_pending_close_and_cancels_reduce_only_orders(forven_db, monkeypatch):
+def test_reconcile_exchange_positions_confirms_pending_close_and_cancels_reduce_only_orders(AXIOM_db, monkeypatch):
     with get_db() as conn:
         conn.execute(
             """
@@ -163,11 +163,11 @@ def test_reconcile_exchange_positions_confirms_pending_close_and_cancels_reduce_
         )
 
     cancelled: list[tuple[str, int, bool]] = []
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_positions", lambda testnet=True: {"positions": []})
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_open_orders", lambda testnet=True: [{"coin": "BTC", "oid": 101, "reduceOnly": True}])
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 108.0})
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_positions", lambda testnet=True: {"positions": []})
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_open_orders", lambda testnet=True: [{"coin": "BTC", "oid": 101, "reduceOnly": True}])
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 108.0})
     monkeypatch.setattr(
-        "forven.exchange.hyperliquid.cancel_order",
+        "axiom.exchange.hyperliquid.cancel_order",
         lambda asset, oid, testnet=True: cancelled.append((asset, oid, testnet)) or {"ok": True},
     )
     monkeypatch.setattr(risk_mod, "log_activity", lambda *_args, **_kwargs: None)

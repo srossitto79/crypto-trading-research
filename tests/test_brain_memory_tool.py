@@ -1,4 +1,4 @@
-"""Phase 1 — Brain memory tool registration tests (P1-T03).
+﻿"""Phase 1 — Brain memory tool registration tests (P1-T03).
 
 Asserts the `memory` tool is exposed to the Brain agent only and that all four
 actions (`view`, `add`, `replace`, `remove`) round-trip through the tool
@@ -13,20 +13,20 @@ import json
 
 def _load_tools_brain():
     # Import for side-effect: register_tool decorator populates the registry.
-    return importlib.import_module("forven.agents.tools_brain")
+    return importlib.import_module("axiom.agents.tools_brain")
 
 
-def test_memory_tool_registered_for_brain(forven_db):
+def test_memory_tool_registered_for_brain(AXIOM_db):
     _load_tools_brain()
-    from forven.agents.tool_registry import get_tools_for_agent
+    from axiom.agents.tool_registry import get_tools_for_agent
 
     names = {tool["name"] for tool in get_tools_for_agent("brain")}
     assert "memory" in names
 
 
-def test_memory_tool_not_visible_to_quant_agents(forven_db):
+def test_memory_tool_not_visible_to_quant_agents(AXIOM_db):
     _load_tools_brain()
-    from forven.agents.tool_registry import get_tools_for_agent
+    from axiom.agents.tool_registry import get_tools_for_agent
 
     for non_brain in (
         "quant-researcher",
@@ -38,7 +38,7 @@ def test_memory_tool_not_visible_to_quant_agents(forven_db):
         assert "memory" not in names, f"memory tool leaked to {non_brain}"
 
 
-def test_memory_tool_view_returns_initial_state(forven_db):
+def test_memory_tool_view_returns_initial_state(AXIOM_db):
     tools_brain = _load_tools_brain()
     out = json.loads(tools_brain._tool_memory({"action": "view"}))
     assert out["ok"] is True
@@ -47,7 +47,7 @@ def test_memory_tool_view_returns_initial_state(forven_db):
     assert out["cap"] == 2000
 
 
-def test_memory_tool_add_then_view_roundtrip(forven_db, monkeypatch):
+def test_memory_tool_add_then_view_roundtrip(AXIOM_db, monkeypatch):
     tools_brain = _load_tools_brain()
     monkeypatch.setattr(
         tools_brain,
@@ -61,7 +61,7 @@ def test_memory_tool_add_then_view_roundtrip(forven_db, monkeypatch):
     assert view_out["body"] == "first note"
 
 
-def test_memory_tool_replace_overwrites(forven_db):
+def test_memory_tool_replace_overwrites(AXIOM_db):
     tools_brain = _load_tools_brain()
     tools_brain._tool_memory({"action": "add", "content": "old"})
     tools_brain._tool_memory({"action": "replace", "content": "new body"})
@@ -69,7 +69,7 @@ def test_memory_tool_replace_overwrites(forven_db):
     assert view_out["body"] == "new body"
 
 
-def test_memory_tool_remove_strips_substring(forven_db):
+def test_memory_tool_remove_strips_substring(AXIOM_db):
     tools_brain = _load_tools_brain()
     tools_brain._tool_memory({"action": "replace", "content": "alpha-beta-gamma"})
     rm = json.loads(tools_brain._tool_memory({"action": "remove", "needle": "beta-"}))
@@ -78,14 +78,14 @@ def test_memory_tool_remove_strips_substring(forven_db):
     assert view_out["body"] == "alpha-gamma"
 
 
-def test_memory_tool_remove_missing_needle(forven_db):
+def test_memory_tool_remove_missing_needle(AXIOM_db):
     tools_brain = _load_tools_brain()
     tools_brain._tool_memory({"action": "replace", "content": "alpha"})
     rm = json.loads(tools_brain._tool_memory({"action": "remove", "needle": "zzz"}))
     assert rm == {"ok": False, "reason": "not_found"}
 
 
-def test_memory_tool_cap_violation_returns_envelope(forven_db):
+def test_memory_tool_cap_violation_returns_envelope(AXIOM_db):
     tools_brain = _load_tools_brain()
     out = json.loads(
         tools_brain._tool_memory({"action": "replace", "content": "x" * 2001})
@@ -96,21 +96,21 @@ def test_memory_tool_cap_violation_returns_envelope(forven_db):
     assert out["cap"] == 2000
 
 
-def test_memory_tool_invalid_action(forven_db):
+def test_memory_tool_invalid_action(AXIOM_db):
     tools_brain = _load_tools_brain()
     out = json.loads(tools_brain._tool_memory({"action": "noop"}))
     assert out["ok"] is False
     assert out["error"] == "invalid_action"
 
 
-def test_memory_tool_add_missing_content_rejected(forven_db):
+def test_memory_tool_add_missing_content_rejected(AXIOM_db):
     tools_brain = _load_tools_brain()
     out = json.loads(tools_brain._tool_memory({"action": "add"}))
     assert out["ok"] is False
     assert out["error"] == "missing_content"
 
 
-def test_memory_tool_remove_missing_needle_param_rejected(forven_db):
+def test_memory_tool_remove_missing_needle_param_rejected(AXIOM_db):
     tools_brain = _load_tools_brain()
     out = json.loads(tools_brain._tool_memory({"action": "remove"}))
     assert out["ok"] is False

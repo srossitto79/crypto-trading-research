@@ -1,8 +1,8 @@
-"""H-1 regression: the Windows run_code branch must not leak secret-bearing
+﻿"""H-1 regression: the Windows run_code branch must not leak secret-bearing
 environment variables into AI-generated / prompt-injectable subprocess code.
 
 Before the fix the Windows branch did ``env = os.environ.copy()`` and passed
-every parent var (ANTHROPIC_API_KEY, FORVEN_HL_API_SECRET, FORVEN_ENCRYPTION_KEY,
+every parent var (ANTHROPIC_API_KEY, AXIOM_HL_API_SECRET, AXIOM_ENCRYPTION_KEY,
 …) straight through. It now routes through env_allowlist.build_subprocess_env,
 which drops secret-shaped names while preserving PYTHONPATH + BLAS caps.
 
@@ -12,7 +12,7 @@ actual subprocess or ctypes call happens.
 """
 from __future__ import annotations
 
-from forven import sandbox
+from axiom import sandbox
 
 
 class _FakeProc:
@@ -42,9 +42,9 @@ def test_windows_run_code_strips_secret_env_vars(monkeypatch):
     secrets = {
         "ANTHROPIC_API_KEY": "sk-ant-should-not-leak",
         "OPENAI_API_KEY": "sk-should-not-leak",
-        "FORVEN_HL_API_SECRET": "0x" + "a" * 64,
-        "FORVEN_ENCRYPTION_KEY": "ZmVybmV0LWtleS1ub3QtbGVhaw==",
-        "FORVEN_OPERATOR_KEY": "operator-token",
+        "AXIOM_HL_API_SECRET": "0x" + "a" * 64,
+        "AXIOM_ENCRYPTION_KEY": "ZmVybmV0LWtleS1ub3QtbGVhaw==",
+        "AXIOM_OPERATOR_KEY": "operator-token",
         "GITHUB_WEBHOOK_SECRET": "whsec_nope",
     }
     for k, v in secrets.items():
@@ -70,7 +70,7 @@ def test_windows_run_code_preserves_pythonpath_and_blas(monkeypatch):
     sandbox.run_code("print('x')")
 
     env = captured["env"]
-    # repo root is on PYTHONPATH so the child can import forven.*
+    # repo root is on PYTHONPATH so the child can import axiom.*
     assert str(sandbox.REPO_ROOT) in env["PYTHONPATH"]
     for var in (
         "OPENBLAS_NUM_THREADS",

@@ -1,6 +1,6 @@
-import re
+﻿import re
 
-with open("forven/auth/minimax.py", "r") as f:
+with open("Axiom/auth/minimax.py", "r") as f:
     content = f.read()
 
 # Fix interval parsing
@@ -11,14 +11,14 @@ content = content.replace('poll_interval = data.get("interval", 2)  # seconds', 
 
 content = content.replace('poll_interval_ms = poll_interval * 1000', 'poll_interval_ms = poll_interval * 1000')
 
-with open("forven/auth/minimax.py", "w") as f:
+with open("Axiom/auth/minimax.py", "w") as f:
     f.write(content)
 
-with open("forven/api.py", "r") as f:
+with open("Axiom/api.py", "r") as f:
     content = f.read()
 
 content = content.replace('interval = int(code_payload.get("interval", 2))', 'interval = int(code_payload.get("interval", 2000)) / 1000.0 if int(code_payload.get("interval", 2)) > 100 else int(code_payload.get("interval", 2))')
 
-with open("forven/api.py", "w") as f:
+with open("Axiom/api.py", "w") as f:
     f.write(content)
 

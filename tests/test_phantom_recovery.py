@@ -1,20 +1,20 @@
-import json
+﻿import json
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 
 import pytest
 
-import forven.config as cfg
-from forven.db import (
+import axiom.config as cfg
+from axiom.db import (
     begin_phantom_recovery,
     get_db,
     get_phantom_recovery_state,
     init_db,
     mark_phantom_recovery_healed,
 )
-from forven.phantom_recovery import handle_phantom_repair_completion, submit_phantom_replay_sync
-from forven.strategy_lifecycle import get_strategy_container, read_strategies
+from axiom.phantom_recovery import handle_phantom_repair_completion, submit_phantom_replay_sync
+from axiom.strategy_lifecycle import get_strategy_container, read_strategies
 
 
 class _FakeFuture:
@@ -58,7 +58,7 @@ def _update_recovery_status(strategy_id: str, status: str, *, healed_result_id: 
         )
 
 
-def test_begin_phantom_recovery_creates_single_claim_row(forven_db):
+def test_begin_phantom_recovery_creates_single_claim_row(AXIOM_db):
     _insert_strategy("S12345")
 
     claimed = begin_phantom_recovery(
@@ -98,7 +98,7 @@ def test_begin_phantom_recovery_creates_single_claim_row(forven_db):
     assert json.loads(event_row["details_json"])["trigger"] == "read_strategies"
 
 
-def test_read_and_detail_schedule_inline_recovery_once_via_db_claim(monkeypatch, forven_db):
+def test_read_and_detail_schedule_inline_recovery_once_via_db_claim(monkeypatch, AXIOM_db):
     submissions: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
 
     class FakeExecutor:
@@ -106,7 +106,7 @@ def test_read_and_detail_schedule_inline_recovery_once_via_db_claim(monkeypatch,
             submissions.append((fn.__name__, args, kwargs))
             return _FakeFuture()
 
-    monkeypatch.setattr("forven.phantom_recovery._INLINE_PHANTOM_RECOVERY_EXECUTOR", FakeExecutor())
+    monkeypatch.setattr("axiom.phantom_recovery._INLINE_PHANTOM_RECOVERY_EXECUTOR", FakeExecutor())
 
     with get_db() as conn:
         conn.execute(
@@ -139,7 +139,7 @@ def test_read_and_detail_schedule_inline_recovery_once_via_db_claim(monkeypatch,
     assert state["replay_count"] == 1
 
 
-def test_read_strategies_refuses_claim_if_backtest_arrives_before_claim(monkeypatch, forven_db):
+def test_read_strategies_refuses_claim_if_backtest_arrives_before_claim(monkeypatch, AXIOM_db):
     submissions: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
 
     class FakeExecutor:
@@ -147,7 +147,7 @@ def test_read_strategies_refuses_claim_if_backtest_arrives_before_claim(monkeypa
             submissions.append((fn.__name__, args, kwargs))
             return _FakeFuture()
 
-    monkeypatch.setattr("forven.phantom_recovery._INLINE_PHANTOM_RECOVERY_EXECUTOR", FakeExecutor())
+    monkeypatch.setattr("axiom.phantom_recovery._INLINE_PHANTOM_RECOVERY_EXECUTOR", FakeExecutor())
 
     with get_db() as conn:
         conn.execute(
@@ -164,7 +164,7 @@ def test_read_strategies_refuses_claim_if_backtest_arrives_before_claim(monkeypa
             )
         return True
 
-    monkeypatch.setattr("forven.phantom_recovery._schedule_allowed", _stale_outer_guard)
+    monkeypatch.setattr("axiom.phantom_recovery._schedule_allowed", _stale_outer_guard)
 
     rows = read_strategies()
     state = get_phantom_recovery_state("S20009")
@@ -175,7 +175,7 @@ def test_read_strategies_refuses_claim_if_backtest_arrives_before_claim(monkeypa
     assert state == {}
 
 
-def test_read_strategies_allows_claim_if_placeholder_backtest_arrives_before_claim(monkeypatch, forven_db):
+def test_read_strategies_allows_claim_if_placeholder_backtest_arrives_before_claim(monkeypatch, AXIOM_db):
     submissions: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
 
     class FakeExecutor:
@@ -183,7 +183,7 @@ def test_read_strategies_allows_claim_if_placeholder_backtest_arrives_before_cla
             submissions.append((fn.__name__, args, kwargs))
             return _FakeFuture()
 
-    monkeypatch.setattr("forven.phantom_recovery._INLINE_PHANTOM_RECOVERY_EXECUTOR", FakeExecutor())
+    monkeypatch.setattr("axiom.phantom_recovery._INLINE_PHANTOM_RECOVERY_EXECUTOR", FakeExecutor())
 
     with get_db() as conn:
         conn.execute(
@@ -200,7 +200,7 @@ def test_read_strategies_allows_claim_if_placeholder_backtest_arrives_before_cla
             )
         return True
 
-    monkeypatch.setattr("forven.phantom_recovery._schedule_allowed", _stale_outer_guard)
+    monkeypatch.setattr("axiom.phantom_recovery._schedule_allowed", _stale_outer_guard)
 
     rows = read_strategies()
     state = get_phantom_recovery_state("S20011")
@@ -212,7 +212,7 @@ def test_read_strategies_allows_claim_if_placeholder_backtest_arrives_before_cla
     assert state["attempt_count"] == 1
 
 
-def test_read_strategies_blocks_malformed_b1abc_backtest_id_before_claim(monkeypatch, forven_db):
+def test_read_strategies_blocks_malformed_b1abc_backtest_id_before_claim(monkeypatch, AXIOM_db):
     submissions: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
 
     class FakeExecutor:
@@ -220,7 +220,7 @@ def test_read_strategies_blocks_malformed_b1abc_backtest_id_before_claim(monkeyp
             submissions.append((fn.__name__, args, kwargs))
             return _FakeFuture()
 
-    monkeypatch.setattr("forven.phantom_recovery._INLINE_PHANTOM_RECOVERY_EXECUTOR", FakeExecutor())
+    monkeypatch.setattr("axiom.phantom_recovery._INLINE_PHANTOM_RECOVERY_EXECUTOR", FakeExecutor())
 
     with get_db() as conn:
         conn.execute(
@@ -237,7 +237,7 @@ def test_read_strategies_blocks_malformed_b1abc_backtest_id_before_claim(monkeyp
             )
         return True
 
-    monkeypatch.setattr("forven.phantom_recovery._schedule_allowed", _stale_outer_guard)
+    monkeypatch.setattr("axiom.phantom_recovery._schedule_allowed", _stale_outer_guard)
 
     rows = read_strategies()
     state = get_phantom_recovery_state("S20012")
@@ -248,7 +248,7 @@ def test_read_strategies_blocks_malformed_b1abc_backtest_id_before_claim(monkeyp
     assert state == {}
 
 
-def test_get_strategy_container_refuses_claim_if_strategy_leaves_active_lane_before_claim(monkeypatch, forven_db):
+def test_get_strategy_container_refuses_claim_if_strategy_leaves_active_lane_before_claim(monkeypatch, AXIOM_db):
     submissions: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
 
     class FakeExecutor:
@@ -256,7 +256,7 @@ def test_get_strategy_container_refuses_claim_if_strategy_leaves_active_lane_bef
             submissions.append((fn.__name__, args, kwargs))
             return _FakeFuture()
 
-    monkeypatch.setattr("forven.phantom_recovery._INLINE_PHANTOM_RECOVERY_EXECUTOR", FakeExecutor())
+    monkeypatch.setattr("axiom.phantom_recovery._INLINE_PHANTOM_RECOVERY_EXECUTOR", FakeExecutor())
 
     with get_db() as conn:
         conn.execute(
@@ -272,7 +272,7 @@ def test_get_strategy_container_refuses_claim_if_strategy_leaves_active_lane_bef
             )
         return True
 
-    monkeypatch.setattr("forven.phantom_recovery._schedule_allowed", _stale_outer_guard)
+    monkeypatch.setattr("axiom.phantom_recovery._schedule_allowed", _stale_outer_guard)
 
     payload = get_strategy_container("S20010")
     state = get_phantom_recovery_state("S20010")
@@ -287,7 +287,7 @@ def test_get_strategy_container_refuses_claim_if_strategy_leaves_active_lane_bef
     assert row["status"] == "research_only"
 
 
-def test_read_strategies_reclaims_stale_replay_running_claim(monkeypatch, forven_db):
+def test_read_strategies_reclaims_stale_replay_running_claim(monkeypatch, AXIOM_db):
     submissions: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
 
     class FakeExecutor:
@@ -295,7 +295,7 @@ def test_read_strategies_reclaims_stale_replay_running_claim(monkeypatch, forven
             submissions.append((fn.__name__, args, kwargs))
             return _FakeFuture()
 
-    monkeypatch.setattr("forven.phantom_recovery._INLINE_PHANTOM_RECOVERY_EXECUTOR", FakeExecutor())
+    monkeypatch.setattr("axiom.phantom_recovery._INLINE_PHANTOM_RECOVERY_EXECUTOR", FakeExecutor())
 
     with get_db() as conn:
         conn.execute(
@@ -330,7 +330,7 @@ def test_read_strategies_reclaims_stale_replay_running_claim(monkeypatch, forven
     assert state["replay_count"] == 2
 
 
-def test_read_and_detail_keep_fresh_replay_running_claim_deduped(monkeypatch, forven_db):
+def test_read_and_detail_keep_fresh_replay_running_claim_deduped(monkeypatch, AXIOM_db):
     submissions: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
 
     class FakeExecutor:
@@ -338,7 +338,7 @@ def test_read_and_detail_keep_fresh_replay_running_claim_deduped(monkeypatch, fo
             submissions.append((fn.__name__, args, kwargs))
             return _FakeFuture()
 
-    monkeypatch.setattr("forven.phantom_recovery._INLINE_PHANTOM_RECOVERY_EXECUTOR", FakeExecutor())
+    monkeypatch.setattr("axiom.phantom_recovery._INLINE_PHANTOM_RECOVERY_EXECUTOR", FakeExecutor())
 
     with get_db() as conn:
         conn.execute(
@@ -362,7 +362,7 @@ def test_read_and_detail_keep_fresh_replay_running_claim_deduped(monkeypatch, fo
     assert state["replay_count"] == 1
 
 
-def test_read_and_detail_skip_existing_backtest_results(monkeypatch, forven_db):
+def test_read_and_detail_skip_existing_backtest_results(monkeypatch, AXIOM_db):
     submissions: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
 
     class FakeExecutor:
@@ -370,7 +370,7 @@ def test_read_and_detail_skip_existing_backtest_results(monkeypatch, forven_db):
             submissions.append((fn.__name__, args, kwargs))
             return _FakeFuture()
 
-    monkeypatch.setattr("forven.phantom_recovery._INLINE_PHANTOM_RECOVERY_EXECUTOR", FakeExecutor())
+    monkeypatch.setattr("axiom.phantom_recovery._INLINE_PHANTOM_RECOVERY_EXECUTOR", FakeExecutor())
 
     with get_db() as conn:
         conn.execute(
@@ -392,7 +392,7 @@ def test_read_and_detail_skip_existing_backtest_results(monkeypatch, forven_db):
     assert payload["strategy"]["recovery_status"] == "idle"
 
 
-def test_get_strategy_container_uses_full_backtest_check_when_history_window_is_truncated(monkeypatch, forven_db):
+def test_get_strategy_container_uses_full_backtest_check_when_history_window_is_truncated(monkeypatch, AXIOM_db):
     submissions: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
 
     class FakeExecutor:
@@ -400,7 +400,7 @@ def test_get_strategy_container_uses_full_backtest_check_when_history_window_is_
             submissions.append((fn.__name__, args, kwargs))
             return _FakeFuture()
 
-    monkeypatch.setattr("forven.phantom_recovery._INLINE_PHANTOM_RECOVERY_EXECUTOR", FakeExecutor())
+    monkeypatch.setattr("axiom.phantom_recovery._INLINE_PHANTOM_RECOVERY_EXECUTOR", FakeExecutor())
 
     with get_db() as conn:
         conn.execute(
@@ -426,7 +426,7 @@ def test_get_strategy_container_uses_full_backtest_check_when_history_window_is_
     assert payload["strategy"]["recovery_status"] == "idle"
 
 
-def test_read_and_detail_skip_non_active_stages(monkeypatch, forven_db):
+def test_read_and_detail_skip_non_active_stages(monkeypatch, AXIOM_db):
     submissions: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
 
     class FakeExecutor:
@@ -434,7 +434,7 @@ def test_read_and_detail_skip_non_active_stages(monkeypatch, forven_db):
             submissions.append((fn.__name__, args, kwargs))
             return _FakeFuture()
 
-    monkeypatch.setattr("forven.phantom_recovery._INLINE_PHANTOM_RECOVERY_EXECUTOR", FakeExecutor())
+    monkeypatch.setattr("axiom.phantom_recovery._INLINE_PHANTOM_RECOVERY_EXECUTOR", FakeExecutor())
 
     with get_db() as conn:
         conn.execute(
@@ -453,7 +453,7 @@ def test_read_and_detail_skip_non_active_stages(monkeypatch, forven_db):
 
 
 @pytest.mark.parametrize("terminal_status", ["healed", "exhausted"])
-def test_read_and_detail_skip_terminal_recovery_rows(monkeypatch, forven_db, terminal_status):
+def test_read_and_detail_skip_terminal_recovery_rows(monkeypatch, AXIOM_db, terminal_status):
     submissions: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
 
     class FakeExecutor:
@@ -461,7 +461,7 @@ def test_read_and_detail_skip_terminal_recovery_rows(monkeypatch, forven_db, ter
             submissions.append((fn.__name__, args, kwargs))
             return _FakeFuture()
 
-    monkeypatch.setattr("forven.phantom_recovery._INLINE_PHANTOM_RECOVERY_EXECUTOR", FakeExecutor())
+    monkeypatch.setattr("axiom.phantom_recovery._INLINE_PHANTOM_RECOVERY_EXECUTOR", FakeExecutor())
 
     with get_db() as conn:
         conn.execute(
@@ -495,7 +495,7 @@ def test_read_and_detail_skip_terminal_recovery_rows(monkeypatch, forven_db, ter
 
 
 @pytest.mark.parametrize("terminal_status", ["healed", "exhausted"])
-def test_schedule_inline_phantom_recovery_cannot_reopen_terminal_rows_when_outer_guard_is_stale(monkeypatch, forven_db, terminal_status):
+def test_schedule_inline_phantom_recovery_cannot_reopen_terminal_rows_when_outer_guard_is_stale(monkeypatch, AXIOM_db, terminal_status):
     submissions: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
 
     class FakeExecutor:
@@ -503,8 +503,8 @@ def test_schedule_inline_phantom_recovery_cannot_reopen_terminal_rows_when_outer
             submissions.append((fn.__name__, args, kwargs))
             return _FakeFuture()
 
-    monkeypatch.setattr("forven.phantom_recovery._INLINE_PHANTOM_RECOVERY_EXECUTOR", FakeExecutor())
-    monkeypatch.setattr("forven.phantom_recovery._schedule_allowed", lambda strategy_id: True)
+    monkeypatch.setattr("axiom.phantom_recovery._INLINE_PHANTOM_RECOVERY_EXECUTOR", FakeExecutor())
+    monkeypatch.setattr("axiom.phantom_recovery._schedule_allowed", lambda strategy_id: True)
 
     with get_db() as conn:
         conn.execute(
@@ -527,7 +527,7 @@ def test_schedule_inline_phantom_recovery_cannot_reopen_terminal_rows_when_outer
                 ("S20006",),
             )
 
-    from forven.phantom_recovery import schedule_inline_phantom_recovery
+    from axiom.phantom_recovery import schedule_inline_phantom_recovery
 
     scheduled = schedule_inline_phantom_recovery("S20006", "read_strategies")
     state = get_phantom_recovery_state("S20006")
@@ -537,7 +537,7 @@ def test_schedule_inline_phantom_recovery_cannot_reopen_terminal_rows_when_outer
     assert state["status"] == terminal_status
 
 
-def test_submit_phantom_replay_sync_marks_healed_on_success(monkeypatch, forven_db):
+def test_submit_phantom_replay_sync_marks_healed_on_success(monkeypatch, AXIOM_db):
     with get_db() as conn:
         conn.execute(
             "INSERT INTO strategies (id, name, type, symbol, timeframe, params, stage, status, created_at, updated_at) "
@@ -554,7 +554,7 @@ def test_submit_phantom_replay_sync_marks_healed_on_success(monkeypatch, forven_
             )
         return {"status": "succeeded", "result_id": "S20002-btc-1"}
 
-    monkeypatch.setattr("forven.phantom_recovery._submit_phantom_replay_backtest", _fake_submit)
+    monkeypatch.setattr("axiom.phantom_recovery._submit_phantom_replay_backtest", _fake_submit)
 
     begin_phantom_recovery("S20002", trigger="read_strategies", next_status="replay_running")
     submit_phantom_replay_sync("S20002", trigger="read_strategies")
@@ -565,7 +565,7 @@ def test_submit_phantom_replay_sync_marks_healed_on_success(monkeypatch, forven_
     assert state["last_error"] is None
 
 
-def test_submit_phantom_replay_sync_moves_to_repair_pending_on_submission_error(monkeypatch, forven_db):
+def test_submit_phantom_replay_sync_moves_to_repair_pending_on_submission_error(monkeypatch, AXIOM_db):
     with get_db() as conn:
         conn.execute(
             "INSERT INTO strategies (id, name, type, symbol, timeframe, params, stage, status, created_at, updated_at) "
@@ -575,8 +575,8 @@ def test_submit_phantom_replay_sync_moves_to_repair_pending_on_submission_error(
     def _raise_submit(strategy_id: str) -> dict[str, str]:
         raise RuntimeError(f"backtest worker crashed for {strategy_id}")
 
-    monkeypatch.setattr("forven.phantom_recovery._submit_phantom_replay_backtest", _raise_submit)
-    monkeypatch.setattr("forven.phantom_recovery._assign_phantom_repair_task", lambda strategy_id, reason: 9001)
+    monkeypatch.setattr("axiom.phantom_recovery._submit_phantom_replay_backtest", _raise_submit)
+    monkeypatch.setattr("axiom.phantom_recovery._assign_phantom_repair_task", lambda strategy_id, reason: 9001)
 
     begin_phantom_recovery("S20003", trigger="read_strategies", next_status="replay_running")
     submit_phantom_replay_sync("S20003", trigger="read_strategies")
@@ -588,7 +588,7 @@ def test_submit_phantom_replay_sync_moves_to_repair_pending_on_submission_error(
     assert state["last_finished_at"] is not None
 
 
-def test_submit_phantom_replay_sync_moves_to_repair_pending_without_result_id(monkeypatch, forven_db):
+def test_submit_phantom_replay_sync_moves_to_repair_pending_without_result_id(monkeypatch, AXIOM_db):
     with get_db() as conn:
         conn.execute(
             "INSERT INTO strategies (id, name, type, symbol, timeframe, params, stage, status, created_at, updated_at) "
@@ -596,10 +596,10 @@ def test_submit_phantom_replay_sync_moves_to_repair_pending_without_result_id(mo
         )
 
     monkeypatch.setattr(
-        "forven.phantom_recovery._submit_phantom_replay_backtest",
+        "axiom.phantom_recovery._submit_phantom_replay_backtest",
         lambda strategy_id: {"status": "accepted", "warning": "replay_returned_without_result_id"},
     )
-    monkeypatch.setattr("forven.phantom_recovery._assign_phantom_repair_task", lambda strategy_id, reason: 9002)
+    monkeypatch.setattr("axiom.phantom_recovery._assign_phantom_repair_task", lambda strategy_id, reason: 9002)
 
     begin_phantom_recovery("S20013", trigger="read_strategies", next_status="replay_running")
     submit_phantom_replay_sync("S20013", trigger="read_strategies")
@@ -614,7 +614,7 @@ def test_handle_phantom_repair_completion_queues_final_retry(monkeypatch):
     queued: list[tuple[str, str]] = []
 
     monkeypatch.setattr(
-        "forven.phantom_recovery.schedule_final_retry",
+        "axiom.phantom_recovery.schedule_final_retry",
         lambda strategy_id, reason: queued.append((strategy_id, reason)) or True,
     )
 
@@ -634,7 +634,7 @@ def test_handle_phantom_repair_completion_exhausts_without_fix(monkeypatch):
     exhausted: list[tuple[str, str]] = []
 
     monkeypatch.setattr(
-        "forven.phantom_recovery.mark_phantom_recovery_exhausted",
+        "axiom.phantom_recovery.mark_phantom_recovery_exhausted",
         lambda strategy_id, reason: exhausted.append((strategy_id, reason)) or True,
     )
 
@@ -650,7 +650,7 @@ def test_handle_phantom_repair_completion_exhausts_without_fix(monkeypatch):
     assert exhausted == [("S40002", "No executable strategy class found")]
 
 
-def test_mark_phantom_recovery_healed_stores_result_id(forven_db):
+def test_mark_phantom_recovery_healed_stores_result_id(AXIOM_db):
     _insert_strategy("S12345")
     _insert_backtest_result("S12345", "S12345-btc-1")
 
@@ -675,7 +675,7 @@ def test_mark_phantom_recovery_healed_stores_result_id(forven_db):
 
 
 @pytest.mark.parametrize("prior_status", ["healed", "exhausted"])
-def test_begin_phantom_recovery_does_not_reopen_after_terminal_cycle(forven_db, prior_status):
+def test_begin_phantom_recovery_does_not_reopen_after_terminal_cycle(AXIOM_db, prior_status):
     _insert_strategy("S12353")
     _insert_backtest_result("S12353", "S12353-btc-1")
 
@@ -702,7 +702,7 @@ def test_begin_phantom_recovery_does_not_reopen_after_terminal_cycle(forven_db, 
     assert state["last_finished_at"] is not None
 
 
-def test_missing_strategy_recovery_helpers_return_false(forven_db):
+def test_missing_strategy_recovery_helpers_return_false(AXIOM_db):
     claimed = begin_phantom_recovery(
         "S99999",
         trigger="read_strategies",
@@ -723,7 +723,7 @@ def test_missing_strategy_recovery_helpers_return_false(forven_db):
     assert row_count == 0
 
 
-def test_mark_phantom_recovery_healed_requires_existing_recovery_row(forven_db):
+def test_mark_phantom_recovery_healed_requires_existing_recovery_row(AXIOM_db):
     _insert_strategy("S12348")
     _insert_backtest_result("S12348", "S12348-btc-1")
 
@@ -734,7 +734,7 @@ def test_mark_phantom_recovery_healed_requires_existing_recovery_row(forven_db):
     assert state == {}
 
 
-def test_mark_phantom_recovery_healed_rejects_missing_result_id(forven_db):
+def test_mark_phantom_recovery_healed_rejects_missing_result_id(AXIOM_db):
     _insert_strategy("S12349")
     begin_phantom_recovery("S12349", trigger="read_strategies", next_status="replay_running")
 
@@ -746,7 +746,7 @@ def test_mark_phantom_recovery_healed_rejects_missing_result_id(forven_db):
     assert state.get("healed_result_id") is None
 
 
-def test_mark_phantom_recovery_healed_rejects_foreign_result_id(forven_db):
+def test_mark_phantom_recovery_healed_rejects_foreign_result_id(AXIOM_db):
     _insert_strategy("S12350")
     _insert_strategy("S12351")
     _insert_backtest_result("S12351", "S12351-btc-1")
@@ -760,7 +760,7 @@ def test_mark_phantom_recovery_healed_rejects_foreign_result_id(forven_db):
     assert state.get("healed_result_id") is None
 
 
-def test_mark_phantom_recovery_healed_rejects_deleted_owned_result(forven_db):
+def test_mark_phantom_recovery_healed_rejects_deleted_owned_result(AXIOM_db):
     _insert_strategy("S12354")
     _insert_backtest_result("S12354", "S12354-btc-1")
     begin_phantom_recovery("S12354", trigger="read_strategies", next_status="replay_running")
@@ -778,7 +778,7 @@ def test_mark_phantom_recovery_healed_rejects_deleted_owned_result(forven_db):
     assert state.get("healed_result_id") is None
 
 
-def test_mark_phantom_recovery_healed_rejects_trashed_owned_result(forven_db):
+def test_mark_phantom_recovery_healed_rejects_trashed_owned_result(AXIOM_db):
     _insert_strategy("S12355")
     _insert_backtest_result("S12355", "S12355-btc-1")
     begin_phantom_recovery("S12355", trigger="read_strategies", next_status="replay_running")
@@ -796,7 +796,7 @@ def test_mark_phantom_recovery_healed_rejects_trashed_owned_result(forven_db):
     assert state.get("healed_result_id") is None
 
 
-def test_begin_phantom_recovery_rejects_invalid_status(forven_db):
+def test_begin_phantom_recovery_rejects_invalid_status(AXIOM_db):
     _insert_strategy("S12346")
 
     claimed = begin_phantom_recovery(
@@ -823,7 +823,7 @@ def test_begin_phantom_recovery_rejects_invalid_status(forven_db):
 
 
 @pytest.mark.parametrize("terminal_status", ["idle", "healed", "exhausted"])
-def test_begin_phantom_recovery_rejects_terminal_statuses(forven_db, terminal_status):
+def test_begin_phantom_recovery_rejects_terminal_statuses(AXIOM_db, terminal_status):
     _insert_strategy("S12352")
 
     claimed = begin_phantom_recovery(
@@ -849,7 +849,7 @@ def test_begin_phantom_recovery_rejects_terminal_statuses(forven_db, terminal_st
     assert event_count == 0
 
 
-def test_begin_phantom_recovery_is_atomic_across_concurrent_callers(forven_db):
+def test_begin_phantom_recovery_is_atomic_across_concurrent_callers(AXIOM_db):
     _insert_strategy("S12347")
     barrier = Barrier(2)
 
@@ -883,8 +883,8 @@ def test_begin_phantom_recovery_is_atomic_across_concurrent_callers(forven_db):
     assert state["replay_count"] == 1
 
 
-def test_init_db_migrates_pre_recovery_schema_and_keeps_existing_data(_isolate_forven_home):
-    db_path = cfg.FORVEN_DB
+def test_init_db_migrates_pre_recovery_schema_and_keeps_existing_data(_isolate_AXIOM_home):
+    db_path = cfg.AXIOM_DB
     with sqlite3.connect(str(db_path)) as conn:
         conn.executescript(
             """
@@ -1040,8 +1040,8 @@ def _old_iso(minutes: int) -> str:
 
 
 @pytest.mark.parametrize("task_status", ["cancelled", "failed", "done"])
-def test_janitor_finalizes_repair_with_dead_agent_task(forven_db, task_status):
-    from forven.phantom_recovery import reclaim_wedged_phantom_recovery_states
+def test_janitor_finalizes_repair_with_dead_agent_task(AXIOM_db, task_status):
+    from axiom.phantom_recovery import reclaim_wedged_phantom_recovery_states
 
     _insert_strategy("S30001")
     assert begin_phantom_recovery("S30001", trigger="test", next_status="replay_running")
@@ -1058,8 +1058,8 @@ def test_janitor_finalizes_repair_with_dead_agent_task(forven_db, task_status):
     assert f"repair_task_lost:{task_status}" in str(state["last_error"])
 
 
-def test_janitor_finalizes_repair_with_missing_agent_task(forven_db):
-    from forven.phantom_recovery import reclaim_wedged_phantom_recovery_states
+def test_janitor_finalizes_repair_with_missing_agent_task(AXIOM_db):
+    from axiom.phantom_recovery import reclaim_wedged_phantom_recovery_states
 
     _insert_strategy("S30002")
     assert begin_phantom_recovery("S30002", trigger="test", next_status="replay_running")
@@ -1075,8 +1075,8 @@ def test_janitor_finalizes_repair_with_missing_agent_task(forven_db):
     assert "repair_task_lost:missing" in str(state["last_error"])
 
 
-def test_janitor_leaves_alive_repair_task_alone(forven_db):
-    from forven.phantom_recovery import reclaim_wedged_phantom_recovery_states
+def test_janitor_leaves_alive_repair_task_alone(AXIOM_db):
+    from axiom.phantom_recovery import reclaim_wedged_phantom_recovery_states
 
     _insert_strategy("S30003")
     assert begin_phantom_recovery("S30003", trigger="test", next_status="replay_running")
@@ -1091,10 +1091,10 @@ def test_janitor_leaves_alive_repair_task_alone(forven_db):
     assert get_phantom_recovery_state("S30003")["status"] == "repair_pending"
 
 
-def test_janitor_skips_fresh_repair_claims(forven_db):
+def test_janitor_skips_fresh_repair_claims(AXIOM_db):
     """A claim younger than REPAIR_WEDGE_MIN_AGE is never touched — avoids
     racing the in-process completion callbacks."""
-    from forven.phantom_recovery import reclaim_wedged_phantom_recovery_states
+    from axiom.phantom_recovery import reclaim_wedged_phantom_recovery_states
 
     _insert_strategy("S30004")
     assert begin_phantom_recovery("S30004", trigger="test", next_status="replay_running")
@@ -1109,10 +1109,10 @@ def test_janitor_skips_fresh_repair_claims(forven_db):
     assert get_phantom_recovery_state("S30004")["status"] == "repair_pending"
 
 
-def test_janitor_redrives_stale_final_retry(monkeypatch, forven_db):
+def test_janitor_redrives_stale_final_retry(monkeypatch, AXIOM_db):
     """App closed mid-final-retry: status stays final_retry_running forever.
     The janitor must re-drive the replay after the stale window."""
-    import forven.phantom_recovery as pr
+    import axiom.phantom_recovery as pr
 
     _insert_strategy("S30005")
     assert begin_phantom_recovery("S30005", trigger="test", next_status="replay_running")
@@ -1147,8 +1147,8 @@ def test_janitor_redrives_stale_final_retry(monkeypatch, forven_db):
     assert len(submitted) == 1
 
 
-def test_janitor_leaves_fresh_final_retry_alone(monkeypatch, forven_db):
-    import forven.phantom_recovery as pr
+def test_janitor_leaves_fresh_final_retry_alone(monkeypatch, AXIOM_db):
+    import axiom.phantom_recovery as pr
 
     _insert_strategy("S30006")
     assert begin_phantom_recovery("S30006", trigger="test", next_status="replay_running")
@@ -1168,10 +1168,10 @@ def test_janitor_leaves_fresh_final_retry_alone(monkeypatch, forven_db):
     assert get_phantom_recovery_state("S30006")["status"] == "final_retry_running"
 
 
-def test_sweep_batch_not_starved_by_wedged_rows(monkeypatch, forven_db):
+def test_sweep_batch_not_starved_by_wedged_rows(monkeypatch, AXIOM_db):
     """B-31: unschedulable (wedged-active) rows at the top of the updated_at
     ordering must not consume the LIMIT batch and starve younger phantoms."""
-    import forven.phantom_recovery as pr
+    import axiom.phantom_recovery as pr
 
     # Oldest strategy: wedged in repair_pending with a LIVE agent task (the
     # janitor correctly leaves it; old sweep would burn the batch slot on it).

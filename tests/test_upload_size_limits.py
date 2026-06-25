@@ -1,4 +1,4 @@
-"""Regression tests for H-S7 (CSV upload size + content-type bound)."""
+﻿"""Regression tests for H-S7 (CSV upload size + content-type bound)."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import pytest
 from fastapi import HTTPException, UploadFile
 from starlette.datastructures import Headers
 
-from forven.routers.data import _read_upload_bounded, _max_upload_bytes
+from axiom.routers.data import _read_upload_bounded, _max_upload_bytes
 
 
 def _make_upload(content: bytes, *, content_type: str = "text/csv", filename: str = "data.csv") -> UploadFile:
@@ -18,17 +18,17 @@ def _make_upload(content: bytes, *, content_type: str = "text/csv", filename: st
 
 
 def test_max_upload_bytes_default(monkeypatch):
-    monkeypatch.delenv("FORVEN_MAX_UPLOAD_BYTES", raising=False)
+    monkeypatch.delenv("AXIOM_MAX_UPLOAD_BYTES", raising=False)
     assert _max_upload_bytes() == 50 * 1024 * 1024
 
 
 def test_max_upload_bytes_overridable(monkeypatch):
-    monkeypatch.setenv("FORVEN_MAX_UPLOAD_BYTES", "1024")
+    monkeypatch.setenv("AXIOM_MAX_UPLOAD_BYTES", "1024")
     assert _max_upload_bytes() == 1024
 
 
 def test_max_upload_bytes_garbage_falls_back(monkeypatch):
-    monkeypatch.setenv("FORVEN_MAX_UPLOAD_BYTES", "not-a-number")
+    monkeypatch.setenv("AXIOM_MAX_UPLOAD_BYTES", "not-a-number")
     assert _max_upload_bytes() == 50 * 1024 * 1024
 
 

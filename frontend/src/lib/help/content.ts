@@ -665,7 +665,7 @@ The danger is that optimization can find parameters that worked historically by 
 3. **Multi-objective**: Can optimize for multiple goals simultaneously (e.g., return AND risk)
 4. **Visualization**: Built-in tools to understand parameter importance and interactions
 
-Forven uses Optuna for parameter optimization, providing efficient search without exhaustive grid testing.`,
+Axiom uses Optuna for parameter optimization, providing efficient search without exhaustive grid testing.`,
 		proTips: [
 			'Start with 100+ trials for reliable optimization',
 			'Enable pruning to speed up by 2-5x',
@@ -1053,7 +1053,7 @@ Crypto exchanges typically charge 0.1% (10 bps) per trade, meaning a round-trip 
 		term: 'Webhook URL',
 		shortDescription: 'Destination endpoint for notifications.',
 		category: 'data',
-		fullDescription: 'Forven posts event messages to this endpoint. Keep it private to avoid alert spoofing.'
+		fullDescription: 'Axiom posts event messages to this endpoint. Keep it private to avoid alert spoofing.'
 	},
 	notification_level: {
 		id: 'notification_level',
@@ -1148,7 +1148,7 @@ Crypto exchanges typically charge 0.1% (10 bps) per trade, meaning a round-trip 
 		term: 'Degradation Alert %',
 		shortDescription: 'Threshold drop that triggers health alerts.',
 		category: 'risk',
-		fullDescription: 'If recent performance falls by this amount, Forven flags potential regime drift or edge decay.',
+		fullDescription: 'If recent performance falls by this amount, Axiom flags potential regime drift or edge decay.',
 		interpretations: [
 			{ range: '10% - 30%', label: 'Recommended', color: 'green', description: 'Balanced sensitivity for most strategies.' },
 			{ range: '< 10%', label: 'Sensitive', color: 'yellow', description: 'More alerts; catches issues earlier.' },
@@ -1217,9 +1217,9 @@ Crypto exchanges typically charge 0.1% (10 bps) per trade, meaning a round-trip 
 			'Set degradation alert threshold around 10-30% for balanced sensitivity'
 		]
 	},
-	forven_service_status: {
-		id: 'forven_service_status',
-		term: 'Forven Service Status',
+	axiom_service_status: {
+		id: 'axiom_service_status',
+		term: 'Axiom Service Status',
 		shortDescription: 'Live health panel for API, daemon, trading state, and bridge connectivity.',
 		category: 'risk',
 		fullDescription: 'Use this panel to confirm runtime readiness before changing settings or enabling live mode.',
@@ -1300,7 +1300,7 @@ Crypto exchanges typically charge 0.1% (10 bps) per trade, meaning a round-trip 
 		term: 'OAuth Quick Link',
 		shortDescription: 'Generates authorization URL/device flow details for provider login.',
 		category: 'strategy',
-		fullDescription: 'Use this to initiate an OAuth grant flow and authorize Forven against the provider account.',
+		fullDescription: 'Use this to initiate an OAuth grant flow and authorize Axiom against the provider account.',
 		proTips: [
 			'Complete generated OAuth links within 2-10 minutes to avoid state expiry',
 			'Recommended: finish setup in one session, then test immediately'
@@ -1344,7 +1344,7 @@ Crypto exchanges typically charge 0.1% (10 bps) per trade, meaning a round-trip 
 		term: 'Token Expiry Timestamp',
 		shortDescription: 'Optional explicit expiration timestamp for the current token set.',
 		category: 'risk',
-		fullDescription: 'Supports either ISO-8601 UTC timestamps or epoch milliseconds, and helps Forven determine when credentials should be renewed.',
+		fullDescription: 'Supports either ISO-8601 UTC timestamps or epoch milliseconds, and helps Axiom determine when credentials should be renewed.',
 		proTips: [
 			'Recommended format: ISO-8601 UTC (for example 2026-01-01T00:00:00Z)',
 			'Keep at least a 5-15 minute safety buffer before hard expiry'
@@ -1449,7 +1449,7 @@ Crypto exchanges typically charge 0.1% (10 bps) per trade, meaning a round-trip 
 		term: 'Model Provider',
 		shortDescription: 'Provider namespace used for model selection and routing.',
 		category: 'strategy',
-		fullDescription: 'Must match an authenticated provider key recognized by Forven.',
+		fullDescription: 'Must match an authenticated provider key recognized by Axiom.',
 		proTips: ['Recommended: choose providers with both primary and fallback models configured']
 	},
 	agent_model_id_setting: {
@@ -1579,7 +1579,7 @@ Crypto exchanges typically charge 0.1% (10 bps) per trade, meaning a round-trip 
 		term: 'Bot Operations Settings',
 		shortDescription: 'Runtime controls for cadence, queue throughput, and recovery behavior.',
 		category: 'optimization',
-		fullDescription: 'These settings directly control how aggressively Forven generates work, how fast queues drain, how scanner execution is permitted and routed, and how quickly stale tasks are recovered.',
+		fullDescription: 'These settings directly control how aggressively Axiom generates work, how fast queues drain, how scanner execution is permitted and routed, and how quickly stale tasks are recovered.',
 		proTips: [
 			'Increase throughput gradually, then monitor scheduler errors and queue latency',
 			'Use conservative values in live mode, aggressive values in paper mode',
@@ -1624,7 +1624,7 @@ Crypto exchanges typically charge 0.1% (10 bps) per trade, meaning a round-trip 
 		term: 'Adaptive Pipeline Throughput',
 		shortDescription: 'Dynamically scales testing throughput to clear backlog and accelerate promotion decisions.',
 		category: 'optimization',
-		fullDescription: 'When enabled, Forven adjusts testing-cycle throughput based on quick_screen/gauntlet backlog, cadence, and queue pressure. This helps move strong candidates forward quickly and purge weak candidates sooner.',
+		fullDescription: 'When enabled, Axiom adjusts testing-cycle throughput based on quick_screen/gauntlet backlog, cadence, and queue pressure. This helps move strong candidates forward quickly and purge weak candidates sooner.',
 		interpretations: [
 			{ range: 'enabled', label: 'Recommended', color: 'green', description: 'Best for high-throughput strategy factories.' },
 			{ range: 'disabled', label: 'Static', color: 'yellow', description: 'Uses fixed per-cycle limits only.' }

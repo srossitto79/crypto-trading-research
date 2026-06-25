@@ -105,7 +105,7 @@ Use Testnet: true (if available)
 
 ---
 
-## Step 3: Configure in Forven
+## Step 3: Configure in Axiom
 
 ### Via UI (Settings):
 
@@ -150,7 +150,7 @@ GENERIC_CCXT_TESTNET=true
 Then restart the backend:
 
 ```bash
-python -m forven api
+python -m axiom api
 ```
 
 ---
@@ -171,7 +171,7 @@ In Settings UI, look for a checkmark or "Connected" badge next to each exchange:
 ### Test Connection
 
 ```bash
-python -m forven soak
+python -m axiom soak
 ```
 
 Should show something like:
@@ -195,7 +195,7 @@ Should show something like:
 2. **Test on Testnet**:
    - Choose Binance or Kraken (both have good testnet)
    - Get testnet API keys
-   - Configure in Forven
+   - Configure in Axiom
    - Set `Use Testnet: true`
    - Run small test trades
 
@@ -258,7 +258,7 @@ See [CCXT Supported Exchanges](https://docs.ccxt.com/manual/docs/exchange-market
 Ctrl+C
 
 # Restart
-python -m forven api
+python -m axiom api
 ```
 
 ### "Feature Not Supported"
@@ -353,8 +353,8 @@ Leverage: 2x-5x  (start conservative!)
 
 1. **Choose your exchange** from the list above
 2. **Get API keys** using the instructions in "Step 2"
-3. **Configure in Forven** via Settings or .env
-4. **Verify connection** with `python -m forven soak`
+3. **Configure in Axiom** via Settings or .env
+4. **Verify connection** with `python -m axiom soak`
 5. **Test with small capital** before scaling up
 6. **Monitor logs** for any issues
 
@@ -378,7 +378,7 @@ If you encounter issues:
 
 1. Check the **Troubleshooting** section above
 2. Verify API key permissions on the exchange
-3. Check backend logs: `python -m forven api` (verbose output)
+3. Check backend logs: `python -m axiom api` (verbose output)
 4. Check frontend console (F12 → Console tab)
 5. Try with MockExchange first to isolate the issue
 

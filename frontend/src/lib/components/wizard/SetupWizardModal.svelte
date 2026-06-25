@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { wizardOpen, wizardStep, closeWizard, clearWizardResume } from '$lib/stores/setupWizard';
-	import { getForvenAuthProviders, reconcileAgentProviders, updateSettingsSection } from '$lib/api';
+	import { getAxiomAuthProviders, reconcileAgentProviders, updateSettingsSection } from '$lib/api';
 	import { addToast } from '$lib/stores/processTracker';
-	import { pendingValues } from '$lib/settings/dirty';
+	import { dirtyFields, originalValues, pendingValues, groupDirtyByBackendSection } from '$lib/settings/dirty';
 	import SettingsTrading from '$lib/components/settings/sections/SettingsTrading.svelte';
 	import SettingsAgents from '$lib/components/settings/sections/SettingsAgents.svelte';
 	import SettingsNotifications from '$lib/components/settings/sections/SettingsNotifications.svelte';
@@ -20,7 +20,7 @@
 	}
 
 	const STEPS: Step[] = [
-		{ id: 'welcome', label: 'Welcome', critical: false, description: 'Get Forven set up.' },
+		{ id: 'welcome', label: 'Welcome', critical: false, description: 'Get Axiom set up.' },
 		{ id: 'trading', label: 'Trading basics', critical: true, description: 'Pick an exchange and paste API credentials.' },
 		{ id: 'ai', label: 'AI providers', critical: true, description: 'Connect at least one provider so agents can run.' },
 		{ id: 'notifications', label: 'Notifications', critical: false, description: 'Discord alerts (optional).' },
@@ -49,9 +49,34 @@
 		getCredentialSubsectionForExchange(selectedExchange),
 	];
 
+	async function savePendingSettings(): Promise<void> {
+		const dirtyIds = new Set($dirtyFields);
+		if (dirtyIds.size === 0) return;
+		const snapshot: Record<string, unknown> = {};
+		const pend = $pendingValues;
+		const orig = $originalValues;
+		for (const id of dirtyIds) snapshot[id] = id in pend ? pend[id] : orig[id];
+		const grouped = groupDirtyByBackendSection(snapshot);
+		if (Object.keys(grouped).length === 0) return;
+		const results = await Promise.allSettled(
+			Object.entries(grouped).map(([section, payload]) => updateSettingsSection(section, payload)),
+		);
+		const failed = results.filter((r) => r.status === 'rejected');
+		if (failed.length === 0) {
+			originalValues.update((o) => ({ ...o, ...snapshot }));
+			dirtyFields.update((set) => {
+				const next = new Set(set);
+				for (const id of dirtyIds) next.delete(id);
+				return next;
+			});
+		} else {
+			addToast(`${failed.length} setting(s) failed to save`, 'error');
+		}
+	}
+
 	async function refreshProviders() {
 		try {
-			const response = await getForvenAuthProviders();
+			const response = await getAxiomAuthProviders();
 			const providers = response?.providers ?? [];
 			providersActive = providers.some((p) => p?.status === 'active');
 		} catch {
@@ -140,26 +165,30 @@
 
 	function skipMessage(s: Step): string {
 		if (s.id === 'trading') {
-			return "Skip Trading basics? Forven won't be able to place paper or live orders until you connect an exchange in Settings.";
+			return "Skip Trading basics? Axiom won't be able to place paper or live orders until you connect an exchange in Settings.";
 		}
-		return "Skip AI providers? Forven won't be able to run research, propose strategies, or chat until you connect one in Settings.";
+		return "Skip AI providers? Axiom won't be able to run research, propose strategies, or chat until you connect one in Settings.";
 	}
 
-	function goTo(i: number) {
+	async function goTo(i: number) {
 		if (i < 0 || i >= STEPS.length) return;
 		const current = STEPS[$wizardStep];
-		if (current.critical && !isSatisfied(current) && i > $wizardStep) {
-			if (!window.confirm(skipMessage(current))) return;
+		if (i > $wizardStep) {
+			await savePendingSettings();
+			if (current.critical && !isSatisfied(current)) {
+				if (!window.confirm(skipMessage(current))) return;
+			}
 		}
 		wizardStep.set(i);
 	}
 
 	async function finish() {
+		await savePendingSettings();
 		const unsatisfied = STEPS.filter((s) => s.critical && !isSatisfied(s));
 		if (unsatisfied.length > 0) {
 			const labels = unsatisfied.map((s) => s.label).join(', ');
 			const ok = window.confirm(
-				`You haven't finished: ${labels}. Forven won't run correctly until these are set up. Finish anyway?`
+				`You haven't finished: ${labels}. Axiom won't run correctly until these are set up. Finish anyway?`
 			);
 			if (!ok) return;
 		}
@@ -188,7 +217,7 @@
 		if (unsatisfied.length > 0) {
 			const labels = unsatisfied.map((s) => s.label).join(', ');
 			const ok = window.confirm(
-				`Skip setup? You haven't finished: ${labels}. Forven won't run correctly until these are set up.`
+				`Skip setup? You haven't finished: ${labels}. Axiom won't run correctly until these are set up.`
 			);
 			if (!ok) return;
 		}
@@ -231,7 +260,7 @@
 				{#if step.critical && !isSatisfied(step)}
 					<div class="px-6 py-3 bg-amber-900/30 border-b border-amber-800 text-sm text-amber-200">
 						{#if step.id === 'trading'}
-							⚠ Without an exchange API connection, Forven can't place paper or live orders.
+							⚠ Without an exchange API connection, Axiom can't place paper or live orders.
 						{:else}
 							⚠ Without an AI provider, agents can't research, propose strategies, or chat.
 						{/if}
@@ -241,7 +270,7 @@
 				<div class="flex-1 min-h-0 overflow-y-auto px-6 py-4">
 					{#if step.id === 'welcome'}
 						<p class="text-sm text-gray-300 leading-relaxed">
-							This wizard walks you through the minimum setup to run Forven.
+							This wizard walks you through the minimum setup to run Axiom.
 							You can skip anything and change it later in Settings.
 						</p>
 					{:else if step.id === 'trading'}
@@ -254,7 +283,7 @@
 						<div class="mb-4 rounded border border-cyan-900 bg-cyan-950/30 px-4 py-3 text-sm text-cyan-100">
 							<p class="font-semibold text-cyan-200">💡 On a budget? Recommended: Google Gemini → <span class="font-mono">gemini-2.5-flash-lite</span></p>
 							<ul class="mt-2 space-y-1 text-xs text-cyan-100/90 list-disc pl-5">
-								<li>Cheapest model that reliably runs Forven's agents (~$0.10 / $0.40 per 1M input/output tokens) and has a <strong>free tier</strong> to try.</li>
+								<li>Cheapest model that reliably runs Axiom's agents (~$0.10 / $0.40 per 1M input/output tokens) and has a <strong>free tier</strong> to try.</li>
 								<li>Supports the tool-calling and large context the agents need.</li>
 								<li><strong>Caveat:</strong> it trades some reasoning depth for cost. If strategy quality looks weak, step up to <span class="font-mono">gemini-2.5-flash</span> (still far cheaper than the pro/3.x models).</li>
 								<li><strong>Free tiers rate-limit hard</strong> (and can hit a project spend cap). For a continuous research loop, expect to add a small paid budget — see <a href="https://ai.studio/spend" target="_blank" rel="noopener" class="underline">ai.studio/spend</a>.</li>

@@ -1,6 +1,6 @@
-"""Tests for forven.cost_pricing — per-model USD cost estimation."""
+﻿"""Tests for Axiom.cost_pricing — per-model USD cost estimation."""
 
-from forven.cost_pricing import estimate_cost_usd
+from axiom.cost_pricing import estimate_cost_usd
 
 
 def test_openai_gpt4o_basic():

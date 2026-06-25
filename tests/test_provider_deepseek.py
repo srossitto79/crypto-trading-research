@@ -1,4 +1,4 @@
-"""Phase 4 / P4-T03 — DeepSeekProvider unit tests.
+﻿"""Phase 4 / P4-T03 — DeepSeekProvider unit tests.
 
 Confirms the direct DeepSeek Chat Completions round-trip:
 - inherits OpenAI function-calling format,
@@ -13,7 +13,7 @@ import asyncio
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from forven.agents.providers import (
+from axiom.agents.providers import (
     DeepSeekProvider,
     OpenAIProvider,
     ProviderResponse,
@@ -45,14 +45,14 @@ def test_factory_resolves_deepseek() -> None:
 
 
 def test_deepseek_default_endpoint() -> None:
-    with patch("forven.agents.providers.get_profile", return_value=None):
+    with patch("axiom.agents.providers.get_profile", return_value=None):
         provider = DeepSeekProvider()
         assert provider.ENDPOINT == "https://api.deepseek.com/v1/chat/completions"
 
 
 def test_deepseek_endpoint_override() -> None:
     with patch(
-        "forven.agents.providers.get_profile",
+        "axiom.agents.providers.get_profile",
         return_value={"base_url": "https://proxy.example.com/"},
     ):
         provider = DeepSeekProvider()
@@ -76,8 +76,8 @@ def test_deepseek_call_returns_tool_calls() -> None:
     mock_client.__aexit__ = AsyncMock(return_value=False)
     mock_client.post = AsyncMock(return_value=fake_resp)
 
-    with patch("forven.agents.providers.httpx.AsyncClient", return_value=mock_client), \
-         patch("forven.agents.providers.get_profile", return_value=None):
+    with patch("axiom.agents.providers.httpx.AsyncClient", return_value=mock_client), \
+         patch("axiom.agents.providers.get_profile", return_value=None):
         result = asyncio.run(provider.call(
             model_id="deepseek-chat",
             messages=[{"role": "user", "content": "list strategies"}],
@@ -119,8 +119,8 @@ def test_deepseek_text_only_response_stops() -> None:
     mock_client.__aexit__ = AsyncMock(return_value=False)
     mock_client.post = AsyncMock(return_value=fake_resp)
 
-    with patch("forven.agents.providers.httpx.AsyncClient", return_value=mock_client), \
-         patch("forven.agents.providers.get_profile", return_value=None):
+    with patch("axiom.agents.providers.httpx.AsyncClient", return_value=mock_client), \
+         patch("axiom.agents.providers.get_profile", return_value=None):
         result = asyncio.run(provider.call(
             model_id="deepseek-chat",
             messages=[],
@@ -144,9 +144,9 @@ def test_deepseek_endpoint_override_routes_request() -> None:
     mock_client.__aexit__ = AsyncMock(return_value=False)
     mock_client.post = AsyncMock(return_value=fake_resp)
 
-    with patch("forven.agents.providers.httpx.AsyncClient", return_value=mock_client), \
+    with patch("axiom.agents.providers.httpx.AsyncClient", return_value=mock_client), \
          patch(
-             "forven.agents.providers.get_profile",
+             "axiom.agents.providers.get_profile",
              return_value={"base_url": "https://proxy.example.com"},
          ):
         asyncio.run(provider.call(

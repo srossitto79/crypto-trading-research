@@ -1,12 +1,12 @@
-# ── Forven Paper-Trade Stack ────────────────────────────────────────
+# ── Axiom Paper-Trade Stack ────────────────────────────────────────
 #
 # Quick start:
 #   1. docker compose up -d
-#   2. docker compose exec forven python -m forven.agent health
-#   3. docker compose exec forven python -m forven.agent enqueue \
-#        --file /app/forven/strategies/builtin/example.py \
+#   2. docker compose exec axiom python -m axiom.agent health
+#   3. docker compose exec axiom python -m axiom.agent enqueue \
+#        --file /app/axiom/strategies/builtin/example.py \
 #        --dataset BTC/USDT-1h
-#   4. docker compose exec forven python -m forven.agent list --status paper
+#   4. docker compose exec axiom python -m axiom.agent list --status paper
 #
 # Paper-trade pipeline stages:
 #   researching → backtesting → paper → deployed
@@ -15,11 +15,11 @@
 # auto-advance through gates when they meet criteria.
 
 services:
-  # ── Forven backend (API + scheduler + gauntlet) ──────────────────
+  # ── Axiom backend (API + scheduler + gauntlet) ──────────────────
   backend:
     build: .
-    image: forven:latest
-    container_name: forven-backend
+    image: axiom:latest
+    container_name: axiom-backend
     restart: unless-stopped
 
     ports:
@@ -30,12 +30,12 @@ services:
 
     environment:
       # ── Container-specific overrides ──────────────────────────
-      - FORVEN_HOME=/data
-      - FORVEN_HOST=0.0.0.0
+      - AXIOM_HOME=/data
+      - AXIOM_HOST=0.0.0.0
 
       # ── Paper-trade behaviour ─────────────────────────────────
-      # - FORVEN_BOT_OWNS_RUNTIME=true # dont set it so the api will manage it without a separate container
-      - FORVEN_ENABLE_REGIME_LAB=0
+      # - AXIOM_BOT_OWNS_RUNTIME=true # dont set it so the api will manage it without a separate container
+      - AXIOM_ENABLE_REGIME_LAB=0
 
       # ── LAN metrics enricher ──────────────────────────────────
       - LAN_METRICS_URL=http://192.168.0.210:8001
@@ -45,8 +45,8 @@ services:
       - PYTHONDONTWRITEBYTECODE=1
 
     volumes:
-      - forven_data:/data
-      - ./forven:/app/forven:cached
+      - axiom_data:/data
+      - ./axiom:/app/axiom:cached
 
     healthcheck:
       test: ["CMD-SHELL", "curl -fSs http://127.0.0.1:8003/api/health || exit 1"]
@@ -70,23 +70,23 @@ services:
       context: ./frontend
       dockerfile: ../Dockerfile.frontend
       args:
-        - VITE_FORVEN_API_KEY=${VITE_FORVEN_API_KEY}
-        - VITE_FORVEN_OPERATOR_KEY=${VITE_FORVEN_OPERATOR_KEY}
-    image: forven-frontend:latest
-    container_name: forven-frontend
+        - VITE_AXIOM_API_KEY=${VITE_AXIOM_API_KEY}
+        - VITE_AXIOM_OPERATOR_KEY=${VITE_AXIOM_OPERATOR_KEY}
+    image: axiom-frontend:latest
+    container_name: axiom-frontend
     restart: unless-stopped
 
     ports:
       - "5173:5173"
 
     environment:
-      - FORVEN_CLIENT_BASE=http://192.168.0.200:8003
+      - AXIOM_CLIENT_BASE=http://192.168.0.200:8003
 
     depends_on:
       backend:
         condition: service_healthy
 
 volumes:
-  forven_data:
-    name: forven_data
+  axiom_data:
+    name: axiom_data
     driver: local

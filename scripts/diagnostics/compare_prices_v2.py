@@ -1,8 +1,8 @@
-import json
+﻿import json
 import time
 import pandas as pd
-from forven.data import get_exchange, _rows_to_frame
-from forven.market_data import fetch_hyperliquid_candles
+from axiom.data import get_exchange, _rows_to_frame
+from axiom.market_data import fetch_hyperliquid_candles
 
 def compare():
     symbol = "BTC/USDT"

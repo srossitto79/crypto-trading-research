@@ -1,4 +1,4 @@
-"""Tests for forven.maintenance terminal queue-row pruning (failed_retention_hours).
+﻿"""Tests for Axiom.maintenance terminal queue-row pruning (failed_retention_hours).
 
 Covers FIX #27: wire the previously-unconsumed ``failed_retention_hours`` knob so
 ``run_db_maintenance`` prunes definitively-terminal agent_tasks/tasks rows, uses a
@@ -9,8 +9,8 @@ old rows ever go).
 
 from datetime import datetime, timedelta, timezone
 
-from forven.db import get_db
-from forven.maintenance import (
+from axiom.db import get_db
+from axiom.maintenance import (
     DEFAULT_FAILED_RETENTION_HOURS,
     _FAILED_WINDOW_MULTIPLIER,
     prune_terminal_task_rows,
@@ -68,7 +68,7 @@ def _exists_task(task_id: int) -> bool:
 
 # --- default safety ---------------------------------------------------------
 
-def test_default_window_is_noop_for_recent_terminal_rows(forven_db):
+def test_default_window_is_noop_for_recent_terminal_rows(AXIOM_db):
     """At the default 72h window, recent terminal rows survive (effectively off)."""
     done = _insert_agent_task(status="done", completed_at=_ts(1))
     cancelled = _insert_task(status="cancelled", completed_at=_ts(10))
@@ -78,7 +78,7 @@ def test_default_window_is_noop_for_recent_terminal_rows(forven_db):
     assert _exists_task(cancelled)
 
 
-def test_run_db_maintenance_default_settings_does_not_prune_recent(forven_db):
+def test_run_db_maintenance_default_settings_does_not_prune_recent(AXIOM_db):
     """The wired job is a no-op for fresh queue rows under default settings."""
     done = _insert_agent_task(status="done", completed_at=_ts(2))
     summary = run_db_maintenance({})
@@ -86,7 +86,7 @@ def test_run_db_maintenance_default_settings_does_not_prune_recent(forven_db):
     assert _exists_agent(done)
 
 
-def test_zero_disables_pruning(forven_db):
+def test_zero_disables_pruning(AXIOM_db):
     old = _insert_agent_task(status="done", completed_at=_ts(10_000))
     assert prune_terminal_task_rows(0) == 0
     assert _exists_agent(old)
@@ -94,7 +94,7 @@ def test_zero_disables_pruning(forven_db):
 
 # --- definitive terminal pruning -------------------------------------------
 
-def test_old_definitive_terminal_rows_are_pruned(forven_db):
+def test_old_definitive_terminal_rows_are_pruned(AXIOM_db):
     keep = _insert_agent_task(status="done", completed_at=_ts(1))
     drop_done = _insert_agent_task(status="done", completed_at=_ts(100))
     drop_completed = _insert_agent_task(status="completed", completed_at=_ts(100))
@@ -110,7 +110,7 @@ def test_old_definitive_terminal_rows_are_pruned(forven_db):
     assert _exists_task(keep_task)
 
 
-def test_null_completed_at_is_never_pruned(forven_db):
+def test_null_completed_at_is_never_pruned(AXIOM_db):
     """A terminal row with no completion timestamp is left alone (can't age it)."""
     row = _insert_agent_task(status="done", completed_at=None)
     assert prune_terminal_task_rows(72) == 0
@@ -119,14 +119,14 @@ def test_null_completed_at_is_never_pruned(forven_db):
 
 # --- never-prune statuses ---------------------------------------------------
 
-def test_interrupted_rows_are_never_pruned(forven_db):
+def test_interrupted_rows_are_never_pruned(AXIOM_db):
     """``interrupted`` rows are re-pended on app restart — must survive pruning."""
     row = _insert_agent_task(status="interrupted", completed_at=_ts(10_000))
     assert prune_terminal_task_rows(1) == 0
     assert _exists_agent(row)
 
 
-def test_inflight_rows_are_never_pruned(forven_db):
+def test_inflight_rows_are_never_pruned(AXIOM_db):
     pending = _insert_agent_task(status="pending", completed_at=_ts(10_000))
     running = _insert_agent_task(status="running", completed_at=_ts(10_000))
     blocked = _insert_agent_task(status="blocked", completed_at=_ts(10_000))
@@ -138,7 +138,7 @@ def test_inflight_rows_are_never_pruned(forven_db):
 
 # --- failed rows: longer window + recovery-aware ----------------------------
 
-def test_failed_uses_longer_window_than_definitive(forven_db):
+def test_failed_uses_longer_window_than_definitive(AXIOM_db):
     """A failed row aged past the terminal window but inside the failed window survives."""
     # 100h old: past the 72h terminal window, but inside the failed window
     # (72h * multiplier). With a non-recoverable error it would otherwise be
@@ -150,7 +150,7 @@ def test_failed_uses_longer_window_than_definitive(forven_db):
     assert _exists_agent(inside)
 
 
-def test_failed_with_nonrecoverable_error_pruned_past_failed_window(forven_db):
+def test_failed_with_nonrecoverable_error_pruned_past_failed_window(AXIOM_db):
     failed_window_h = 72 * _FAILED_WINDOW_MULTIPLIER
     drop = _insert_agent_task(
         status="failed",
@@ -162,7 +162,7 @@ def test_failed_with_nonrecoverable_error_pruned_past_failed_window(forven_db):
     assert not _exists_agent(drop)
 
 
-def test_failed_with_recoverable_error_is_never_pruned(forven_db):
+def test_failed_with_recoverable_error_is_never_pruned(AXIOM_db):
     """Rows recovery would re-queue (rate-limit / transient) are never deleted,
     even when far older than the failed window."""
     failed_window_h = 72 * _FAILED_WINDOW_MULTIPLIER
@@ -183,7 +183,7 @@ def test_failed_with_recoverable_error_is_never_pruned(forven_db):
     assert _exists_task(transient)
 
 
-def test_recovery_protected_rows_do_not_block_other_deletions(forven_db):
+def test_recovery_protected_rows_do_not_block_other_deletions(AXIOM_db):
     """A recoverable failed row interleaved with deletable rows must not stop the
     page-forward scan from reaching the deletable ones."""
     failed_window_h = 72 * _FAILED_WINDOW_MULTIPLIER
@@ -206,7 +206,7 @@ def test_recovery_protected_rows_do_not_block_other_deletions(forven_db):
 
 # --- FTS trigger sanity -----------------------------------------------------
 
-def test_agent_tasks_fts_stays_consistent_after_prune(forven_db):
+def test_agent_tasks_fts_stays_consistent_after_prune(AXIOM_db):
     """The AFTER-DELETE FTS trigger must fire cleanly and keep the index queryable."""
     drop = _insert_agent_task(
         status="done", completed_at=_ts(1000), title="prunable-needle"

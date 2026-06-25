@@ -15,8 +15,8 @@ export interface ChatMessage {
 	toolName?: string;
 }
 
-const MESSAGE_STORAGE_KEY = 'forven_brain_chat';
-const UNREAD_STORAGE_KEY = 'forven_brain_chat_unread';
+const MESSAGE_STORAGE_KEY = 'axiom_brain_chat';
+const UNREAD_STORAGE_KEY = 'axiom_brain_chat_unread';
 
 function loadJson<T>(key: string, fallback: T): T {
 	if (!browser) return fallback;

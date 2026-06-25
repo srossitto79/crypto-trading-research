@@ -12,7 +12,7 @@
 
 	let dismissed = false;
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
-	const SESSION_KEY = 'forven.update_banner.dismissed';
+	const SESSION_KEY = 'axiom.update_banner.dismissed';
 	const POLL_MS = 24 * 60 * 60 * 1000; // re-check daily
 
 	function handleDismiss() {

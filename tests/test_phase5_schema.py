@@ -1,4 +1,4 @@
-"""Phase 5 / P5-T01 — schema migration v28 verification.
+﻿"""Phase 5 / P5-T01 — schema migration v28 verification.
 
 Confirms the Phase 5 schema bits exist after migration:
   * ``approvals.expires_at`` and the classifier columns
@@ -13,7 +13,7 @@ that the v28 migration ran.
 from __future__ import annotations
 
 
-from forven.db import SCHEMA_VERSION, get_db, init_db
+from axiom.db import SCHEMA_VERSION, get_db, init_db
 
 
 PHASE5_APPROVAL_COLUMNS = (
@@ -36,7 +36,7 @@ def _columns(conn, table: str) -> set[str]:
     return {row["name"] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
 
 
-def test_approvals_has_phase5_columns(forven_db) -> None:
+def test_approvals_has_phase5_columns(AXIOM_db) -> None:
     init_db()
     with get_db() as conn:
         cols = _columns(conn, "approvals")
@@ -44,7 +44,7 @@ def test_approvals_has_phase5_columns(forven_db) -> None:
     assert not missing, f"approvals table missing Phase 5 columns: {missing}"
 
 
-def test_agent_toolset_overrides_table_exists(forven_db) -> None:
+def test_agent_toolset_overrides_table_exists(AXIOM_db) -> None:
     init_db()
     with get_db() as conn:
         row = conn.execute(
@@ -57,7 +57,7 @@ def test_agent_toolset_overrides_table_exists(forven_db) -> None:
             assert required in cols, f"missing column {required!r}"
 
 
-def test_agent_toolset_overrides_composite_pk(forven_db) -> None:
+def test_agent_toolset_overrides_composite_pk(AXIOM_db) -> None:
     """PK is (agent_id, context, tool_name) — second insert with the same
     triple must fail (or be replaced via INSERT OR REPLACE)."""
     init_db()
@@ -84,7 +84,7 @@ def test_agent_toolset_overrides_composite_pk(forven_db) -> None:
     assert raised, "duplicate (agent_id, context, tool_name) should violate PK"
 
 
-def test_brain_routines_table_exists(forven_db) -> None:
+def test_brain_routines_table_exists(AXIOM_db) -> None:
     init_db()
     with get_db() as conn:
         row = conn.execute(
@@ -112,7 +112,7 @@ def test_brain_routines_table_exists(forven_db) -> None:
             assert required in cols, f"missing column {required!r}"
 
 
-def test_brain_routines_name_unique(forven_db) -> None:
+def test_brain_routines_name_unique(AXIOM_db) -> None:
     init_db()
     with get_db() as conn:
         conn.execute(

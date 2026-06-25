@@ -1,15 +1,15 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
-from forven.db import get_db, kv_set
-from forven.gauntlet.engine import resume_workflow
-from forven.gauntlet.settings import build_settings_snapshot
-from forven.gauntlet.status import get_strategy_gauntlet_status
-from forven.gauntlet.store import create_or_get_workflow, get_workflow_detail, update_step_status
-from forven.strategy_lifecycle import LifecycleCreateBody, create_lifecycle_strategy
+from axiom.db import get_db, kv_set
+from axiom.gauntlet.engine import resume_workflow
+from axiom.gauntlet.settings import build_settings_snapshot
+from axiom.gauntlet.status import get_strategy_gauntlet_status
+from axiom.gauntlet.store import create_or_get_workflow, get_workflow_detail, update_step_status
+from axiom.strategy_lifecycle import LifecycleCreateBody, create_lifecycle_strategy
 
 
-def test_lifecycle_strategy_creation_starts_quick_screen_workflow(forven_db):
-    kv_set("forven:pipeline:settings", {"gauntlet_auto_quick_screen_enabled": True})
+def test_lifecycle_strategy_creation_starts_quick_screen_workflow(AXIOM_db):
+    kv_set("axiom:pipeline:settings", {"gauntlet_auto_quick_screen_enabled": True})
 
     created = create_lifecycle_strategy(
         LifecycleCreateBody(
@@ -27,8 +27,8 @@ def test_lifecycle_strategy_creation_starts_quick_screen_workflow(forven_db):
     assert created["gauntlet_workflow_id"] == status["workflow_id"]
 
 
-def test_quick_screen_runtime_error_blocks_without_rejecting_strategy(forven_db, monkeypatch):
-    kv_set("forven:pipeline:settings", {"gauntlet_auto_quick_screen_enabled": True})
+def test_quick_screen_runtime_error_blocks_without_rejecting_strategy(AXIOM_db, monkeypatch):
+    kv_set("axiom:pipeline:settings", {"gauntlet_auto_quick_screen_enabled": True})
     created = create_lifecycle_strategy(
         LifecycleCreateBody(
             name="RSI Runtime Block",
@@ -41,7 +41,7 @@ def test_quick_screen_runtime_error_blocks_without_rejecting_strategy(forven_db,
     def _raise_runtime(*_args, **_kwargs):
         raise RuntimeError("backtest engine unavailable")
 
-    monkeypatch.setattr("forven.gauntlet.tasks._submit_backtest", _raise_runtime)
+    monkeypatch.setattr("axiom.gauntlet.tasks._submit_backtest", _raise_runtime)
 
     result = resume_workflow(created["gauntlet_workflow_id"], max_steps=1)
     status = get_strategy_gauntlet_status(created["id"])
@@ -54,8 +54,8 @@ def test_quick_screen_runtime_error_blocks_without_rejecting_strategy(forven_db,
     assert row["status"] == "quick_screen"
 
 
-def test_quick_screen_pass_advances_to_gate(forven_db, monkeypatch):
-    kv_set("forven:pipeline:settings", {"gauntlet_auto_quick_screen_enabled": True})
+def test_quick_screen_pass_advances_to_gate(AXIOM_db, monkeypatch):
+    kv_set("axiom:pipeline:settings", {"gauntlet_auto_quick_screen_enabled": True})
     created = create_lifecycle_strategy(
         LifecycleCreateBody(
             name="RSI Quick Pass",
@@ -97,7 +97,7 @@ def test_quick_screen_pass_advances_to_gate(forven_db, monkeypatch):
             },
         }
 
-    monkeypatch.setattr("forven.gauntlet.tasks._submit_backtest", _fake_submit)
+    monkeypatch.setattr("axiom.gauntlet.tasks._submit_backtest", _fake_submit)
 
     result = resume_workflow(created["gauntlet_workflow_id"], max_steps=2)
     status = get_strategy_gauntlet_status(created["id"])
@@ -120,7 +120,7 @@ def _created_strategy_for_workflow() -> str:
     return created["id"]
 
 
-def test_validation_optimization_resubmits_after_server_restart(forven_db, monkeypatch):
+def test_validation_optimization_resubmits_after_server_restart(AXIOM_db, monkeypatch):
     # A server restart flags the in-flight optimization result 'failed' with the
     # restart marker. The step must RE-SUBMIT a fresh optimization rather than poll
     # the dead result every tick — the old behavior burned the 8-retry budget and
@@ -143,9 +143,9 @@ def test_validation_optimization_resubmits_after_server_restart(forven_db, monke
         resubmits["n"] += 1
         return {"result_id": "OPT-FRESH", "status": "succeeded", "best_params": {"rsi_period": 21}}
 
-    monkeypatch.setattr("forven.gauntlet.tasks._submit_optimization", _fake_submit)
+    monkeypatch.setattr("axiom.gauntlet.tasks._submit_optimization", _fake_submit)
 
-    from forven.gauntlet.tasks import run_validation_optimization
+    from axiom.gauntlet.tasks import run_validation_optimization
 
     outcome = run_validation_optimization(workflow, opt_step)
 
@@ -154,7 +154,7 @@ def test_validation_optimization_resubmits_after_server_restart(forven_db, monke
     assert outcome["result_id"] == "OPT-FRESH"
 
 
-def test_validation_optimization_blocks_on_genuine_failure(forven_db, monkeypatch):
+def test_validation_optimization_blocks_on_genuine_failure(AXIOM_db, monkeypatch):
     # A non-restart failure keeps the bounded-retry path — it must NOT silently
     # re-submit (only restart-interruption is exempt).
     import json
@@ -175,9 +175,9 @@ def test_validation_optimization_blocks_on_genuine_failure(forven_db, monkeypatc
         called["n"] += 1
         return {"result_id": "X"}
 
-    monkeypatch.setattr("forven.gauntlet.tasks._submit_optimization", _fake_submit)
+    monkeypatch.setattr("axiom.gauntlet.tasks._submit_optimization", _fake_submit)
 
-    from forven.gauntlet.tasks import run_validation_optimization
+    from axiom.gauntlet.tasks import run_validation_optimization
 
     outcome = run_validation_optimization(workflow, opt_step)
 
@@ -185,7 +185,7 @@ def test_validation_optimization_blocks_on_genuine_failure(forven_db, monkeypatc
     assert called["n"] == 0, "a genuine failure must not auto-resubmit"
 
 
-def test_validation_optimization_uses_best_sweep_timeframe(forven_db, monkeypatch):
+def test_validation_optimization_uses_best_sweep_timeframe(AXIOM_db, monkeypatch):
     strategy_id = _created_strategy_for_workflow()
     workflow = create_or_get_workflow(strategy_id=strategy_id, created_by="pytest", settings_snapshot=build_settings_snapshot())
     detail = get_workflow_detail(workflow["id"])
@@ -214,9 +214,9 @@ def test_validation_optimization_uses_best_sweep_timeframe(forven_db, monkeypatc
         seen["timeframe"] = body.timeframe
         return {"result_id": "OPT-4H", "status": "succeeded", "best_params": {"rsi_period": 21}}
 
-    monkeypatch.setattr("forven.gauntlet.tasks._submit_optimization", _fake_submit)
+    monkeypatch.setattr("axiom.gauntlet.tasks._submit_optimization", _fake_submit)
 
-    from forven.gauntlet.tasks import run_validation_optimization
+    from axiom.gauntlet.tasks import run_validation_optimization
 
     outcome = run_validation_optimization(workflow, opt_step)
 
@@ -225,7 +225,7 @@ def test_validation_optimization_uses_best_sweep_timeframe(forven_db, monkeypatc
     assert seen["timeframe"] == "4h"
 
 
-def test_apply_optimized_defaults_updates_strategy_params_and_records_artifact(forven_db):
+def test_apply_optimized_defaults_updates_strategy_params_and_records_artifact(AXIOM_db):
     strategy_id = _created_strategy_for_workflow()
     workflow = create_or_get_workflow(strategy_id=strategy_id, created_by="pytest", settings_snapshot=build_settings_snapshot())
     detail = get_workflow_detail(workflow["id"])
@@ -237,7 +237,7 @@ def test_apply_optimized_defaults_updates_strategy_params_and_records_artifact(f
         output={"result_id": "OPT-1", "timeframe": "4h", "best_params": {"rsi_period": 21, "rsi_entry": 35}},
     )
 
-    from forven.gauntlet.tasks import run_apply_optimized_defaults
+    from axiom.gauntlet.tasks import run_apply_optimized_defaults
 
     outcome = run_apply_optimized_defaults(workflow, apply_step)
 
@@ -257,7 +257,7 @@ def test_apply_optimized_defaults_updates_strategy_params_and_records_artifact(f
     assert artifact["result_id"] == "OPT-1"
 
 
-def test_confirmation_backtest_uses_applied_defaults(forven_db, monkeypatch):
+def test_confirmation_backtest_uses_applied_defaults(AXIOM_db, monkeypatch):
     strategy_id = _created_strategy_for_workflow()
     workflow = create_or_get_workflow(strategy_id=strategy_id, created_by="pytest", settings_snapshot=build_settings_snapshot())
     detail = get_workflow_detail(workflow["id"])
@@ -271,9 +271,9 @@ def test_confirmation_backtest_uses_applied_defaults(forven_db, monkeypatch):
         seen_params.update(body.params or {})
         return {"result_id": "B-confirm", "metrics": {"total_trades": 20, "sharpe_ratio": 1.3}}
 
-    monkeypatch.setattr("forven.gauntlet.tasks._submit_backtest", _fake_submit)
+    monkeypatch.setattr("axiom.gauntlet.tasks._submit_backtest", _fake_submit)
 
-    from forven.gauntlet.tasks import run_confirmation_backtest
+    from axiom.gauntlet.tasks import run_confirmation_backtest
 
     outcome = run_confirmation_backtest(workflow, confirm_step)
 
@@ -282,7 +282,7 @@ def test_confirmation_backtest_uses_applied_defaults(forven_db, monkeypatch):
     assert seen_params == {"rsi_period": 21}
 
 
-def test_regime_split_adapter_rejects_vacuous_pass_payload(forven_db, monkeypatch):
+def test_regime_split_adapter_rejects_vacuous_pass_payload(AXIOM_db, monkeypatch):
     strategy_id = _created_strategy_for_workflow()
     workflow = create_or_get_workflow(strategy_id=strategy_id, created_by="pytest", settings_snapshot=build_settings_snapshot())
     detail = get_workflow_detail(workflow["id"])
@@ -299,17 +299,17 @@ def test_regime_split_adapter_rejects_vacuous_pass_payload(forven_db, monkeypatc
         )
 
     monkeypatch.setattr(
-        "forven.gauntlet.tasks._run_regime_split",
+        "axiom.gauntlet.tasks._run_regime_split",
         lambda _body: {"persisted_result_id": "RS-1", "verdict": "PASS", "n_regimes": 1, "profitable_regime_share": 1.0},
     )
     # Force regime_split to be REQUIRED so the legitimacy rejection still hard-gates (a
     # non-required test's failure is intentionally downgraded — see the test below).
     monkeypatch.setattr(
-        "forven.gauntlet.tasks._required_tests",
+        "axiom.gauntlet.tasks._required_tests",
         lambda _wf: ["walk_forward", "parameter_jitter", "cost_stress", "regime_split"],
     )
 
-    from forven.gauntlet.tasks import run_regime_split
+    from axiom.gauntlet.tasks import run_regime_split
 
     outcome = run_regime_split(workflow, regime_step)
 
@@ -317,7 +317,7 @@ def test_regime_split_adapter_rejects_vacuous_pass_payload(forven_db, monkeypatc
     assert "at least 2 regimes" in outcome["message"]
 
 
-def test_non_required_test_failure_does_not_fail_the_gate(forven_db, monkeypatch):
+def test_non_required_test_failure_does_not_fail_the_gate(AXIOM_db, monkeypatch):
     """A NON-required test that fails (verdict FAIL or legitimacy miss) must NOT drive the
     workflow terminal — it passes through (recorded) so a strategy that passed every
     REQUIRED test still reaches the promotion gate instead of being auto-archived."""
@@ -342,11 +342,11 @@ def test_non_required_test_failure_does_not_fail_the_gate(forven_db, monkeypatch
 
     # A genuine multi-regime result with a FAIL verdict (the strategy lost in some regimes).
     monkeypatch.setattr(
-        "forven.gauntlet.tasks._run_regime_split",
+        "axiom.gauntlet.tasks._run_regime_split",
         lambda _body: {"persisted_result_id": "RS-1", "verdict": "FAIL", "n_regimes": 3, "n_trades": 40, "profitable_regime_share": 0.33},
     )
 
-    from forven.gauntlet.tasks import run_regime_split
+    from axiom.gauntlet.tasks import run_regime_split
 
     outcome = run_regime_split(workflow, regime_step)
 
@@ -356,7 +356,7 @@ def test_non_required_test_failure_does_not_fail_the_gate(forven_db, monkeypatch
     assert outcome.get("non_required_failure") is True
 
 
-def test_paper_promotion_gate_uses_unified_status_and_transition(forven_db, monkeypatch):
+def test_paper_promotion_gate_uses_unified_status_and_transition(AXIOM_db, monkeypatch):
     strategy_id = _created_strategy_for_workflow()
     workflow = create_or_get_workflow(
         strategy_id=strategy_id,
@@ -384,10 +384,10 @@ def test_paper_promotion_gate_uses_unified_status_and_transition(forven_db, monk
         seen.update(kwargs)
         return {"from": "gauntlet", "to": "paper"}
 
-    monkeypatch.setattr("forven.gauntlet.tasks._transition_to_paper", _fake_transition)
+    monkeypatch.setattr("axiom.gauntlet.tasks._transition_to_paper", _fake_transition)
     gate_step = next(item for item in detail["steps"] if item["step_key"] == "paper_promotion_gate")
 
-    from forven.gauntlet.tasks import run_paper_promotion_gate
+    from axiom.gauntlet.tasks import run_paper_promotion_gate
 
     outcome = run_paper_promotion_gate(workflow, gate_step)
 

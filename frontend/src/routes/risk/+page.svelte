@@ -1,19 +1,19 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
 	import {
-		getForvenDashboard,
-		getForvenRisk,
+		getAxiomDashboard,
+		getAxiomRisk,
 		resetTradingHalt,
-		type ForvenDashboardResponse,
-		type ForvenRiskStatus,
+		type AxiomDashboardResponse,
+		type AxiomRiskStatus,
 	} from '$lib/api';
-	import { triggerEmergencyHalt } from '$lib/api/forven';
+	import { triggerEmergencyHalt } from '$lib/api/axiom';
 	import ErrorBanner from '$lib/components/ErrorBanner.svelte';
 	import LoadingState from '$lib/components/LoadingState.svelte';
 	import { createRealtimeRefresh, type RealtimeRefreshController } from '$lib/utils/realtime';
 
-	let dashboard: ForvenDashboardResponse | null = null;
-	let risk: ForvenRiskStatus | null = null;
+	let dashboard: AxiomDashboardResponse | null = null;
+	let risk: AxiomRiskStatus | null = null;
 	let loading = true;
 	let error = '';
 	let actionMessage = '';
@@ -119,8 +119,8 @@
 	async function loadRiskData() {
 		error = '';
 		const [dashboardResult, riskResult] = await Promise.allSettled([
-			getForvenDashboard(),
-			getForvenRisk(),
+			getAxiomDashboard(),
+			getAxiomRisk(),
 		]);
 
 		if (dashboardResult.status === 'fulfilled') {
@@ -202,7 +202,7 @@
 </script>
 
 <svelte:head>
-	<title>Risk Command | Forven</title>
+	<title>Risk Command | Axiom</title>
 	<meta name="description" content="Monitor drawdown, kill-switch state, and live portfolio risk guardrails." />
 </svelte:head>
 

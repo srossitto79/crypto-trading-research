@@ -1,10 +1,10 @@
-import asyncio
+﻿import asyncio
 
 import pytest
 
-from forven.control_plane import ops
-from forven.control_plane.models import QueueProcessingBody
-from forven.control_plane.queue_processing import (
+from axiom.control_plane import ops
+from axiom.control_plane.models import QueueProcessingBody
+from axiom.control_plane.queue_processing import (
     QUEUE_PROCESS_REQUEST_KEY,
     QUEUE_PROCESS_RESULT_KEY,
     build_queue_process_request,
@@ -42,7 +42,7 @@ def test_process_task_queues_delegates_processing_to_live_bot_worker(monkeypatch
         },
     )
     monkeypatch.setattr(
-        "forven.db.recover_stale_running_tasks",
+        "axiom.db.recover_stale_running_tasks",
         lambda stale_minutes=10, fail_agents=(): {
             "agent_requeued": 1,
             "agent_failed": 0,
@@ -80,7 +80,7 @@ def test_process_task_queues_falls_back_to_local_runtime_when_bot_worker_is_down
         lambda: {"lock_held": False, "active_pid": None, "active_pid_running": False},
     )
     monkeypatch.setattr(
-        "forven.db.recover_stale_running_tasks",
+        "axiom.db.recover_stale_running_tasks",
         lambda stale_minutes=10, fail_agents=(): {
             "agent_requeued": 0,
             "agent_failed": 0,
@@ -88,7 +88,7 @@ def test_process_task_queues_falls_back_to_local_runtime_when_bot_worker_is_down
         },
     )
     monkeypatch.setattr(
-        "forven.runtime_worker.process_agent_tasks_once",
+        "axiom.runtime_worker.process_agent_tasks_once",
         lambda: asyncio.sleep(0, result=1),
     )
 
@@ -125,7 +125,7 @@ def test_process_task_queues_falls_back_to_local_runtime_when_bot_lock_is_stale(
         },
     )
     monkeypatch.setattr(
-        "forven.db.recover_stale_running_tasks",
+        "axiom.db.recover_stale_running_tasks",
         lambda stale_minutes=10, fail_agents=(): {
             "agent_requeued": 0,
             "agent_failed": 0,
@@ -133,11 +133,11 @@ def test_process_task_queues_falls_back_to_local_runtime_when_bot_lock_is_stale(
         },
     )
     monkeypatch.setattr(
-        "forven.runtime_worker.process_agent_tasks_once",
+        "axiom.runtime_worker.process_agent_tasks_once",
         lambda: asyncio.sleep(0, result=2),
     )
     monkeypatch.setattr(
-        "forven.runtime_worker.process_brain_tasks_once",
+        "axiom.runtime_worker.process_brain_tasks_once",
         lambda: asyncio.sleep(0, result=1),
     )
 
@@ -158,9 +158,9 @@ def test_process_task_queues_falls_back_to_local_runtime_when_bot_lock_is_stale(
 
 def test_bot_consumes_queued_processing_request(monkeypatch):
     pytest.importorskip("discord")
-    from forven.bot import ForvenBot
+    from axiom.bot import AxiomBot
 
-    bot = ForvenBot(agent_id=None)
+    bot = AxiomBot(agent_id=None)
     store = {
         QUEUE_PROCESS_REQUEST_KEY: build_queue_process_request(
             process_agent_tasks=True,
@@ -175,8 +175,8 @@ def test_bot_consumes_queued_processing_request(monkeypatch):
     async def fake_process_pending_tasks():
         calls.append("brain")
 
-    monkeypatch.setattr("forven.bot.kv_get", lambda key, default=None: store.get(key, default))
-    monkeypatch.setattr("forven.bot.kv_set", lambda key, value: store.__setitem__(key, value))
+    monkeypatch.setattr("axiom.bot.kv_get", lambda key, default=None: store.get(key, default))
+    monkeypatch.setattr("axiom.bot.kv_set", lambda key, value: store.__setitem__(key, value))
     monkeypatch.setattr(bot, "_process_agent_tasks", fake_process_agent_tasks)
     monkeypatch.setattr(bot, "_process_pending_tasks", fake_process_pending_tasks)
 

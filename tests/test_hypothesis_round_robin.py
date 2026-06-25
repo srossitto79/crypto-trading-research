@@ -1,4 +1,4 @@
-"""Phase 3: round-robin depth enforcement.
+﻿"""Phase 3: round-robin depth enforcement.
 
 Once a hypothesis has been picked, the scheduler must NOT pick it again until
 it has accumulated `min_strategies_per_pick` children since the last pick.
@@ -7,8 +7,8 @@ it has accumulated `min_strategies_per_pick` children since the last pick.
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
-from forven.db import get_db, kv_set
-from forven.hypotheses import create_hypothesis
+from axiom.db import get_db, kv_set
+from axiom.hypotheses import create_hypothesis
 
 
 def _hyp(idx: int) -> dict:
@@ -38,7 +38,7 @@ def _hyp(idx: int) -> dict:
 
 def _set_min(min_per_pick: int, cap: int = 10) -> None:
     kv_set(
-        "forven:settings",
+        "axiom:settings",
         {
             "research_settings": {
                 "hypothesis_discipline": {
@@ -77,10 +77,10 @@ def _bypass_cooldown(hypothesis_id: str) -> None:
     )
 
 
-def test_first_pick_bypasses_depth_gate(forven_db):
+def test_first_pick_bypasses_depth_gate(AXIOM_db):
     """A hypothesis that has never been picked is always eligible (no
     last_dispatched_at means no in-progress depth requirement)."""
-    from forven.hypothesis_promotion import _score_rows
+    from axiom.hypothesis_promotion import _score_rows
 
     _set_min(3)
     _hyp(0)
@@ -88,10 +88,10 @@ def test_first_pick_bypasses_depth_gate(forven_db):
     assert len(rows) == 1
 
 
-def test_pick_blocked_until_min_strategies_reached(forven_db):
+def test_pick_blocked_until_min_strategies_reached(AXIOM_db):
     """A hypothesis picked once but with only 2 children since (min=3) is
     excluded from the next pick."""
-    from forven.hypothesis_promotion import _score_rows
+    from axiom.hypothesis_promotion import _score_rows
 
     _set_min(3)
     h = _hyp(0)
@@ -105,9 +105,9 @@ def test_pick_blocked_until_min_strategies_reached(forven_db):
     assert rows == []
 
 
-def test_pick_allowed_after_min_strategies_reached(forven_db):
+def test_pick_allowed_after_min_strategies_reached(AXIOM_db):
     """Same as above but with 3 children since pick — eligible."""
-    from forven.hypothesis_promotion import _score_rows
+    from axiom.hypothesis_promotion import _score_rows
 
     _set_min(3)
     h = _hyp(0)
@@ -123,10 +123,10 @@ def test_pick_allowed_after_min_strategies_reached(forven_db):
     assert rows[0]["id"] == h["id"]
 
 
-def test_strategies_before_pick_do_not_count(forven_db):
+def test_strategies_before_pick_do_not_count(AXIOM_db):
     """Children created BEFORE last_dispatched_at don't count toward the
     post-pick depth — only new ones do."""
-    from forven.hypothesis_promotion import _score_rows
+    from axiom.hypothesis_promotion import _score_rows
 
     _set_min(3)
     h = _hyp(0)
@@ -143,10 +143,10 @@ def test_strategies_before_pick_do_not_count(forven_db):
     assert rows == []
 
 
-def test_round_robin_distributes_picks(forven_db):
+def test_round_robin_distributes_picks(AXIOM_db):
     """3 hypotheses, min=2. Tick A picks H_a, then 2 children land. Tick B
     must pick H_b (or H_c), not H_a again."""
-    from forven.hypothesis_promotion import _score_rows
+    from axiom.hypothesis_promotion import _score_rows
 
     _set_min(2)
     h_a = _hyp(0)
@@ -164,12 +164,12 @@ def test_round_robin_distributes_picks(forven_db):
     assert ids == {h_a["id"], h_b["id"], h_c["id"]}
 
 
-def test_run_promotion_loop_logs_no_eligible(forven_db, caplog):
+def test_run_promotion_loop_logs_no_eligible(AXIOM_db, caplog):
     """When all hypotheses are depth-blocked, run_promotion_loop returns
     empty result with no_eligible flag and logs the structured message."""
     import logging
 
-    from forven.hypothesis_promotion import run_promotion_loop
+    from axiom.hypothesis_promotion import run_promotion_loop
 
     _set_min(5)
     h = _hyp(0)
@@ -179,8 +179,8 @@ def test_run_promotion_loop_logs_no_eligible(forven_db, caplog):
     after = (picked_at + timedelta(seconds=1)).isoformat()
     _seed_strategy(h["id"], "S1", after)
 
-    with caplog.at_level(logging.INFO, logger="forven.hypothesis_promotion"):
-        with patch("forven.brain.assign_task") as mock:
+    with caplog.at_level(logging.INFO, logger="axiom.hypothesis_promotion"):
+        with patch("axiom.brain.assign_task") as mock:
             result = run_promotion_loop(top_k=3)
     assert result["dispatched_ids"] == []
     assert result["picked"] == 0
@@ -189,10 +189,10 @@ def test_run_promotion_loop_logs_no_eligible(forven_db, caplog):
     assert any("no_eligible_hypothesis" in rec.message for rec in caplog.records)
 
 
-def test_disproven_strategies_still_count_for_depth(forven_db):
+def test_disproven_strategies_still_count_for_depth(AXIOM_db):
     """Children with negative outcomes still count toward depth — depth is
     about effort spent, not success."""
-    from forven.hypothesis_promotion import _score_rows
+    from axiom.hypothesis_promotion import _score_rows
 
     _set_min(3)
     h = _hyp(0)

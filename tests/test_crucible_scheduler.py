@@ -1,12 +1,12 @@
-"""Scheduler and compatibility wiring for the crucible planner."""
+﻿"""Scheduler and compatibility wiring for the crucible planner."""
 
 from __future__ import annotations
 
 import asyncio
 import json
 
-from forven.db import get_db
-from forven.scheduler import run_job, seed_forven_jobs
+from axiom.db import get_db
+from axiom.scheduler import run_job, seed_AXIOM_jobs
 
 
 def _scheduler_row(job_id: str) -> dict:
@@ -20,10 +20,10 @@ def _scheduler_row(job_id: str) -> dict:
     return dict(row)
 
 
-def test_seed_forven_jobs_enables_crucible_planner_and_disables_superseded_jobs(forven_db):
-    seed_forven_jobs()
+def test_seed_AXIOM_jobs_enables_crucible_planner_and_disables_superseded_jobs(AXIOM_db):
+    seed_AXIOM_jobs()
 
-    planner = _scheduler_row("forven-crucible-planner")
+    planner = _scheduler_row("Axiom-crucible-planner")
     payload = json.loads(planner["payload"] or "{}")
 
     assert planner["enabled"] == 1
@@ -32,25 +32,25 @@ def test_seed_forven_jobs_enables_crucible_planner_and_disables_superseded_jobs(
     assert planner["command"] == "crucible-planner"
     assert payload == {"kind": "crucible_planner", "limit": 5}
 
-    assert _scheduler_row("forven-ideation-daily")["enabled"] == 0
+    assert _scheduler_row("Axiom-ideation-daily")["enabled"] == 0
     # The Daily Coding Cycle is retired — not seeded at all (not merely disabled).
     with get_db() as conn:
         coding_row = conn.execute(
-            "SELECT id FROM scheduler_jobs WHERE id = 'forven-coding-daily'"
+            "SELECT id FROM scheduler_jobs WHERE id = 'Axiom-coding-daily'"
         ).fetchone()
     assert coding_row is None
 
-    assert _scheduler_row("forven-hypothesis-promotion-loop")["enabled"] == 1
+    assert _scheduler_row("Axiom-hypothesis-promotion-loop")["enabled"] == 1
 
 
-def test_run_job_dispatches_crucible_planner_kind(monkeypatch, forven_db):
+def test_run_job_dispatches_crucible_planner_kind(monkeypatch, AXIOM_db):
     calls: list[int] = []
 
     def _stub_crucible_planner_cycle(*, limit: int = 3):
         calls.append(limit)
         return {"planned": 1, "assigned": 1}
 
-    import forven.crucible_planner as crucible_planner_mod
+    import axiom.crucible_planner as crucible_planner_mod
 
     monkeypatch.setattr(
         crucible_planner_mod,
@@ -74,7 +74,7 @@ def test_run_job_dispatches_crucible_planner_kind(monkeypatch, forven_db):
     assert calls == [7]
 
 
-def test_brain_assign_research_cycle_delegates_to_crucible_planner(monkeypatch, forven_db):
+def test_brain_assign_research_cycle_delegates_to_crucible_planner(monkeypatch, AXIOM_db):
     calls: list[int] = []
 
     def _stub_crucible_planner_cycle(*, limit: int = 3):
@@ -84,8 +84,8 @@ def test_brain_assign_research_cycle_delegates_to_crucible_planner(monkeypatch, 
     def _legacy_assign_task(*args, **kwargs):
         raise AssertionError("assign_research_cycle should not fan out legacy agent_tasks")
 
-    import forven.brain as brain_mod
-    import forven.crucible_planner as crucible_planner_mod
+    import axiom.brain as brain_mod
+    import axiom.crucible_planner as crucible_planner_mod
 
     monkeypatch.setattr(
         crucible_planner_mod,

@@ -1,4 +1,4 @@
-"""Phase 1 (P1-T10) — recall_similar_situation tool registration tests.
+﻿"""Phase 1 (P1-T10) — recall_similar_situation tool registration tests.
 
 Asserts:
 - Tool is exposed to the Brain agent only (other agents can't see it).
@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import json
 
-from forven.agents.tool_registry import get_tools_for_agent
-from forven.db import get_db
+from axiom.agents.tool_registry import get_tools_for_agent
+from axiom.db import get_db
 
 
 def _ensure_agent(agent_id: str, name: str, role: str) -> None:
@@ -22,20 +22,20 @@ def _ensure_agent(agent_id: str, name: str, role: str) -> None:
         )
 
 
-def test_recall_tool_visible_to_brain(forven_db):
+def test_recall_tool_visible_to_brain(AXIOM_db):
     _ensure_agent("brain", "Brain", "brain")
     names = {t["name"] for t in get_tools_for_agent("brain")}
     assert "recall_similar_situation" in names
 
 
-def test_recall_tool_hidden_from_other_agents(forven_db):
+def test_recall_tool_hidden_from_other_agents(AXIOM_db):
     _ensure_agent("quant-researcher", "Quant Researcher", "quant-researcher")
     names = {t["name"] for t in get_tools_for_agent("quant-researcher")}
     assert "recall_similar_situation" not in names
 
 
-def test_recall_tool_returns_envelope_on_success(forven_db, monkeypatch):
-    from forven.agents import tools_brain  # noqa: F401 — registers tool
+def test_recall_tool_returns_envelope_on_success(AXIOM_db, monkeypatch):
+    from axiom.agents import tools_brain  # noqa: F401 — registers tool
 
     # Patch the underlying recall to avoid hitting any real LLMs.
     fake_result = {
@@ -48,9 +48,9 @@ def test_recall_tool_returns_envelope_on_success(forven_db, monkeypatch):
         "latency_ms": 12,
     }
 
-    import forven.agents.tools_brain as tb
+    import axiom.agents.tools_brain as tb
     monkeypatch.setattr(
-        "forven.recall.recall_similar_situation",
+        "axiom.recall.recall_similar_situation",
         lambda *a, **kw: fake_result,
     )
 
@@ -62,8 +62,8 @@ def test_recall_tool_returns_envelope_on_success(forven_db, monkeypatch):
     assert payload["aux_model"] == "openrouter:openai/gpt-4o-mini"
 
 
-def test_recall_tool_missing_query_returns_envelope(forven_db):
-    import forven.agents.tools_brain as tb
+def test_recall_tool_missing_query_returns_envelope(AXIOM_db):
+    import axiom.agents.tools_brain as tb
 
     raw = tb._tool_recall_similar_situation({"query": ""})
     payload = json.loads(raw)
@@ -71,55 +71,55 @@ def test_recall_tool_missing_query_returns_envelope(forven_db):
     assert payload["error"] == "missing_query"
 
 
-def test_recall_tool_clamps_limit_high(forven_db, monkeypatch):
+def test_recall_tool_clamps_limit_high(AXIOM_db, monkeypatch):
     captured: dict = {}
 
     def spy(query, scope="all", limit=5):
         captured["limit"] = limit
         return {"summary": "", "hits": [], "aux_model": None, "latency_ms": 0}
 
-    monkeypatch.setattr("forven.recall.recall_similar_situation", spy)
+    monkeypatch.setattr("axiom.recall.recall_similar_situation", spy)
 
-    import forven.agents.tools_brain as tb
+    import axiom.agents.tools_brain as tb
     tb._tool_recall_similar_situation({"query": "x", "limit": 9999})
     assert captured["limit"] == 20
 
 
-def test_recall_tool_clamps_limit_low(forven_db, monkeypatch):
+def test_recall_tool_clamps_limit_low(AXIOM_db, monkeypatch):
     captured: dict = {}
 
     def spy(query, scope="all", limit=5):
         captured["limit"] = limit
         return {"summary": "", "hits": [], "aux_model": None, "latency_ms": 0}
 
-    monkeypatch.setattr("forven.recall.recall_similar_situation", spy)
+    monkeypatch.setattr("axiom.recall.recall_similar_situation", spy)
 
-    import forven.agents.tools_brain as tb
+    import axiom.agents.tools_brain as tb
     tb._tool_recall_similar_situation({"query": "x", "limit": 0})
     assert captured["limit"] == 1
 
 
-def test_recall_tool_normalizes_unknown_scope_to_all(forven_db, monkeypatch):
+def test_recall_tool_normalizes_unknown_scope_to_all(AXIOM_db, monkeypatch):
     captured: dict = {}
 
     def spy(query, scope="all", limit=5):
         captured["scope"] = scope
         return {"summary": "", "hits": [], "aux_model": None, "latency_ms": 0}
 
-    monkeypatch.setattr("forven.recall.recall_similar_situation", spy)
+    monkeypatch.setattr("axiom.recall.recall_similar_situation", spy)
 
-    import forven.agents.tools_brain as tb
+    import axiom.agents.tools_brain as tb
     tb._tool_recall_similar_situation({"query": "x", "scope": "nonsense"})
     assert captured["scope"] == "all"
 
 
-def test_recall_tool_handles_underlying_exception(forven_db, monkeypatch):
+def test_recall_tool_handles_underlying_exception(AXIOM_db, monkeypatch):
     def boom(*_a, **_kw):
         raise RuntimeError("db wedged")
 
-    monkeypatch.setattr("forven.recall.recall_similar_situation", boom)
+    monkeypatch.setattr("axiom.recall.recall_similar_situation", boom)
 
-    import forven.agents.tools_brain as tb
+    import axiom.agents.tools_brain as tb
     raw = tb._tool_recall_similar_situation({"query": "x"})
     payload = json.loads(raw)
     assert payload["ok"] is False

@@ -1,4 +1,4 @@
-"""Phase 1 (P1-T11) — auxiliary model routing tests.
+﻿"""Phase 1 (P1-T11) — auxiliary model routing tests.
 
 Asserts the ``auxiliary`` block in the model-routing policy:
 - Defaults are seeded for compression, recall, skill_extraction, post_mortem.
@@ -14,9 +14,9 @@ from __future__ import annotations
 
 import pytest
 
-import forven.model_routing as model_routing
-from forven.db import kv_get, kv_set
-from forven.model_routing import (
+import axiom.model_routing as model_routing
+from axiom.db import kv_get, kv_set
+from axiom.model_routing import (
     AUXILIARY_TASK_KINDS,
     _DEFAULT_AUXILIARY_ROUTING,
     _MODEL_ROUTING_STORAGE_KEY,
@@ -40,7 +40,7 @@ def _no_provider_credentials(monkeypatch):
     monkeypatch.setattr(model_routing, "_provider_has_credentials", lambda p: False)
 
 
-def test_default_routing_includes_all_auxiliary_kinds(forven_db):
+def test_default_routing_includes_all_auxiliary_kinds(AXIOM_db):
     policy = get_model_routing()
     assert "auxiliary" in policy
     for kind in AUXILIARY_TASK_KINDS:
@@ -50,7 +50,7 @@ def test_default_routing_includes_all_auxiliary_kinds(forven_db):
         assert entry["model_id"]
 
 
-def test_get_auxiliary_routing_returns_recall_default(forven_db):
+def test_get_auxiliary_routing_returns_recall_default(AXIOM_db):
     routing = get_auxiliary_routing("recall")
     assert routing["provider"] == "openrouter"
     assert routing["model_id"] == "openai/gpt-4o-mini"
@@ -58,13 +58,13 @@ def test_get_auxiliary_routing_returns_recall_default(forven_db):
     assert routing["api_key"] is None
 
 
-def test_get_auxiliary_routing_returns_skill_extraction_default(forven_db):
+def test_get_auxiliary_routing_returns_skill_extraction_default(AXIOM_db):
     routing = get_auxiliary_routing("skill_extraction")
     assert routing["provider"] == "openrouter"
     assert routing["model_id"] == "anthropic/claude-3-5-sonnet"
 
 
-def test_get_auxiliary_routing_unknown_kind_falls_back_to_priority_zero(forven_db):
+def test_get_auxiliary_routing_unknown_kind_falls_back_to_priority_zero(AXIOM_db):
     routing = get_auxiliary_routing("not_a_real_task")
     # Should degrade gracefully — provider_priority[0] with its default model.
     policy = get_model_routing()
@@ -73,7 +73,7 @@ def test_get_auxiliary_routing_unknown_kind_falls_back_to_priority_zero(forven_d
     assert routing["model_id"]
 
 
-def test_update_one_auxiliary_key_preserves_others(forven_db):
+def test_update_one_auxiliary_key_preserves_others(AXIOM_db):
     policy = get_model_routing()
     # Mutate only `recall` — set a custom base_url + api_key.
     policy["auxiliary"]["recall"] = {
@@ -99,7 +99,7 @@ def test_update_one_auxiliary_key_preserves_others(forven_db):
         assert live["model_id"] == default["model_id"]
 
 
-def test_legacy_policy_missing_auxiliary_block_reads_with_defaults(forven_db):
+def test_legacy_policy_missing_auxiliary_block_reads_with_defaults(AXIOM_db):
     """A pre-existing kv row written before this field existed must still work."""
     legacy = {
         "provider_priority": ["openai", "minimax"],
@@ -121,7 +121,7 @@ def test_legacy_policy_missing_auxiliary_block_reads_with_defaults(forven_db):
         assert policy["auxiliary"][kind]["model_id"] == default["model_id"]
 
 
-def test_bad_shaped_auxiliary_entry_falls_back_to_default(forven_db):
+def test_bad_shaped_auxiliary_entry_falls_back_to_default(AXIOM_db):
     """Missing provider/model_id should reject the entry, not crash."""
     bad = {
         "provider_priority": ["openai"],
@@ -145,7 +145,7 @@ def test_bad_shaped_auxiliary_entry_falls_back_to_default(forven_db):
     assert policy["auxiliary"]["skill_extraction"]["provider"] == "openrouter"
 
 
-def test_per_task_base_url_and_api_key_round_trip(forven_db):
+def test_per_task_base_url_and_api_key_round_trip(AXIOM_db):
     policy = get_model_routing()
     policy["auxiliary"]["compression"] = {
         "provider": "openai",
@@ -159,7 +159,7 @@ def test_per_task_base_url_and_api_key_round_trip(forven_db):
     assert rt["api_key"] == "sk-proxy"
 
 
-def test_unsupported_provider_in_auxiliary_is_rejected(forven_db):
+def test_unsupported_provider_in_auxiliary_is_rejected(AXIOM_db):
     """Setting `provider: 'fakeco'` should not corrupt — it falls back to default."""
     bad = {
         "provider_priority": ["openai"],
@@ -194,7 +194,7 @@ def _connect_and_select(monkeypatch, providers: set[str]) -> None:
     """Mark ``providers`` connected in-app AND make their tokens resolve so the
     model_selection callable gate (connected ∩ selected) admits each provider's
     default model."""
-    from forven import model_selection
+    from axiom import model_selection
 
     for p in providers:
         model_selection.mark_provider_connected(p)
@@ -205,7 +205,7 @@ def _connect_and_select(monkeypatch, providers: set[str]) -> None:
     )
 
 
-def test_aux_routing_diverts_only_to_connected_and_callable_provider(forven_db, monkeypatch):
+def test_aux_routing_diverts_only_to_connected_and_callable_provider(AXIOM_db, monkeypatch):
     """All five aux kinds default to openrouter. With openrouter uncredentialed
     but openai CONNECTED + SELECTED (its default model gpt-5.2 is a routing
     selection), routing must divert to openai with its default model."""
@@ -219,7 +219,7 @@ def test_aux_routing_diverts_only_to_connected_and_callable_provider(forven_db, 
         assert routing["model_id"] == get_model_routing()["default_models"]["openai"]
 
 
-def test_aux_routing_does_not_divert_to_env_only_unselected_provider(forven_db, monkeypatch):
+def test_aux_routing_does_not_divert_to_env_only_unselected_provider(AXIOM_db, monkeypatch):
     """openai is env-credentialed but NOT connected in-app: it is NOT a valid
     substitute. The original (openrouter) entry is returned unchanged so the
     downstream call fails closed instead of silently spending on an unselected
@@ -234,10 +234,10 @@ def test_aux_routing_does_not_divert_to_env_only_unselected_provider(forven_db, 
     assert routing["model_id"] == "openai/gpt-4o-mini"
 
 
-def test_aux_routing_divert_emits_loud_runtime_health_event(forven_db, monkeypatch):
+def test_aux_routing_divert_emits_loud_runtime_health_event(AXIOM_db, monkeypatch):
     """A divert must be operator-visible: a runtime-health ``fallback`` event is
     recorded against the original provider, naming the substitute."""
-    from forven import provider_runtime_health as prh
+    from axiom import provider_runtime_health as prh
 
     monkeypatch.setattr(model_routing, "_provider_has_credentials", lambda p: False)
     _connect_and_select(monkeypatch, {"openai"})
@@ -255,9 +255,9 @@ def test_aux_routing_divert_emits_loud_runtime_health_event(forven_db, monkeypat
     assert "openrouter" in event["message"] and "openai" in event["message"]
 
 
-def test_aux_routing_with_mocked_auth_profiles_resolves_to_available_provider(forven_db, monkeypatch):
+def test_aux_routing_with_mocked_auth_profiles_resolves_to_available_provider(AXIOM_db, monkeypatch):
     """Exercise the REAL credential probe against mocked auth profiles
-    (forven.auth.store.get_token) rather than a stubbed predicate. Divert still
+    (Axiom.auth.store.get_token) rather than a stubbed predicate. Divert still
     requires the substitute to be connected in-app AND callable."""
     monkeypatch.setattr(
         model_routing, "_provider_has_credentials", _REAL_PROVIDER_HAS_CREDENTIALS
@@ -266,11 +266,11 @@ def test_aux_routing_with_mocked_auth_profiles_resolves_to_available_provider(fo
     def _get_token(provider: str) -> str:
         if provider in ("openai", "minimax"):
             return "tok"
-        raise ValueError(f"No auth profile for {provider}. Run: forven auth login {provider}")
+        raise ValueError(f"No auth profile for {provider}. Run: Axiom auth login {provider}")
 
-    monkeypatch.setattr("forven.auth.store.get_token", _get_token)
+    monkeypatch.setattr("axiom.auth.store.get_token", _get_token)
     # Connect openai in-app so it is a valid (connected ∩ selected) substitute.
-    from forven import model_selection
+    from axiom import model_selection
 
     model_selection.mark_provider_connected("openai")
 
@@ -279,14 +279,14 @@ def test_aux_routing_with_mocked_auth_profiles_resolves_to_available_provider(fo
     assert routing["model_id"]
 
 
-def test_aux_routing_keeps_openrouter_when_it_has_credentials(forven_db, monkeypatch):
+def test_aux_routing_keeps_openrouter_when_it_has_credentials(AXIOM_db, monkeypatch):
     monkeypatch.setattr(model_routing, "_provider_has_credentials", lambda p: True)
     routing = get_auxiliary_routing("recall")
     assert routing["provider"] == "openrouter"
     assert routing["model_id"] == "openai/gpt-4o-mini"
 
 
-def test_aux_routing_explicit_api_key_is_never_diverted(forven_db, monkeypatch):
+def test_aux_routing_explicit_api_key_is_never_diverted(AXIOM_db, monkeypatch):
     """An operator-configured per-task api_key means the routed provider is
     intentional — never silently swap it out, even if no stored profile."""
     monkeypatch.setattr(model_routing, "_provider_has_credentials", lambda p: p == "openai")
@@ -304,7 +304,7 @@ def test_aux_routing_explicit_api_key_is_never_diverted(forven_db, monkeypatch):
     assert routing["api_key"] == "sk-or-test"
 
 
-def test_aux_routing_nothing_credentialed_keeps_routed_provider(forven_db):
+def test_aux_routing_nothing_credentialed_keeps_routed_provider(AXIOM_db):
     """With NO credentialed providers (autouse fixture), the entry is returned
     unchanged so the eventual error names the provider the policy asked for."""
     routing = get_auxiliary_routing("approval")
@@ -312,7 +312,7 @@ def test_aux_routing_nothing_credentialed_keeps_routed_provider(forven_db):
     assert routing["model_id"] == "openai/gpt-4o-mini"
 
 
-def test_auxiliary_block_is_persisted_after_update(forven_db):
+def test_auxiliary_block_is_persisted_after_update(AXIOM_db):
     policy = get_model_routing()
     policy["auxiliary"]["recall"] = {
         "provider": "openai",

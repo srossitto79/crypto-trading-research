@@ -1,17 +1,17 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-from forven.api_domains import hypotheses as hypotheses_domain
-from forven.db import get_db
+from axiom.api_domains import hypotheses as hypotheses_domain
+from axiom.db import get_db
 
 
 @pytest.fixture
-def seeded_hypothesis(forven_db):
+def seeded_hypothesis(AXIOM_db):
     """Create an operator-seeded hypothesis with thesis/mechanism already filled."""
-    from forven.hypotheses import create_hypothesis
+    from axiom.hypotheses import create_hypothesis
 
     h = create_hypothesis(
         title="Bollinger Band + RSI",
@@ -54,7 +54,7 @@ def test_generate_strategies_enqueues_operator_task(seeded_hypothesis):
     assert row["status"] == "pending"
 
 
-def test_generate_strategies_missing_hypothesis_404(forven_db):
+def test_generate_strategies_missing_hypothesis_404(AXIOM_db):
     with pytest.raises(HTTPException) as exc:
         hypotheses_domain.generate_strategies_payload("HYP-does-not-exist")
     assert exc.value.status_code == 404
@@ -73,7 +73,7 @@ def test_generate_strategies_dedupes_active_task(seeded_hypothesis):
 
 def test_generate_strategies_route_returns_task(seeded_hypothesis):
     """POST /api/hypotheses/{id}/generate-strategies enqueues via the real route."""
-    from forven.api import app
+    from axiom.api import app
 
     client = TestClient(app)
     response = client.post(
@@ -98,10 +98,10 @@ def test_generate_strategies_route_returns_task(seeded_hypothesis):
 
 
 @pytest.fixture
-def placeholder_hypothesis(forven_db):
+def placeholder_hypothesis(AXIOM_db):
     """operator_seed hypothesis whose fields still carry paste-time boilerplate —
     i.e. the source was pasted but no strategy was extracted."""
-    from forven.hypotheses import create_hypothesis
+    from axiom.hypotheses import create_hypothesis
 
     return create_hypothesis(
         title="Operator-seeded from youtube",
@@ -139,7 +139,7 @@ def test_generate_strategies_force_bypasses_placeholder_gate(placeholder_hypothe
 
 
 def test_generate_strategies_route_surfaces_422_on_placeholder(placeholder_hypothesis):
-    from forven.api import app
+    from axiom.api import app
 
     client = TestClient(app)
     response = client.post(

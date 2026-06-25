@@ -1,10 +1,10 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
-from forven.regime import RANGE_BOUND, resolve_regime_gate
+from axiom.regime import RANGE_BOUND, resolve_regime_gate
 
 
 def test_backtest_module_imports_with_regime_gate_available():
-    import forven.strategies.backtest as backtest_mod
+    import axiom.strategies.backtest as backtest_mod
 
     assert callable(backtest_mod.resolve_regime_gate)
 

@@ -1,15 +1,15 @@
-"""Tests for research-task context assembly."""
+﻿"""Tests for research-task context assembly."""
 
 from __future__ import annotations
 
 import asyncio
 import json
 
-from forven.research_contract import build_research_contract, default_research_settings
+from axiom.research_contract import build_research_contract, default_research_settings
 
 
 def test_build_research_context_excludes_chroma_by_default():
-    from forven.research_context import build_research_context
+    from axiom.research_context import build_research_context
 
     contract = build_research_contract(
         lane="exploration",
@@ -36,7 +36,7 @@ def test_build_research_context_excludes_chroma_by_default():
 
 
 def test_build_research_context_renders_optional_inspiration_memory():
-    from forven.research_context import build_research_context
+    from axiom.research_context import build_research_context
 
     contract = build_research_contract(
         lane="exploration",
@@ -58,7 +58,7 @@ def test_build_research_context_renders_optional_inspiration_memory():
 
 
 def test_build_research_context_includes_strategy_diversity_guard(monkeypatch):
-    from forven.research_context import build_research_context
+    from axiom.research_context import build_research_context
 
     contract = build_research_contract(
         lane="exploration",
@@ -66,7 +66,7 @@ def test_build_research_context_includes_strategy_diversity_guard(monkeypatch):
         available_datasets=["ohlcv"],
     )
     monkeypatch.setattr(
-        "forven.research_context.render_strategy_diversity_guard",
+        "axiom.research_context.render_strategy_diversity_guard",
         lambda **kwargs: "# STRATEGY DIVERSITY GUARD\n- RSI is cooled down.",
     )
 
@@ -83,7 +83,7 @@ def test_build_research_context_includes_strategy_diversity_guard(monkeypatch):
 
 
 def test_coerce_research_contract_tolerates_invalid_spawn_limits():
-    from forven.research_context import coerce_research_contract
+    from axiom.research_context import coerce_research_contract
 
     contract = coerce_research_contract(
         {
@@ -101,7 +101,7 @@ def test_coerce_research_contract_tolerates_invalid_spawn_limits():
 
 
 def test_coerce_research_contract_parses_falsey_external_sources_strings():
-    from forven.research_context import coerce_research_contract
+    from axiom.research_context import coerce_research_contract
 
     contract = coerce_research_contract(
         {
@@ -115,7 +115,7 @@ def test_coerce_research_contract_parses_falsey_external_sources_strings():
 
 
 def test_build_research_context_treats_off_inspiration_memory_case_insensitively():
-    from forven.research_context import build_research_context, coerce_research_contract
+    from axiom.research_context import build_research_context, coerce_research_contract
 
     contract = coerce_research_contract(
         {
@@ -137,9 +137,9 @@ def test_build_research_context_treats_off_inspiration_memory_case_insensitively
     assert "INSPIRATION MEMORY" not in payload
 
 
-def test_run_agent_task_uses_research_context_for_research_tasks(forven_db, monkeypatch):
-    from forven.agents import runner
-    from forven.db import get_db
+def test_run_agent_task_uses_research_context_for_research_tasks(AXIOM_db, monkeypatch):
+    from axiom.agents import runner
+    from axiom.db import get_db
 
     now = "2026-04-14T00:00:00+00:00"
     research_contract = build_research_contract(

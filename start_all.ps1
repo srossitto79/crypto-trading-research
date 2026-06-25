@@ -199,9 +199,9 @@ function Get-BotProcessIds {
                 Where-Object {
                     $cmd = [string]$_.CommandLine
                     $cmd -match $escapedRepoRoot -and (
-                        $cmd -match 'from forven\.bot import run_bot' -or
-                        $cmd -match '-m\s+forven(\.cli)?\s+bot' -or
-                        $cmd -match '-m\s+forven\s+bot'
+                        $cmd -match 'from axiom\.bot import run_bot' -or
+                        $cmd -match '-m axiom(\.cli)?\s+bot' -or
+                        $cmd -match '-m axiom\s+bot'
                     )
                 } |
                 Select-Object -ExpandProperty ProcessId -Unique
@@ -339,8 +339,8 @@ function Get-DaemonProcessIds {
                 Where-Object {
                     $cmd = [string]$_.CommandLine
                     $cmd -match $escapedRepoRoot -and (
-                        $cmd -match '-m\s+forven\s+daemon\s+start' -or
-                        $cmd -match '-m\s+forven(\.cli)?\s+daemon\s+start'
+                        $cmd -match '-m axiom\s+daemon\s+start' -or
+                        $cmd -match '-m axiom(\.cli)?\s+daemon\s+start'
                     )
                 } |
                 Select-Object -ExpandProperty ProcessId -Unique
@@ -413,7 +413,7 @@ function Install-BackendDeps {
         Invoke-Checked -FilePath $Python -CommandArgs @("-m","pip","install","-e",".")
     } catch {
         Write-WarnMessage "pip install -e . failed; installing runtime deps directly."
-        & $Python -m pip uninstall -y forven | Out-Null
+        & $Python -m pip uninstall -y axiom | Out-Null
         Invoke-Checked -FilePath $Python -CommandArgs @(
             "-m","pip","install",
             "click>=8.0","rich>=13.0","httpx>=0.25","PyJWT>=2.8","cryptography>=41.0","croniter>=2.0",
@@ -450,7 +450,7 @@ function Test-BotTokenConfigured {
         return $true
     }
 
-    $configPath = Join-Path $env:FORVEN_HOME "config.json"
+    $configPath = Join-Path $env:AXIOM_HOME "config.json"
     if (-not (Test-Path $configPath)) {
         return $false
     }
@@ -494,11 +494,11 @@ function Get-PythonLockStatus {
 }
 
 function Get-BotLockStatus {
-    return Get-PythonLockStatus -ModuleName "forven.bot" -FunctionName "get_bot_lock_status"
+    return Get-PythonLockStatus -ModuleName "axiom.bot" -FunctionName "get_bot_lock_status"
 }
 
 function Get-DaemonLockStatus {
-    return Get-PythonLockStatus -ModuleName "forven.daemon" -FunctionName "get_daemon_lock_status"
+    return Get-PythonLockStatus -ModuleName "axiom.daemon" -FunctionName "get_daemon_lock_status"
 }
 
 function Get-WatchdogOwnerLockPath {
@@ -636,7 +636,7 @@ function Release-WatchdogOwnerLock {
 
 function Get-LabWorkerStatus {
     try {
-        $json = & $python -c "import json; from forven.lab_worker_service import get_lab_worker_status; print(json.dumps(get_lab_worker_status()))" 2>$null
+        $json = & $python -c "import json; from axiom.lab_worker_service import get_lab_worker_status; print(json.dumps(get_lab_worker_status()))" 2>$null
         if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace(($json -join ""))) {
             return $null
         }
@@ -711,7 +711,7 @@ function Start-BackendService {
         Throw-StartAllError "Port $backendPort occupied by unkillable process and service is not healthy."
     }
     Write-Info "Starting backend on ${backendHost}:$backendPort ..."
-    $proc = Start-LoggedProcess -FilePath $python -CommandArgs @("-m","uvicorn","--app-dir",$script:RepoRoot,"forven.api:app","--host",$backendHost,"--port",$backendPort.ToString(),"--workers",$backendWorkers.ToString()) `
+    $proc = Start-LoggedProcess -FilePath $python -CommandArgs @("-m","uvicorn","--app-dir",$script:RepoRoot,"axiom.api:app","--host",$backendHost,"--port",$backendPort.ToString(),"--workers",$backendWorkers.ToString()) `
         -WorkingDirectory $script:RepoRoot -StdOutPath $backendLog -StdErrPath $backendErr
     if (-not (Wait-ForHttp -Url $backendHealth -Label "Backend")) {
         if (Test-Path $backendErr) { Get-Content $backendErr -Tail 120 }
@@ -826,7 +826,7 @@ function Ensure-BotService {
     }
 
     if ($forceRestart -eq "0" -and $lockHealthy) {
-        Write-Info "Reusing healthy Forven bot."
+        Write-Info "Reusing healthy Axiom bot."
         Add-StartupSummary -Service "bot" -Action "reused" -Details "pid=$lockPid"
         return $null
     }
@@ -839,7 +839,7 @@ function Ensure-BotService {
             }
             $action = "restarted"
         } catch {
-            Write-WarnMessage "Could not stop existing Forven bot; leaving it alone so the app can still start. $($_.Exception.Message)"
+            Write-WarnMessage "Could not stop existing Axiom bot; leaving it alone so the app can still start. $($_.Exception.Message)"
             Add-StartupSummary -Service "bot" -Action "skipped" -Details "existing process unavailable"
             return $null
         }
@@ -847,8 +847,8 @@ function Ensure-BotService {
         $action = "started"
     }
 
-    Write-Info "Starting Forven bot ..."
-    $proc = Start-LoggedProcess -FilePath $python -CommandArgs @("-m","forven","bot","start") `
+    Write-Info "Starting Axiom bot ..."
+    $proc = Start-LoggedProcess -FilePath $python -CommandArgs @("-m","axiom","bot","start") `
         -WorkingDirectory $script:RepoRoot -StdOutPath $botLog -StdErrPath $botErr
     Add-StartupSummary -Service "bot" -Action $action -Details "pid=$($proc.Id)"
     return $proc
@@ -872,7 +872,7 @@ function Ensure-DaemonService {
     }
 
     if ($forceRestart -eq "0" -and $lockHealthy) {
-        Write-Info "Reusing healthy Forven daemon."
+        Write-Info "Reusing healthy Axiom daemon."
         Add-StartupSummary -Service "daemon" -Action "reused" -Details "pid=$lockPid"
         return $null
     }
@@ -885,7 +885,7 @@ function Ensure-DaemonService {
             }
             $action = "restarted"
         } catch {
-            Write-WarnMessage "Could not stop existing Forven daemon; leaving it alone so the app can still start. $($_.Exception.Message)"
+            Write-WarnMessage "Could not stop existing Axiom daemon; leaving it alone so the app can still start. $($_.Exception.Message)"
             Add-StartupSummary -Service "daemon" -Action "skipped" -Details "existing process unavailable"
             return $null
         }
@@ -893,8 +893,8 @@ function Ensure-DaemonService {
         $action = "started"
     }
 
-    Write-Info "Starting Forven daemon (data/risk loop) ..."
-    $proc = Start-LoggedProcess -FilePath $python -CommandArgs @("-m","forven","daemon","start") `
+    Write-Info "Starting Axiom daemon (data/risk loop) ..."
+    $proc = Start-LoggedProcess -FilePath $python -CommandArgs @("-m","axiom","daemon","start") `
         -WorkingDirectory $script:RepoRoot -StdOutPath $daemonLog -StdErrPath $daemonErr
     Start-Sleep -Seconds 2
     if ($null -ne $proc -and $proc.HasExited -and (Test-Path $daemonErr)) {
@@ -945,7 +945,7 @@ function Ensure-LabWorkerService {
 
     $action = if ($workerPid -gt 0) { "restarted" } else { "started" }
     Write-Info "Starting Regime Lab worker ..."
-    $proc = Start-LoggedProcess -FilePath $python -CommandArgs @("-m","forven","lab","worker") `
+    $proc = Start-LoggedProcess -FilePath $python -CommandArgs @("-m","axiom","lab","worker") `
         -WorkingDirectory $script:RepoRoot -StdOutPath $labWorkerLog -StdErrPath $labWorkerErr
     $status = Wait-ForLabWorker -Attempts 20
     $active = ($null -ne $status) -and [bool]$status.active
@@ -961,8 +961,8 @@ function Ensure-LabWorkerService {
     return $proc
 }
 
-function Stop-AllForvenProcesses {
-    # Kill live Forven services tied to this repo before clearing stale lock files.
+function Stop-AllAxiomProcesses {
+    # Kill live Axiom services tied to this repo before clearing stale lock files.
     Stop-PortListeners -Port $backendPort
     Stop-PortListeners -Port $frontendPort
 
@@ -1004,9 +1004,9 @@ function Stop-AllForvenProcesses {
     Stop-OrphanPythonMultiprocessingProcesses
 
     # Clear stale lock files
-    $forvenHome = if ($env:FORVEN_HOME) { $env:FORVEN_HOME } else { Join-Path $env:USERPROFILE ".forven" }
+    $axiomHome = if ($env:AXIOM_HOME) { $env:AXIOM_HOME } else { Join-Path $env:USERPROFILE ".axiom" }
     foreach ($lockName in @("bot.lock", "daemon.lock")) {
-        $lockPath = Join-Path $forvenHome $lockName
+        $lockPath = Join-Path $axiomHome $lockName
         if (Test-Path $lockPath) {
             try {
                 Remove-Item -Path $lockPath -Force -ErrorAction Stop
@@ -1018,22 +1018,22 @@ function Stop-AllForvenProcesses {
     }
 }
 
-$backendPort = if ([string]::IsNullOrWhiteSpace($env:FORVEN_PORT)) { 8003 } else { [int]$env:FORVEN_PORT }
-$backendHost = if (-not [string]::IsNullOrWhiteSpace($env:FORVEN_BIND_HOST)) {
-    $env:FORVEN_BIND_HOST.Trim()
-} elseif (-not [string]::IsNullOrWhiteSpace($env:FORVEN_HOST)) {
-    $env:FORVEN_HOST.Trim()
+$backendPort = if ([string]::IsNullOrWhiteSpace($env:AXIOM_PORT)) { 8003 } else { [int]$env:AXIOM_PORT }
+$backendHost = if (-not [string]::IsNullOrWhiteSpace($env:AXIOM_BIND_HOST)) {
+    $env:AXIOM_BIND_HOST.Trim()
+} elseif (-not [string]::IsNullOrWhiteSpace($env:AXIOM_HOST)) {
+    $env:AXIOM_HOST.Trim()
 } else {
     "127.0.0.1"
 }
 $backendWorkers = if ([string]::IsNullOrWhiteSpace($env:BACKEND_WORKERS)) { 1 } else { [int]$env:BACKEND_WORKERS }
 $frontendPort = 5173
 $startBot = if ($env:START_BOT) { $env:START_BOT.Trim() } else { "0" }
-$regimeLabEnabledRaw = if ($env:FORVEN_ENABLE_REGIME_LAB) { $env:FORVEN_ENABLE_REGIME_LAB.Trim() } else { "0" }
+$regimeLabEnabledRaw = if ($env:AXIOM_ENABLE_REGIME_LAB) { $env:AXIOM_ENABLE_REGIME_LAB.Trim() } else { "0" }
 $regimeLabEnabled = @("1", "true", "yes", "on") -contains $regimeLabEnabledRaw.ToLowerInvariant()
-$env:FORVEN_ENABLE_REGIME_LAB = if ($regimeLabEnabled) { "1" } else { "0" }
+$env:AXIOM_ENABLE_REGIME_LAB = if ($regimeLabEnabled) { "1" } else { "0" }
 if ([string]::IsNullOrWhiteSpace($env:VITE_ENABLE_REGIME_LAB)) {
-    $env:VITE_ENABLE_REGIME_LAB = $env:FORVEN_ENABLE_REGIME_LAB
+    $env:VITE_ENABLE_REGIME_LAB = $env:AXIOM_ENABLE_REGIME_LAB
 }
 $defaultStartLabWorker = if ($regimeLabEnabled) { "1" } else { "0" }
 $startLabWorker = if ($env:START_LAB_WORKER) { $env:START_LAB_WORKER.Trim() } else { $defaultStartLabWorker }
@@ -1046,21 +1046,21 @@ if ($script:ShowChildWindows -notin @("0","1")) { Throw-StartAllError "SHOW_CHIL
 if ($forceRestart -notin @("0","1")) { Throw-StartAllError "FORCE_RESTART must be 0 or 1." }
 if ($detachServices -notin @("0","1")) { Throw-StartAllError "DETACH_SERVICES must be 0 or 1." }
 
-if ([string]::IsNullOrWhiteSpace($env:FORVEN_HOME)) {
-    $env:FORVEN_HOME = Join-Path $env:USERPROFILE ".forven"
-    Write-Info "FORVEN_HOME not set. Defaulting to $($env:FORVEN_HOME)"
+if ([string]::IsNullOrWhiteSpace($env:AXIOM_HOME)) {
+    $env:AXIOM_HOME = Join-Path $env:USERPROFILE ".axiom"
+    Write-Info "AXIOM_HOME not set. Defaulting to $($env:AXIOM_HOME)"
 }
 try {
-    New-Item -Path $env:FORVEN_HOME -ItemType Directory -Force -ErrorAction Stop | Out-Null
-    $homeProbe = Join-Path $env:FORVEN_HOME ".forven_write_probe"
+    New-Item -Path $env:AXIOM_HOME -ItemType Directory -Force -ErrorAction Stop | Out-Null
+    $homeProbe = Join-Path $env:AXIOM_HOME ".axiom_write_probe"
     Set-Content -Path $homeProbe -Value "ok" -Encoding UTF8 -ErrorAction Stop
     Remove-Item -Path $homeProbe -Force -ErrorAction SilentlyContinue
 } catch {
-    $fallbackHome = Join-Path $script:RepoRoot ".forven_home"
-    Write-WarnMessage "Could not use FORVEN_HOME '$($env:FORVEN_HOME)': $($_.Exception.Message)"
+    $fallbackHome = Join-Path $script:RepoRoot ".axiom_home"
+    Write-WarnMessage "Could not use AXIOM_HOME '$($env:AXIOM_HOME)': $($_.Exception.Message)"
     Write-WarnMessage "Falling back to $fallbackHome"
-    $env:FORVEN_HOME = $fallbackHome
-    New-Item -Path $env:FORVEN_HOME -ItemType Directory -Force -ErrorAction Stop | Out-Null
+    $env:AXIOM_HOME = $fallbackHome
+    New-Item -Path $env:AXIOM_HOME -ItemType Directory -Force -ErrorAction Stop | Out-Null
 }
 
 $startDaemon = if ($env:START_DAEMON) { $env:START_DAEMON.Trim() } else { "0" }
@@ -1077,21 +1077,21 @@ $backendLog = Join-Path $logRoot "unified_backend.log"
 $backendErr = Join-Path $logRoot "unified_backend.err.log"
 $frontendLog = Join-Path $logRoot "unified_frontend.log"
 $frontendErr = Join-Path $logRoot "unified_frontend.err.log"
-$botLog = Join-Path $logRoot "forven_bot.log"
-$botErr = Join-Path $logRoot "forven_bot.err.log"
-$labWorkerLog = Join-Path $logRoot "forven_lab_worker.log"
-$labWorkerErr = Join-Path $logRoot "forven_lab_worker.err.log"
-$daemonLog = Join-Path $logRoot "forven_daemon.log"
-$daemonErr = Join-Path $logRoot "forven_daemon.err.log"
+$botLog = Join-Path $logRoot "axiom_bot.log"
+$botErr = Join-Path $logRoot "axiom_bot.err.log"
+$labWorkerLog = Join-Path $logRoot "axiom_lab_worker.log"
+$labWorkerErr = Join-Path $logRoot "axiom_lab_worker.err.log"
+$daemonLog = Join-Path $logRoot "axiom_daemon.log"
+$daemonErr = Join-Path $logRoot "axiom_daemon.err.log"
 
 $backendHealth = "http://127.0.0.1:$backendPort/api/health"
 $frontendRoot = "http://127.0.0.1:$frontendPort/"
-if ([string]::IsNullOrWhiteSpace($env:FORVEN_CLIENT_BASE)) { $env:FORVEN_CLIENT_BASE = "http://127.0.0.1:$backendPort" }
+if ([string]::IsNullOrWhiteSpace($env:AXIOM_CLIENT_BASE)) { $env:AXIOM_CLIENT_BASE = "http://127.0.0.1:$backendPort" }
 $env:PYTHONPATH = if ([string]::IsNullOrWhiteSpace($env:PYTHONPATH)) { $script:RepoRoot } else { "$script:RepoRoot;$($env:PYTHONPATH)" }
 
 $npm = Get-NpmCommand
 $python = [string](Ensure-Venv | Select-Object -Last 1)
-if (-not (Test-ModuleAvailable -PythonCommand $python -ModuleName "forven.api") -or
+if (-not (Test-ModuleAvailable -PythonCommand $python -ModuleName "axiom.api") -or
     -not (Test-ModuleAvailable -PythonCommand $python -ModuleName "uvicorn") -or
     -not (Test-ModuleAvailable -PythonCommand $python -ModuleName "websockets") -or
     -not (Test-ModuleAvailable -PythonCommand $python -ModuleName "multipart")) {
@@ -1100,11 +1100,11 @@ if (-not (Test-ModuleAvailable -PythonCommand $python -ModuleName "forven.api") 
 Ensure-FrontendDeps -Npm $npm
 
 # Bootstrap DB schema before API import path that reads kv.
-Invoke-Checked -FilePath $python -CommandArgs @("-c","from forven.db import init_db; init_db(); print('db_initialized')")
+Invoke-Checked -FilePath $python -CommandArgs @("-c","from axiom.db import init_db; init_db(); print('db_initialized')")
 
 # Seed core agents so the UI works even if the Discord bot can't connect.
 # Idempotent; updates existing rows with latest role/instructions.
-Invoke-Checked -FilePath $python -CommandArgs @("-c","from forven.bot import seed_default_agents; r = seed_default_agents(); print('agents_seeded created=' + str(len(r['created'])) + ' updated=' + str(len(r['updated'])) + ' total=' + str(r['total']))")
+Invoke-Checked -FilePath $python -CommandArgs @("-c","from axiom.bot import seed_default_agents; r = seed_default_agents(); print('agents_seeded created=' + str(len(r['created'])) + ' updated=' + str(len(r['updated'])) + ' total=' + str(r['total']))")
 
 $backendProc = $null
 $frontendProc = $null
@@ -1128,29 +1128,29 @@ try {
         $activeOwnerName = if ($null -ne $watchdogStatus -and $null -ne $watchdogStatus.owner_name) { [string]$watchdogStatus.owner_name } else { "watchdog" }
         $activeOwnerPid = if ($null -ne $watchdogStatus -and $null -ne $watchdogStatus.active_pid) { [int]$watchdogStatus.active_pid } else { 0 }
         if ($null -ne $watchdogStatus -and [bool]$watchdogStatus.other_process_active) {
-            Write-WarnMessage "Another Forven watchdog owner is already active ($activeOwnerName PID $activeOwnerPid); leaving services untouched."
+            Write-WarnMessage "Another Axiom watchdog owner is already active ($activeOwnerName PID $activeOwnerPid); leaving services untouched."
             Add-StartupSummary -Service "watchdog" -Action "skipped" -Details "owner=$activeOwnerName pid=$activeOwnerPid"
             Write-StartupSummary
             $startupCompleted = $true
             return
         }
         if ($null -ne $watchdogStatus -and [bool]$watchdogStatus.lock_held) {
-            Write-WarnMessage "Another Forven watchdog owner appears to be active, but its owner metadata is unavailable; leaving services untouched."
+            Write-WarnMessage "Another Axiom watchdog owner appears to be active, but its owner metadata is unavailable; leaving services untouched."
             Add-StartupSummary -Service "watchdog" -Action "skipped" -Details "owner=unknown pid=unknown"
             Write-StartupSummary
             $startupCompleted = $true
             return
         }
-        Throw-StartAllError "Could not acquire the Forven watchdog owner lock."
+        Throw-StartAllError "Could not acquire the Axiom watchdog owner lock."
     }
     $script:WatchdogOwnerLockHeld = $true
     Add-StartupSummary -Service "watchdog" -Action "claimed" -Details "owner=start_all pid=$PID"
 
-    # Always kill all existing Forven processes for a clean start
-    Write-Info "Stopping all existing Forven processes..."
-    Stop-AllForvenProcesses
+    # Always kill all existing Axiom processes for a clean start
+    Write-Info "Stopping all existing Axiom processes..."
+    Stop-AllAxiomProcesses
 
-    Write-Info "Starting Forven services..."
+    Write-Info "Starting Axiom services..."
 
     $backendProc = Ensure-BackendService
     $labWorkerProc = Ensure-LabWorkerService
@@ -1188,7 +1188,7 @@ try {
     # Per-service failure tracking. Protects against crash-loops (e.g. invalid
     # Discord token → LoginFailure → exit → restart → repeat).
     # Exit code 78 from a managed service is treated as "config error, do not
-    # restart this session" — see forven/bot.py run_bot() LoginFailure handler.
+    # restart this session" — see axiom/bot.py run_bot() LoginFailure handler.
     $script:ServiceState = @{}
     foreach ($svc in @("backend","bot","daemon","frontend")) {
         $script:ServiceState[$svc] = @{
@@ -1323,7 +1323,7 @@ try {
                 Write-WarnMessage "Bot (PID $($botProc.Id), exit $exitCode) exited - restarting..."
                 try {
                     $botProc = Start-LoggedProcess -FilePath $python `
-                        -CommandArgs @("-m","forven","bot","start") `
+                        -CommandArgs @("-m","axiom","bot","start") `
                         -WorkingDirectory $script:RepoRoot -StdOutPath $botLog -StdErrPath $botErr
                     $script:ServiceState["bot"].lastRestart = [DateTime]::Now
                     Write-Info "Bot restarted as PID $($botProc.Id)"
@@ -1356,7 +1356,7 @@ try {
                     Write-WarnMessage "Daemon (PID $($daemonProc.Id), exit $exitCode) exited - restarting..."
                     try {
                         $daemonProc = Start-LoggedProcess -FilePath $python `
-                            -CommandArgs @("-m","forven","daemon","start") `
+                            -CommandArgs @("-m","axiom","daemon","start") `
                             -WorkingDirectory $script:RepoRoot -StdOutPath $daemonLog -StdErrPath $daemonErr
                         $script:ServiceState["daemon"].lastRestart = [DateTime]::Now
                         Write-Info "Daemon restarted as PID $($daemonProc.Id)"

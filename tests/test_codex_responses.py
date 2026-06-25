@@ -1,4 +1,4 @@
-"""Tests for the ChatGPT Codex (Responses API) OAuth path.
+﻿"""Tests for the ChatGPT Codex (Responses API) OAuth path.
 
 Covers the fix for "OpenAI OAuth auth not working": ChatGPT OAuth tokens must go
 to ``chatgpt.com/backend-api/codex/responses`` via the Responses API (with the
@@ -13,9 +13,9 @@ import asyncio
 import jwt
 import pytest
 
-import forven.codex_responses as cr
-import forven.agents.providers as providers
-from forven.agents.providers import (
+import axiom.codex_responses as cr
+import axiom.agents.providers as providers
+from axiom.agents.providers import (
     CodexProvider,
     OpenAIAutoProvider,
     OpenAIProvider,
@@ -338,7 +338,7 @@ def test_factory_resolves_openai_to_auto_provider():
 
 def test_verify_provider_key_accepts_openai_oauth(monkeypatch):
     """An OAuth token must not be probed against api.openai.com/v1/models (401)."""
-    import forven.api_core as api_core
+    import axiom.api_core as api_core
 
     # Fail loudly if any network probe is attempted for the OAuth short-circuit.
     monkeypatch.setattr(
@@ -351,7 +351,7 @@ def test_verify_provider_key_accepts_openai_oauth(monkeypatch):
 
 
 def test_discover_openai_models_oauth_uses_catalog(monkeypatch):
-    import forven.api_core as api_core
+    import axiom.api_core as api_core
 
     monkeypatch.setattr(
         api_core, "_get_provider_discovery_token",

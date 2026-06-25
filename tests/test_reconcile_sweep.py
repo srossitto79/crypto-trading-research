@@ -1,4 +1,4 @@
-"""Tests for sweep_pending_close_reconcile (audit lead B-38).
+﻿"""Tests for sweep_pending_close_reconcile (audit lead B-38).
 
 The sweep previously closed every aged pending-close trade as 'exchange flat'
 without ever consulting the exchange, because of four stacked bugs:
@@ -20,8 +20,8 @@ from __future__ import annotations
 import json
 from datetime import datetime, timedelta, timezone
 
-import forven.exchange.hyperliquid as hl_mod
-import forven.scanner as scanner_mod
+import axiom.exchange.hyperliquid as hl_mod
+import axiom.scanner as scanner_mod
 
 
 def _iso(minutes_ago: float) -> str:
@@ -40,7 +40,7 @@ def _insert_trade(
     entry_price: float = 100.0,
     signal_exit_price: float | None = 110.0,
 ) -> None:
-    from forven.db import get_db
+    from axiom.db import get_db
 
     with get_db() as conn:
         conn.execute(
@@ -66,7 +66,7 @@ def _insert_trade(
 
 
 def _get_trade(trade_id: str) -> dict | None:
-    from forven.db import get_db
+    from axiom.db import get_db
 
     with get_db() as conn:
         row = conn.execute("SELECT * FROM trades WHERE id = ?", (trade_id,)).fetchone()
@@ -91,7 +91,7 @@ def _positions_payload(*positions: dict) -> dict:
 # ── (a)+(b): dict-shaped get_positions with a real position is detected ─────
 
 
-def test_open_exchange_position_is_not_closed_as_flat(monkeypatch, forven_db):
+def test_open_exchange_position_is_not_closed_as_flat(monkeypatch, AXIOM_db):
     """A trade whose asset is still open on the exchange must NOT be closed as
     'exchange flat'. With the retry close failing, it must stay OPEN."""
     _insert_trade("T-OPEN", asset="BTC", signal_data=_aged_pending())
@@ -114,7 +114,7 @@ def test_open_exchange_position_is_not_closed_as_flat(monkeypatch, forven_db):
     assert trade["status"] == "OPEN"  # never fabricated a flat close
 
 
-def test_flat_exchange_closes_locally(monkeypatch, forven_db):
+def test_flat_exchange_closes_locally(monkeypatch, AXIOM_db):
     """Exchange verified flat (dict payload, no matching coin) -> close locally."""
     _insert_trade("T-FLAT", asset="BTC", signal_data=_aged_pending())
 
@@ -139,7 +139,7 @@ def test_flat_exchange_closes_locally(monkeypatch, forven_db):
     assert sd["close_incomplete"] is False
 
 
-def test_zero_size_wrapper_position_counts_as_flat(monkeypatch, forven_db):
+def test_zero_size_wrapper_position_counts_as_flat(monkeypatch, AXIOM_db):
     """An assetPositions wrapper with szi=0 for the asset means flat."""
     _insert_trade("T-ZERO", asset="BTC", signal_data=_aged_pending())
 
@@ -157,7 +157,7 @@ def test_zero_size_wrapper_position_counts_as_flat(monkeypatch, forven_db):
 # ── (c): retry branch calls close_position with a size ──────────────────────
 
 
-def test_retry_close_passes_size_side_and_testnet(monkeypatch, forven_db):
+def test_retry_close_passes_size_side_and_testnet(monkeypatch, AXIOM_db):
     _insert_trade("T-RETRY", asset="SOL", direction="long", size=3.25,
                   signal_data=_aged_pending())
 
@@ -194,7 +194,7 @@ def test_retry_close_passes_size_side_and_testnet(monkeypatch, forven_db):
     assert trade["exit_price"] == 95.5
 
 
-def test_retry_close_short_uses_buy_side_and_exchange_size_fallback(monkeypatch, forven_db):
+def test_retry_close_short_uses_buy_side_and_exchange_size_fallback(monkeypatch, AXIOM_db):
     """NULL local size falls back to the exchange position size; shorts close
     with a buy."""
     _insert_trade("T-SHORT", asset="ETH", direction="short", size=None,
@@ -218,7 +218,7 @@ def test_retry_close_short_uses_buy_side_and_exchange_size_fallback(monkeypatch,
     assert calls == [{"asset": "ETH", "size": 1.5, "side": "buy"}]
 
 
-def test_retry_close_error_dict_keeps_trade_open(monkeypatch, forven_db):
+def test_retry_close_error_dict_keeps_trade_open(monkeypatch, AXIOM_db):
     """close_position returning {'error': ...} (no raise) must not record a
     successful close."""
     _insert_trade("T-ERRDICT", asset="BTC", signal_data=_aged_pending())
@@ -241,7 +241,7 @@ def test_retry_close_error_dict_keeps_trade_open(monkeypatch, forven_db):
 # ── (d): grace period honored via pending_close_reconcile_at ────────────────
 
 
-def test_age_grace_honored_via_pending_close_reconcile_at(monkeypatch, forven_db):
+def test_age_grace_honored_via_pending_close_reconcile_at(monkeypatch, AXIOM_db):
     """A trade opened hours ago but marked pending-close 5 minutes ago is
     within the 30-minute grace window -> NOT swept (the old code fell back to
     opened_at because it read the wrong key, sweeping on the first pass)."""
@@ -264,7 +264,7 @@ def test_age_grace_honored_via_pending_close_reconcile_at(monkeypatch, forven_db
     assert _get_trade("T-FRESH")["status"] == "OPEN"
 
 
-def test_aged_trade_is_swept_after_grace(monkeypatch, forven_db):
+def test_aged_trade_is_swept_after_grace(monkeypatch, AXIOM_db):
     _insert_trade("T-AGED", asset="BTC", opened_at=_iso(240),
                   signal_data=_aged_pending(minutes_ago=45))
 
@@ -276,7 +276,7 @@ def test_aged_trade_is_swept_after_grace(monkeypatch, forven_db):
     assert _get_trade("T-AGED")["status"] == "CLOSED"
 
 
-def test_legacy_requested_at_key_still_honored(monkeypatch, forven_db):
+def test_legacy_requested_at_key_still_honored(monkeypatch, AXIOM_db):
     """Rows written with the legacy 'pending_close_reconcile_requested_at' key
     keep their grace window."""
     _insert_trade(
@@ -298,7 +298,7 @@ def test_legacy_requested_at_key_still_honored(monkeypatch, forven_db):
 # ── Local-only paper trades: honest local close, no exchange fabrication ────
 
 
-def test_local_only_paper_trade_closed_as_local_paper_close(monkeypatch, forven_db):
+def test_local_only_paper_trade_closed_as_local_paper_close(monkeypatch, AXIOM_db):
     """Paper trades execute locally by design (paper_stage_local_execution_only)
     and never reach the exchange, so there is no exchange truth to reconcile.
     The honest behavior — documented here — is a LOCAL paper close at the exit
@@ -330,7 +330,7 @@ def test_local_only_paper_trade_closed_as_local_paper_close(monkeypatch, forven_
     assert sd["close_incomplete"] is False
 
 
-def test_paper_trade_with_exchange_order_id_is_reconciled_normally(monkeypatch, forven_db):
+def test_paper_trade_with_exchange_order_id_is_reconciled_normally(monkeypatch, AXIOM_db):
     """A paper trade that DID reach the exchange (carries an order id) is not
     local-only and goes through normal exchange reconciliation."""
     sd = _aged_pending()
@@ -347,7 +347,7 @@ def test_paper_trade_with_exchange_order_id_is_reconciled_normally(monkeypatch, 
 # ── Exchange unreachable: fail OPEN, never ghost-close (RECON-1) ────────────
 
 
-def test_exchange_unreachable_leaves_trade_open(monkeypatch, forven_db):
+def test_exchange_unreachable_leaves_trade_open(monkeypatch, AXIOM_db):
     """RECON-1: a transient exchange-read failure must NOT close the trade. An
     unreadable account is indistinguishable from a still-open position, so the
     sweep fails OPEN — the trade stays pending for the next sweep to retry.
@@ -370,10 +370,10 @@ def test_exchange_unreachable_leaves_trade_open(monkeypatch, forven_db):
 
 
 def _set_books_kv(short_addr="0xshortbook", long_addr="0xlongbook"):
-    from forven.db import kv_set
+    from axiom.db import kv_set
 
     kv_set(
-        "forven:settings",
+        "axiom:settings",
         {
             "live_books_enabled": True,
             "hyperliquid_long_book_address": long_addr,
@@ -383,13 +383,13 @@ def _set_books_kv(short_addr="0xshortbook", long_addr="0xlongbook"):
 
 
 def _set_book(trade_id: str, book: str) -> None:
-    from forven.db import get_db
+    from axiom.db import get_db
 
     with get_db() as conn:
         conn.execute("UPDATE trades SET book = ? WHERE id = ?", (book, trade_id))
 
 
-def test_subaccount_short_not_ghost_closed_when_master_flat(monkeypatch, forven_db):
+def test_subaccount_short_not_ghost_closed_when_master_flat(monkeypatch, AXIOM_db):
     """RECON-1: a SHORT held only in the short-book sub-account must be seen as
     OPEN even though the MASTER wallet reads flat — otherwise the sweep would
     ghost-close a live position (the 28559eb8 bug, in the reconcile sibling).
@@ -423,7 +423,7 @@ def test_subaccount_short_not_ghost_closed_when_master_flat(monkeypatch, forven_
     assert captured["side"] == "buy"  # closing a short
 
 
-def test_non_pending_trades_are_ignored(monkeypatch, forven_db):
+def test_non_pending_trades_are_ignored(monkeypatch, AXIOM_db):
     _insert_trade("T-PLAIN", asset="BTC", signal_data={})
 
     def _boom(*args, **kwargs):

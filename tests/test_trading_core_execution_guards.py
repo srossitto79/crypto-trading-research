@@ -1,13 +1,13 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 
 import pytest
 
-import forven.scanner as scanner_mod
-from forven.api_domains import trading as trading_domain
-from forven.db import get_db
-from forven.exchange import risk as risk_mod
+import axiom.scanner as scanner_mod
+from axiom.api_domains import trading as trading_domain
+from axiom.db import get_db
+from axiom.exchange import risk as risk_mod
 
 
 @pytest.fixture(autouse=True)
@@ -15,7 +15,7 @@ def _stub_szdecimals(monkeypatch):
     """Keep order tests hermetic: stub the exchange-meta szDecimals fetch so
     market/limit/close don't make a real /info HTTP call."""
     try:
-        import forven.exchange.hyperliquid as hl
+        import axiom.exchange.hyperliquid as hl
         monkeypatch.setattr(hl, "_get_sz_decimals", lambda url: {"BTC": 5, "ETH": 4, "SOL": 2})
     except Exception:
         pass
@@ -82,7 +82,7 @@ def _position_count(trade_id: str) -> int:
         ).fetchone()["n"]
 
 
-def test_fail_unfilled_open_trade_marks_failed_and_releases(forven_db):
+def test_fail_unfilled_open_trade_marks_failed_and_releases(AXIOM_db):
     _insert_open_trade("T-PHANTOM-1")
     _insert_position("T-PHANTOM-1")
 
@@ -95,7 +95,7 @@ def test_fail_unfilled_open_trade_marks_failed_and_releases(forven_db):
     assert _position_count("T-PHANTOM-1") == 0  # risk slot released
 
 
-def test_fail_unfilled_open_trade_skips_filled_position(forven_db):
+def test_fail_unfilled_open_trade_skips_filled_position(AXIOM_db):
     # A trade whose entry actually filled is a REAL position — never convert to FAILED.
     _insert_open_trade("T-FILLED-1")
     with get_db() as conn:
@@ -108,7 +108,7 @@ def test_fail_unfilled_open_trade_skips_filled_position(forven_db):
     assert _position_count("T-FILLED-1") == 1
 
 
-def test_fail_unfilled_open_trade_is_idempotent(forven_db):
+def test_fail_unfilled_open_trade_is_idempotent(AXIOM_db):
     _insert_open_trade("T-PHANTOM-2")
     scanner_mod._fail_unfilled_open_trade("T-PHANTOM-2", "fail once")
     assert _trade_row("T-PHANTOM-2")["status"] == "FAILED"
@@ -117,10 +117,10 @@ def test_fail_unfilled_open_trade_is_idempotent(forven_db):
     assert _trade_row("T-PHANTOM-2")["status"] == "FAILED"
 
 
-def test_report_execution_failure_open_cleans_phantom_trade(forven_db, monkeypatch):
+def test_report_execution_failure_open_cleans_phantom_trade(AXIOM_db, monkeypatch):
     _insert_open_trade("T-PHANTOM-3")
     _insert_position("T-PHANTOM-3")
-    import forven.brain as brain_mod
+    import axiom.brain as brain_mod
     monkeypatch.setattr(brain_mod, "handoff_execution_failure_to_developer", lambda **_kw: {})
 
     scanner_mod._report_execution_failure(
@@ -131,13 +131,13 @@ def test_report_execution_failure_open_cleans_phantom_trade(forven_db, monkeypat
     assert _position_count("T-PHANTOM-3") == 0
 
 
-def test_report_execution_failure_close_leaves_real_position_open(forven_db, monkeypatch):
+def test_report_execution_failure_close_leaves_real_position_open(AXIOM_db, monkeypatch):
     # A close-side failure is a real (filled) position whose EXIT failed — must stay OPEN.
     _insert_open_trade("T-REAL-1")
     with get_db() as conn:
         conn.execute("UPDATE trades SET fill_entry_price = 100.0 WHERE id = ?", ("T-REAL-1",))
     _insert_position("T-REAL-1")
-    import forven.brain as brain_mod
+    import axiom.brain as brain_mod
     monkeypatch.setattr(brain_mod, "handoff_execution_failure_to_developer", lambda **_kw: {})
 
     scanner_mod._report_execution_failure(
@@ -148,7 +148,7 @@ def test_report_execution_failure_close_leaves_real_position_open(forven_db, mon
     assert _position_count("T-REAL-1") == 1
 
 
-def test_read_all_trades_lists_across_statuses_with_filter_and_paging(forven_db):
+def test_read_all_trades_lists_across_statuses_with_filter_and_paging(AXIOM_db):
     # Distinct assets so the M1 partial unique index on OPEN (strategy,asset,
     # direction) doesn't reject the inserts before they're moved off OPEN.
     _insert_open_trade("L-OPEN-1", asset="BTC")
@@ -172,7 +172,7 @@ def test_read_all_trades_lists_across_statuses_with_filter_and_paging(forven_db)
     assert len(page["trades"]) == 1 and page["limit"] == 1 and page["total"] >= 3
 
 
-def test_mark_trade_failed_clears_unfilled_phantom(forven_db):
+def test_mark_trade_failed_clears_unfilled_phantom(AXIOM_db):
     _insert_open_trade("M-PHANTOM-1")
     _insert_position("M-PHANTOM-1")
     res = trading_domain.mark_trade_failed("M-PHANTOM-1", _ReasonBody("phantom cleanup"))
@@ -181,7 +181,7 @@ def test_mark_trade_failed_clears_unfilled_phantom(forven_db):
     assert _position_count("M-PHANTOM-1") == 0
 
 
-def test_mark_trade_failed_refuses_filled_position(forven_db):
+def test_mark_trade_failed_refuses_filled_position(AXIOM_db):
     _insert_open_trade("M-REAL-1")
     with get_db() as conn:
         conn.execute("UPDATE trades SET fill_entry_price = 100.0 WHERE id = 'M-REAL-1'")
@@ -190,7 +190,7 @@ def test_mark_trade_failed_refuses_filled_position(forven_db):
     assert _trade_row("M-REAL-1")["status"] == "OPEN"
 
 
-def test_mark_trade_failed_handles_missing_and_nonopen(forven_db):
+def test_mark_trade_failed_handles_missing_and_nonopen(AXIOM_db):
     assert trading_domain.mark_trade_failed("NOPE-404", _ReasonBody())["ok"] is False
     _insert_open_trade("M-CLOSED-1")
     with get_db() as conn:
@@ -199,7 +199,7 @@ def test_mark_trade_failed_handles_missing_and_nonopen(forven_db):
     assert res["ok"] is False and "not OPEN" in res["error"]
 
 
-def test_execute_trade_intent_blocks_open_when_trading_disallowed(forven_db, monkeypatch):
+def test_execute_trade_intent_blocks_open_when_trading_disallowed(AXIOM_db, monkeypatch):
     _insert_open_trade("T-EXEC-BLOCKED-1")
 
     monkeypatch.setattr(scanner_mod, "is_trading_allowed", lambda: (False, "Kill-switch active"))
@@ -222,7 +222,7 @@ def test_execute_trade_intent_blocks_open_when_trading_disallowed(forven_db, mon
         )
 
 
-def test_execute_trade_intent_rejects_oversized_open(forven_db, monkeypatch):
+def test_execute_trade_intent_rejects_oversized_open(AXIOM_db, monkeypatch):
     _insert_open_trade("T-EXEC-SIZE-1")
 
     monkeypatch.setattr(scanner_mod, "is_trading_allowed", lambda: (True, "OK"))
@@ -251,7 +251,7 @@ def test_execute_trade_intent_rejects_oversized_open(forven_db, monkeypatch):
 
 def test_market_order_reuses_client_order_ids_for_same_idempotency_key(monkeypatch):
     pytest.importorskip("hyperliquid")
-    import forven.exchange.hyperliquid as hl
+    import axiom.exchange.hyperliquid as hl
 
     captured_orders: list[list[dict]] = []
 
@@ -267,7 +267,7 @@ def test_market_order_reuses_client_order_ids_for_same_idempotency_key(monkeypat
         def all_mids(self):
             return {"BTC": "100.0"}
 
-    monkeypatch.setattr("forven.sim.clock.is_sim_active", lambda: False)
+    monkeypatch.setattr("axiom.sim.clock.is_sim_active", lambda: False)
     monkeypatch.setattr(hl, "get_exchange", lambda testnet=True: (_DummyExchange(), _DummyInfo(), "0xabc"))
     monkeypatch.setattr(hl, "_ensure_agent_authorized_for_trading", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(hl, "_with_breaker", lambda _name, _breaker, fn, *a, **k: fn(*a, **k))
@@ -282,7 +282,7 @@ def test_market_order_reuses_client_order_ids_for_same_idempotency_key(monkeypat
 
 def test_market_order_raises_when_exchange_response_has_no_order_ids(monkeypatch):
     pytest.importorskip("hyperliquid")
-    import forven.exchange.hyperliquid as hl
+    import axiom.exchange.hyperliquid as hl
 
     captured_orders: list[list[dict]] = []
 
@@ -295,7 +295,7 @@ def test_market_order_raises_when_exchange_response_has_no_order_ids(monkeypatch
         def all_mids(self):
             return {"BTC": "100.0"}
 
-    monkeypatch.setattr("forven.sim.clock.is_sim_active", lambda: False)
+    monkeypatch.setattr("axiom.sim.clock.is_sim_active", lambda: False)
     monkeypatch.setattr(hl, "get_exchange", lambda testnet=True: (_DummyExchange(), _DummyInfo(), "0xabc"))
     monkeypatch.setattr(hl, "_ensure_agent_authorized_for_trading", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(hl, "_with_breaker", lambda _name, _breaker, fn, *a, **k: fn(*a, **k))
@@ -308,7 +308,7 @@ def test_market_order_raises_when_exchange_response_has_no_order_ids(monkeypatch
 
 def test_limit_order_rejects_stale_prices(monkeypatch):
     pytest.importorskip("hyperliquid")
-    import forven.exchange.hyperliquid as hl
+    import axiom.exchange.hyperliquid as hl
 
     class _DummyExchange:
         def bulk_orders(self, orders):
@@ -318,7 +318,7 @@ def test_limit_order_rejects_stale_prices(monkeypatch):
         def all_mids(self):
             return {"BTC": "100.0"}
 
-    monkeypatch.setattr("forven.sim.clock.is_sim_active", lambda: False)
+    monkeypatch.setattr("axiom.sim.clock.is_sim_active", lambda: False)
     monkeypatch.setattr(hl, "get_exchange", lambda testnet=True: (_DummyExchange(), _DummyInfo(), "0xabc"))
     monkeypatch.setattr(hl, "_ensure_agent_authorized_for_trading", lambda *_args, **_kwargs: None)
 
@@ -328,7 +328,7 @@ def test_limit_order_rejects_stale_prices(monkeypatch):
     assert "Refusing stale limit order" in result["error"]
 
 
-def test_reconcile_exchange_positions_flags_duplicate_sqlite_trades(forven_db, monkeypatch):
+def test_reconcile_exchange_positions_flags_duplicate_sqlite_trades(AXIOM_db, monkeypatch):
     # M1's partial unique index normally prevents two same-key OPEN trades; drop
     # it here to simulate a pre-M1 / recovery-adopted duplicate and verify the
     # reconciler still flags it (defense in depth).
@@ -338,7 +338,7 @@ def test_reconcile_exchange_positions_flags_duplicate_sqlite_trades(forven_db, m
     _insert_open_trade("T-RISK-DUPE-2", strategy_id="risk-reconcile", size=1.5)
 
     monkeypatch.setattr(
-        "forven.exchange.hyperliquid.get_positions",
+        "axiom.exchange.hyperliquid.get_positions",
         lambda testnet=True: {
             "positions": [
                 {
@@ -352,8 +352,8 @@ def test_reconcile_exchange_positions_flags_duplicate_sqlite_trades(forven_db, m
             ]
         },
     )
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_open_orders", lambda testnet=True: [])
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 100.0})
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_open_orders", lambda testnet=True: [])
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 100.0})
     monkeypatch.setattr(
         risk_mod,
         "_repair_position_protection",

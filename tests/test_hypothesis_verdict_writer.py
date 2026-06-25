@@ -1,8 +1,8 @@
-import json
+﻿import json
 from unittest.mock import patch
 
-from forven.db import get_db, kv_set
-from forven.hypotheses import create_hypothesis
+from axiom.db import get_db, kv_set
+from axiom.hypotheses import create_hypothesis
 
 
 def _hyp():
@@ -32,11 +32,11 @@ def _seed_passing_children(hypothesis_id: str, n: int = 4) -> None:
             )
 
 
-def test_write_verdict_memo_happy_path(forven_db):
-    from forven.hypothesis_verdict import write_verdict_memo
+def test_write_verdict_memo_happy_path(AXIOM_db):
+    from axiom.hypothesis_verdict import write_verdict_memo
     # Make math floor permissive so the LLM 'proven' is accepted
     kv_set(
-        "forven:settings",
+        "axiom:settings",
         {"research_settings": {"hypothesis_discipline": {
             "verdict_hit_rate_threshold": 0.5,
             "verdict_min_diversity_cells": 2,
@@ -53,7 +53,7 @@ def test_write_verdict_memo_happy_path(forven_db):
         "garbage_signal": False,
         "decided_after_n_strategies": 2,
     })
-    with patch("forven.hypothesis_verdict._call_llm", return_value=fake_response):
+    with patch("axiom.hypothesis_verdict._call_llm", return_value=fake_response):
         result = write_verdict_memo(hyp["id"])
     assert result["ok"] is True
     assert result["hypothesis"]["status"] == "proven"
@@ -61,28 +61,28 @@ def test_write_verdict_memo_happy_path(forven_db):
     assert result["hypothesis"]["verdict_memo_by"] == "agent:strategy-developer"
 
 
-def test_write_verdict_memo_disproven_path(forven_db):
-    from forven.hypothesis_verdict import write_verdict_memo
+def test_write_verdict_memo_disproven_path(AXIOM_db):
+    from axiom.hypothesis_verdict import write_verdict_memo
     hyp = _hyp()
     fake = json.dumps({"verdict": "disproven", "rationale": "incoherent idea"})
-    with patch("forven.hypothesis_verdict._call_llm", return_value=fake):
+    with patch("axiom.hypothesis_verdict._call_llm", return_value=fake):
         result = write_verdict_memo(hyp["id"])
     assert result["hypothesis"]["status"] == "disproven"
 
 
-def test_write_verdict_memo_researching_keeps_status(forven_db):
-    from forven.hypothesis_verdict import write_verdict_memo
+def test_write_verdict_memo_researching_keeps_status(AXIOM_db):
+    from axiom.hypothesis_verdict import write_verdict_memo
     hyp = _hyp()
     fake = json.dumps({"verdict": "researching", "rationale": "keep trying"})
-    with patch("forven.hypothesis_verdict._call_llm", return_value=fake):
+    with patch("axiom.hypothesis_verdict._call_llm", return_value=fake):
         result = write_verdict_memo(hyp["id"])
     assert result["hypothesis"]["status"] == "researching"
 
 
-def test_write_verdict_memo_malformed_json_leaves_status(forven_db):
-    from forven.hypothesis_verdict import write_verdict_memo
+def test_write_verdict_memo_malformed_json_leaves_status(AXIOM_db):
+    from axiom.hypothesis_verdict import write_verdict_memo
     hyp = _hyp()
-    with patch("forven.hypothesis_verdict._call_llm", return_value="not json at all"):
+    with patch("axiom.hypothesis_verdict._call_llm", return_value="not json at all"):
         result = write_verdict_memo(hyp["id"])
     assert result["ok"] is False
     assert result["error_code"] == "parse_failed"
@@ -95,27 +95,27 @@ def test_write_verdict_memo_malformed_json_leaves_status(forven_db):
     assert n == 0
 
 
-def test_write_verdict_memo_llm_exception_leaves_status(forven_db):
-    from forven.hypothesis_verdict import write_verdict_memo
+def test_write_verdict_memo_llm_exception_leaves_status(AXIOM_db):
+    from axiom.hypothesis_verdict import write_verdict_memo
     hyp = _hyp()
-    with patch("forven.hypothesis_verdict._call_llm", side_effect=RuntimeError("rate limit")):
+    with patch("axiom.hypothesis_verdict._call_llm", side_effect=RuntimeError("rate limit")):
         result = write_verdict_memo(hyp["id"])
     assert result["ok"] is False
     assert result["error_code"] == "llm_call_failed"
 
 
-def test_write_verdict_memo_missing_hypothesis_returns_error(forven_db):
-    from forven.hypothesis_verdict import write_verdict_memo
+def test_write_verdict_memo_missing_hypothesis_returns_error(AXIOM_db):
+    from axiom.hypothesis_verdict import write_verdict_memo
     result = write_verdict_memo("HYP-none")
     assert result["ok"] is False
     assert result["error_code"] == "not_found"
 
 
-def test_write_verdict_memo_invalid_verdict_value_rejected(forven_db):
-    from forven.hypothesis_verdict import write_verdict_memo
+def test_write_verdict_memo_invalid_verdict_value_rejected(AXIOM_db):
+    from axiom.hypothesis_verdict import write_verdict_memo
     hyp = _hyp()
     fake = json.dumps({"verdict": "maybe", "rationale": "idk"})
-    with patch("forven.hypothesis_verdict._call_llm", return_value=fake):
+    with patch("axiom.hypothesis_verdict._call_llm", return_value=fake):
         result = write_verdict_memo(hyp["id"])
     assert result["ok"] is False
     assert result["error_code"] == "invalid_verdict"

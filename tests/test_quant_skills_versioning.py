@@ -1,34 +1,34 @@
-"""P3-T02 — versioning fields on QuantSkill, update_skill writes history rows."""
+﻿"""P3-T02 — versioning fields on QuantSkill, update_skill writes history rows."""
 from __future__ import annotations
 
 import tempfile
 
 import pytest
 
-from forven import db as forven_db
-from forven import quant_skills as qs
+from axiom import db as AXIOM_db
+from axiom import quant_skills as qs
 
 
 @pytest.fixture
 def isolated_skills(tmp_path, monkeypatch):
-    """Redirect SKILLS_DIR + FORVEN_HOME so SKILL.md and history both land in tmpdir."""
+    """Redirect SKILLS_DIR + AXIOM_HOME so SKILL.md and history both land in tmpdir."""
     skills_dir = tmp_path / "quant-skills"
     skills_dir.mkdir()
     (skills_dir / "_hypotheses").mkdir()
     (skills_dir / "_archived").mkdir()
 
-    monkeypatch.setattr("forven.quant_skills.SKILLS_DIR", skills_dir)
-    monkeypatch.setattr("forven.quant_skills.HYPOTHESES_DIR", skills_dir / "_hypotheses")
-    monkeypatch.setattr("forven.quant_skills.ARCHIVED_DIR", skills_dir / "_archived")
+    monkeypatch.setattr("axiom.quant_skills.SKILLS_DIR", skills_dir)
+    monkeypatch.setattr("axiom.quant_skills.HYPOTHESES_DIR", skills_dir / "_hypotheses")
+    monkeypatch.setattr("axiom.quant_skills.ARCHIVED_DIR", skills_dir / "_archived")
 
     # Fresh DB
     db_dir = tempfile.mkdtemp()
-    monkeypatch.setenv("FORVEN_HOME", db_dir)
-    if hasattr(forven_db, "_DB_PATH"):
-        forven_db._DB_PATH = None  # type: ignore[attr-defined]
-    if hasattr(forven_db, "_init_db_done"):
-        forven_db._init_db_done = False  # type: ignore[attr-defined]
-    forven_db.init_db()
+    monkeypatch.setenv("AXIOM_HOME", db_dir)
+    if hasattr(AXIOM_db, "_DB_PATH"):
+        AXIOM_db._DB_PATH = None  # type: ignore[attr-defined]
+    if hasattr(AXIOM_db, "_init_db_done"):
+        AXIOM_db._init_db_done = False  # type: ignore[attr-defined]
+    AXIOM_db.init_db()
     yield skills_dir
 
 
@@ -129,7 +129,7 @@ def test_get_skill_diff_same_version_empty(isolated_skills):
 
 
 def test_legacy_frontmatter_reads_as_v1(isolated_skills, tmp_path):
-    """A pre-Phase-3 SKILL.md (no `version`, Forven keys at top of metadata)
+    """A pre-Phase-3 SKILL.md (no `version`, Axiom keys at top of metadata)
     must still load and report version=1."""
     skill_dir = isolated_skills / "legacy-skill"
     skill_dir.mkdir()
@@ -183,7 +183,7 @@ def test_round_trip_legacy_to_v3(isolated_skills):
 
     raw = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
     assert "version: 1" in raw or "version: '1'" in raw
-    assert "forven:" in raw  # nested under metadata.forven now
+    assert "axiom:" in raw  # nested under metadata.Axiom now
     # Re-read should produce equivalent fields
     reread = qs.read_skill("round-trip")
     assert reread is not None

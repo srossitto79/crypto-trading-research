@@ -1,6 +1,6 @@
-import re
+﻿import re
 
-with open("forven/reporter.py", "r") as f:
+with open("Axiom/reporter.py", "r") as f:
     content = f.read()
 
 content = content.replace(
@@ -16,7 +16,7 @@ content = content.replace(
 new_token_logic = """
     token = get_bot_token()
     if agent_id:
-        from forven.db import get_db
+        from axiom.db import get_db
         with get_db() as conn:
             agent = conn.execute("SELECT discord_token FROM agents WHERE id = ?", (agent_id,)).fetchone()
             if agent and agent["discord_token"]:
@@ -29,6 +29,6 @@ content = re.sub(
     content
 )
 
-with open("forven/reporter.py", "w") as f:
+with open("Axiom/reporter.py", "w") as f:
     f.write(content)
 print("Patched reporter.py")

@@ -1,14 +1,14 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import numpy as np
 import pandas as pd
 import pytest
 
-ADXTrendStrategy = pytest.importorskip("forven.strategies.custom.ADX_TREND").ADXTrendStrategy
-ADXFilteredEMAStrategy = pytest.importorskip("forven.strategies.custom.adx_filtered_ema").ADXFilteredEMAStrategy
-ATRBreakoutVolumeComposite = pytest.importorskip("forven.strategies.custom.atr_breakout_volume_composite").ATRBreakoutVolumeComposite
-WilliamsRRsiStrategy = pytest.importorskip("forven.strategies.custom.williams_r_rsi").WilliamsRRsiStrategy
-ZscoreMeanReversionComposite = pytest.importorskip("forven.strategies.custom.zscore_mean_reversion_composite").ZscoreMeanReversionComposite
+ADXTrendStrategy = pytest.importorskip("axiom.strategies.custom.ADX_TREND").ADXTrendStrategy
+ADXFilteredEMAStrategy = pytest.importorskip("axiom.strategies.custom.adx_filtered_ema").ADXFilteredEMAStrategy
+ATRBreakoutVolumeComposite = pytest.importorskip("axiom.strategies.custom.atr_breakout_volume_composite").ATRBreakoutVolumeComposite
+WilliamsRRsiStrategy = pytest.importorskip("axiom.strategies.custom.williams_r_rsi").WilliamsRRsiStrategy
+ZscoreMeanReversionComposite = pytest.importorskip("axiom.strategies.custom.zscore_mean_reversion_composite").ZscoreMeanReversionComposite
 
 
 def _market_frame(periods: int = 320, *, freq: str = "15min") -> pd.DataFrame:

@@ -3,7 +3,7 @@
 	import { beforeNavigate, goto } from '$app/navigation';
 	import { get } from 'svelte/store';
 
-	import { getSettings, getForvenDashboard } from '$lib/api';
+	import { getSettings, getAxiomDashboard } from '$lib/api';
 	import { SETTINGS_AREAS, type SettingsAreaId } from '$lib/settings/manifest';
 	import { dirtyFields } from '$lib/settings/dirty';
 	import { openWizard } from '$lib/stores/setupWizard';
@@ -63,7 +63,7 @@
 		(async () => {
 			const [settingsResult, dashboardResult] = await Promise.allSettled([
 				getSettings(),
-				getForvenDashboard(),
+				getAxiomDashboard(),
 			]);
 			if (settingsResult.status === 'fulfilled') {
 				settings = settingsResult.value as unknown as Record<string, unknown>;
@@ -128,7 +128,7 @@
 			class="flex items-center justify-between gap-4 border border-amber-700 bg-amber-900/30 text-amber-100 rounded px-4 py-3"
 			role="alert"
 		>
-			<span class="text-sm">Wizard incomplete — complete the onboarding wizard to finish setting up Forven.</span>
+			<span class="text-sm">Wizard incomplete — complete the onboarding wizard to finish setting up Axiom.</span>
 			<button
 				type="button"
 				on:click={openWizard}

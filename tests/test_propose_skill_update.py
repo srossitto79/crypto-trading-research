@@ -1,4 +1,4 @@
-"""P3-T07 — propose_skill_update Brain tool + skill_update_proposal approval."""
+﻿"""P3-T07 — propose_skill_update Brain tool + skill_update_proposal approval."""
 from __future__ import annotations
 
 import importlib
@@ -6,23 +6,23 @@ import json
 
 import pytest
 
-from forven import db as forven_db_mod
-from forven import quant_skills as qs
+from axiom import db as AXIOM_db_mod
+from axiom import quant_skills as qs
 
 
 def _load_tools_brain():
-    return importlib.import_module("forven.agents.tools_brain")
+    return importlib.import_module("axiom.agents.tools_brain")
 
 
 @pytest.fixture
-def env(tmp_path, monkeypatch, forven_db):
+def env(tmp_path, monkeypatch, AXIOM_db):
     skills_dir = tmp_path / "quant-skills"
     skills_dir.mkdir()
     (skills_dir / "_hypotheses").mkdir()
     (skills_dir / "_archived").mkdir()
-    monkeypatch.setattr("forven.quant_skills.SKILLS_DIR", skills_dir)
-    monkeypatch.setattr("forven.quant_skills.HYPOTHESES_DIR", skills_dir / "_hypotheses")
-    monkeypatch.setattr("forven.quant_skills.ARCHIVED_DIR", skills_dir / "_archived")
+    monkeypatch.setattr("axiom.quant_skills.SKILLS_DIR", skills_dir)
+    monkeypatch.setattr("axiom.quant_skills.HYPOTHESES_DIR", skills_dir / "_hypotheses")
+    monkeypatch.setattr("axiom.quant_skills.ARCHIVED_DIR", skills_dir / "_archived")
     yield skills_dir
 
 
@@ -47,7 +47,7 @@ def _seed_skill(name: str = "regime-trend-rsi"):
 
 def test_propose_skill_update_registered_for_brain(env):
     _load_tools_brain()
-    from forven.agents.tool_registry import get_tools_for_agent
+    from axiom.agents.tool_registry import get_tools_for_agent
 
     names = {t["name"] for t in get_tools_for_agent("brain")}
     assert "propose_skill_update" in names
@@ -55,7 +55,7 @@ def test_propose_skill_update_registered_for_brain(env):
 
 def test_propose_skill_update_not_visible_to_quant(env):
     _load_tools_brain()
-    from forven.agents.tool_registry import get_tools_for_agent
+    from axiom.agents.tool_registry import get_tools_for_agent
 
     for role in ("quant-researcher", "strategy-developer", "execution-trader"):
         names = {t["name"] for t in get_tools_for_agent(role)}
@@ -79,7 +79,7 @@ def test_propose_creates_pending_approval(env):
     assert isinstance(out["approval_id"], int)
 
     # The approval row exists with correct shape
-    with forven_db_mod.get_db() as conn:
+    with AXIOM_db_mod.get_db() as conn:
         row = conn.execute(
             "SELECT approval_type, target_type, target_id, status, payload "
             "FROM approvals WHERE id = ?",
@@ -127,7 +127,7 @@ def test_propose_strips_protected_metadata(env):
     }))
     assert out["ok"] is True
 
-    with forven_db_mod.get_db() as conn:
+    with AXIOM_db_mod.get_db() as conn:
         row = conn.execute(
             "SELECT payload FROM approvals WHERE id = ?",
             (out["approval_id"],),
@@ -151,8 +151,8 @@ def test_approve_skill_update_applies_and_bumps_version(env):
     }))
     approval_id = out["approval_id"]
 
-    from forven.control_plane.approvals import post_approve_approval
-    from forven.control_plane.models import ApprovalDecisionBody
+    from axiom.control_plane.approvals import post_approve_approval
+    from axiom.control_plane.models import ApprovalDecisionBody
 
     result = post_approve_approval(
         approval_id,
@@ -185,8 +185,8 @@ def test_approve_does_not_mutate_confidence(env):
     }))
     approval_id = out["approval_id"]
 
-    from forven.control_plane.approvals import post_approve_approval
-    from forven.control_plane.models import ApprovalDecisionBody
+    from axiom.control_plane.approvals import post_approve_approval
+    from axiom.control_plane.models import ApprovalDecisionBody
 
     post_approve_approval(
         approval_id,
@@ -211,8 +211,8 @@ def test_deny_skill_update_leaves_skill_untouched(env):
     }))
     approval_id = out["approval_id"]
 
-    from forven.control_plane.approvals import post_deny_approval
-    from forven.control_plane.models import ApprovalDecisionBody
+    from axiom.control_plane.approvals import post_deny_approval
+    from axiom.control_plane.models import ApprovalDecisionBody
 
     post_deny_approval(
         approval_id,

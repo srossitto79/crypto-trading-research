@@ -1,9 +1,9 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import time
 from uuid import uuid4
 
-from forven.lab_db import (
+from axiom.lab_db import (
     claim_next_lab_job,
     create_lab_experiment,
     create_or_update_model_version,
@@ -14,10 +14,10 @@ from forven.lab_db import (
     set_lab_meta,
     upsert_regime_program,
 )
-from forven.lab_orchestrator import ORCHESTRATOR_JOB_TYPE, get_orchestrator_status, update_orchestrator_config
-from forven.lab_regime_engine import MODEL_REBUILD_JOB_TYPE, SEGMENT_BUILD_JOB_TYPE
-from forven.lab_models import LabJobState
-from forven.lab_worker_service import (
+from axiom.lab_orchestrator import ORCHESTRATOR_JOB_TYPE, get_orchestrator_status, update_orchestrator_config
+from axiom.lab_regime_engine import MODEL_REBUILD_JOB_TYPE, SEGMENT_BUILD_JOB_TYPE
+from axiom.lab_models import LabJobState
+from axiom.lab_worker_service import (
     WORKER_STATUS_META_KEY,
     _start_non_matrix_job_heartbeat,
     get_lab_worker_status,
@@ -41,7 +41,7 @@ def test_process_claimed_lab_job_supports_model_rebuild(monkeypatch):
     assert claimed is not None
 
     monkeypatch.setattr(
-        "forven.lab_worker_service.run_model_rebuild_job",
+        "axiom.lab_worker_service.run_model_rebuild_job",
         lambda payload: {
             "status": "ok",
             "experiment_id": str(payload["experiment_id"]),
@@ -100,7 +100,7 @@ def test_process_claimed_lab_job_initializes_program_baseline(monkeypatch):
     assert claimed is not None
 
     monkeypatch.setattr(
-        "forven.lab_worker_service.run_model_rebuild_job",
+        "axiom.lab_worker_service.run_model_rebuild_job",
         lambda payload: {
             "status": "ok",
             "experiment_id": str(payload["experiment_id"]),
@@ -141,7 +141,7 @@ def test_process_claimed_lab_job_supports_segment_build(monkeypatch):
     assert claimed is not None
 
     monkeypatch.setattr(
-        "forven.lab_worker_service.run_segment_build_job",
+        "axiom.lab_worker_service.run_segment_build_job",
         lambda payload: {
             "status": "ok",
             "model_version_id": str(payload["model_version_id"]),
@@ -162,10 +162,10 @@ def test_non_matrix_job_heartbeat_loop_refreshes_claim(monkeypatch):
     beats: list[dict] = []
 
     monkeypatch.setattr(
-        "forven.lab_worker_service.heartbeat_lab_job",
+        "axiom.lab_worker_service.heartbeat_lab_job",
         lambda *args, **kwargs: beats.append(dict(kwargs)),
     )
-    monkeypatch.setattr("forven.lab_worker_service._write_worker_status", lambda **_kwargs: None)
+    monkeypatch.setattr("axiom.lab_worker_service._write_worker_status", lambda **_kwargs: None)
 
     stop_event, thread = _start_non_matrix_job_heartbeat(
         worker_id="test-worker",
@@ -235,7 +235,7 @@ def test_process_claimed_lab_job_chains_continuous_cycle(monkeypatch):
     assert claimed_model.id == model_job_id
 
     monkeypatch.setattr(
-        "forven.lab_worker_service.run_model_rebuild_job",
+        "axiom.lab_worker_service.run_model_rebuild_job",
         lambda payload: {
             "status": "ok",
             "experiment_id": str(payload["experiment_id"]),
@@ -257,7 +257,7 @@ def test_process_claimed_lab_job_chains_continuous_cycle(monkeypatch):
     assert claimed_segment.id == segment_job_id
 
     monkeypatch.setattr(
-        "forven.lab_worker_service.run_segment_build_job",
+        "axiom.lab_worker_service.run_segment_build_job",
         lambda payload: {
             "status": "ok",
             "model_version_id": str(payload["model_version_id"]),

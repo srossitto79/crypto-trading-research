@@ -1,10 +1,10 @@
-"""Regression tests for H-S5 (validated JWT extraction)."""
+﻿"""Regression tests for H-S5 (validated JWT extraction)."""
 
 from __future__ import annotations
 
 import jwt
 
-from forven.auth import safe_extract_chatgpt_account_id
+from axiom.auth import safe_extract_chatgpt_account_id
 
 
 def _mint(payload: dict) -> str:

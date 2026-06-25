@@ -1,4 +1,4 @@
-"""Regression tests for backtesting optimization compatibility routing."""
+﻿"""Regression tests for backtesting optimization compatibility routing."""
 
 from __future__ import annotations
 
@@ -9,11 +9,11 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 
-from forven.backtesting import BacktestingClient
-from forven.db import get_db
-from forven.routers import strategies as strategies_router
-from forven.routers import verdict as verdict_router
-from forven.strategies.optimizer import _get_param_space, optimize_strategy
+from axiom.backtesting import BacktestingClient
+from axiom.db import get_db
+from axiom.routers import strategies as strategies_router
+from axiom.routers import verdict as verdict_router
+from axiom.strategies.optimizer import _get_param_space, optimize_strategy
 
 
 def _insert_strategy(strategy_id: str, *, symbol: str = "BTC", timeframe: str = "1h") -> None:
@@ -99,8 +99,8 @@ def test_post_backtesting_optimize_parses_dataset_id_and_ranges(monkeypatch):
                 "parameter_ranges": {"rsi_length": [5, 14]},
             }
 
-    monkeypatch.setattr("forven.routers.strategies.core.post_optimization_submit", _fake_submit)
-    monkeypatch.setattr("forven.routers.strategies.asyncio.to_thread", _fake_to_thread)
+    monkeypatch.setattr("axiom.routers.strategies.core.post_optimization_submit", _fake_submit)
+    monkeypatch.setattr("axiom.routers.strategies.asyncio.to_thread", _fake_to_thread)
 
     result = asyncio.run(strategies_router.post_backtesting_optimize(_FakeRequest()))
 
@@ -134,8 +134,8 @@ def test_post_backtesting_verdict_forwards_payload(monkeypatch):
                 "tests": ["walk_forward", "monte_carlo"],
             }
 
-    monkeypatch.setattr("forven.routers.strategies.verdict_routes.execute_verdict", _fake_execute)
-    monkeypatch.setattr("forven.routers.strategies.asyncio.to_thread", _fake_to_thread)
+    monkeypatch.setattr("axiom.routers.strategies.verdict_routes.execute_verdict", _fake_execute)
+    monkeypatch.setattr("axiom.routers.strategies.asyncio.to_thread", _fake_to_thread)
 
     result = asyncio.run(strategies_router.post_backtesting_verdict(_FakeRequest()))
 
@@ -168,8 +168,8 @@ def test_post_backtesting_run_offloads_sync_execution(monkeypatch):
                 "parameters": {"rsi_length": 14},
             }
 
-    monkeypatch.setattr("forven.routers.strategies.core.post_backtesting_run", _fake_run)
-    monkeypatch.setattr("forven.routers.strategies.asyncio.to_thread", _fake_to_thread)
+    monkeypatch.setattr("axiom.routers.strategies.core.post_backtesting_run", _fake_run)
+    monkeypatch.setattr("axiom.routers.strategies.asyncio.to_thread", _fake_to_thread)
 
     result = asyncio.run(strategies_router.post_backtesting_run(_FakeRequest()))
 
@@ -193,7 +193,7 @@ def test_post_api_verdict_run_alias_forwards_payload(monkeypatch):
                 "tests": ["walk_forward"],
             }
 
-    monkeypatch.setattr("forven.routers.strategies.verdict_routes.execute_verdict", _fake_execute)
+    monkeypatch.setattr("axiom.routers.strategies.verdict_routes.execute_verdict", _fake_execute)
 
     result = asyncio.run(strategies_router.post_api_verdict_run(_FakeRequest()))
 
@@ -217,8 +217,8 @@ def test_native_verdict_route_offloads_sync_execution(monkeypatch):
         captured["kwargs"] = kwargs
         return fn(*args, **kwargs)
 
-    monkeypatch.setattr("forven.routers.verdict.execute_verdict", _fake_execute)
-    monkeypatch.setattr("forven.routers.verdict.asyncio.to_thread", _fake_to_thread)
+    monkeypatch.setattr("axiom.routers.verdict.execute_verdict", _fake_execute)
+    monkeypatch.setattr("axiom.routers.verdict.asyncio.to_thread", _fake_to_thread)
 
     result = asyncio.run(
         verdict_router.run_verdict(
@@ -234,7 +234,7 @@ def test_native_verdict_route_offloads_sync_execution(monkeypatch):
     assert captured["body"].strategy_id == "S00042"
 
 
-def test_execute_verdict_resolves_dataset_id_to_latest_matching_result(forven_db):
+def test_execute_verdict_resolves_dataset_id_to_latest_matching_result(AXIOM_db):
     _insert_strategy("S00037", symbol="BNB", timeframe="1h")
     older = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
     newer = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
@@ -280,7 +280,7 @@ def test_execute_verdict_resolves_dataset_id_to_latest_matching_result(forven_db
     assert result.tests["sample_size"]["value"] == 52
 
 
-def test_execute_verdict_dataset_resolution_stays_scoped_to_strategy(forven_db):
+def test_execute_verdict_dataset_resolution_stays_scoped_to_strategy(AXIOM_db):
     now = datetime.now(timezone.utc)
     _insert_strategy("S00040", symbol="BNB", timeframe="1h")
     _insert_strategy("S00041", symbol="BNB", timeframe="1h")
@@ -324,7 +324,7 @@ def test_execute_verdict_dataset_resolution_stays_scoped_to_strategy(forven_db):
     assert result.tests["sample_size"]["value"] == 33
 
 
-def test_execute_verdict_resolves_decorated_strategy_id_to_canonical_result(forven_db):
+def test_execute_verdict_resolves_decorated_strategy_id_to_canonical_result(AXIOM_db):
     _insert_strategy("S00136", symbol="BTC", timeframe="1h")
     _insert_backtest_result(
         "bt-s00136-canonical",
@@ -353,7 +353,7 @@ def test_execute_verdict_resolves_decorated_strategy_id_to_canonical_result(forv
     assert result.tests["sample_size"]["value"] == 44
 
 
-def test_execute_verdict_falls_back_to_strategy_metrics_when_result_row_missing(forven_db):
+def test_execute_verdict_falls_back_to_strategy_metrics_when_result_row_missing(AXIOM_db):
     _insert_strategy("S00144", symbol="XRP/USDT", timeframe="15m")
     with get_db() as conn:
         conn.execute(
@@ -387,7 +387,7 @@ def test_execute_verdict_falls_back_to_strategy_metrics_when_result_row_missing(
     assert result.tests["sample_size"]["value"] == 77
 
 
-def test_execute_verdict_direct_result_id_lookup_still_works(forven_db):
+def test_execute_verdict_direct_result_id_lookup_still_works(AXIOM_db):
     _insert_strategy("S00042", symbol="BTC", timeframe="1h")
     _insert_backtest_result(
         "bt-s00042-direct",
@@ -454,8 +454,8 @@ def test_backtesting_client_run_verdict_falls_back_to_native_route_on_404(monkey
         calls.append(("fallback", url))
         return _Response(200, {"status": "pass", "result_id": "verdict-123", "tests": {}, "summary": {}}, url)
 
-    monkeypatch.setattr("forven.backtesting.httpx.Client", _DummyClient)
-    monkeypatch.setattr("forven.backtesting.httpx.post", _fallback_post)
+    monkeypatch.setattr("axiom.backtesting.httpx.Client", _DummyClient)
+    monkeypatch.setattr("axiom.backtesting.httpx.post", _fallback_post)
 
     client = BacktestingClient(base_url="http://127.0.0.1:8003/api")
     try:
@@ -471,8 +471,8 @@ def test_backtesting_client_run_verdict_falls_back_to_native_route_on_404(monkey
     ]
 
 
-def test_backtesting_client_sends_forven_api_and_operator_keys(monkeypatch):
-    from forven.backtesting import BacktestingClient
+def test_backtesting_client_sends_AXIOM_api_and_operator_keys(monkeypatch):
+    from axiom.backtesting import BacktestingClient
 
     captured: dict[str, object] = {}
 
@@ -483,9 +483,9 @@ def test_backtesting_client_sends_forven_api_and_operator_keys(monkeypatch):
         def close(self):
             return None
 
-    monkeypatch.setenv("FORVEN_API_KEY", "api-key-123")
-    monkeypatch.setenv("FORVEN_OPERATOR_KEY", "operator-key-456")
-    monkeypatch.setattr("forven.backtesting.httpx.Client", _DummyClient)
+    monkeypatch.setenv("AXIOM_API_KEY", "api-key-123")
+    monkeypatch.setenv("AXIOM_OPERATOR_KEY", "operator-key-456")
+    monkeypatch.setattr("axiom.backtesting.httpx.Client", _DummyClient)
 
     client = BacktestingClient(base_url="http://127.0.0.1:8003/api")
     try:
@@ -510,13 +510,13 @@ def test_optimize_strategy_uses_explicit_parameter_ranges(monkeypatch):
             }
         ]
 
-    monkeypatch.setattr("forven.strategies.optimizer.grid_search", _fake_grid_search)
+    monkeypatch.setattr("axiom.strategies.optimizer.grid_search", _fake_grid_search)
     monkeypatch.setattr(
-        "forven.strategies.optimizer.walk_forward",
+        "axiom.strategies.optimizer.walk_forward",
         lambda **_kwargs: {"verdict": "PASS", "degradation": 0.1},
     )
-    monkeypatch.setattr("forven.api_core.get_settings", lambda: {"backtest_duration_days": 365})
-    monkeypatch.setattr("forven.vectordb.store_backtest_result", lambda **_kwargs: None)
+    monkeypatch.setattr("axiom.api_core.get_settings", lambda: {"backtest_duration_days": 365})
+    monkeypatch.setattr("axiom.vectordb.store_backtest_result", lambda **_kwargs: None)
 
     result = optimize_strategy(
         strategy_id="S-explicit-space",
@@ -545,13 +545,13 @@ def test_optimize_strategy_normalizes_frontend_parameter_range_dicts(monkeypatch
             }
         ]
 
-    monkeypatch.setattr("forven.strategies.optimizer.grid_search", _fake_grid_search)
+    monkeypatch.setattr("axiom.strategies.optimizer.grid_search", _fake_grid_search)
     monkeypatch.setattr(
-        "forven.strategies.optimizer.walk_forward",
+        "axiom.strategies.optimizer.walk_forward",
         lambda **_kwargs: {"verdict": "PASS", "degradation": 0.1},
     )
-    monkeypatch.setattr("forven.api_core.get_settings", lambda: {"backtest_duration_days": 365})
-    monkeypatch.setattr("forven.vectordb.store_backtest_result", lambda **_kwargs: None)
+    monkeypatch.setattr("axiom.api_core.get_settings", lambda: {"backtest_duration_days": 365})
+    monkeypatch.setattr("axiom.vectordb.store_backtest_result", lambda **_kwargs: None)
 
     result = optimize_strategy(
         strategy_id="S-explicit-dict-space",
@@ -570,15 +570,15 @@ def _isolate_param_space_lookups(monkeypatch, *, registry_obj=None):
     """Make _get_param_space deterministic: no registry classes, no custom-module scan."""
     import types
 
-    monkeypatch.setattr("forven.strategies.registry.discover", lambda: None)
-    monkeypatch.setattr("forven.strategies.registry.get", lambda _sid: registry_obj)
+    monkeypatch.setattr("axiom.strategies.registry.discover", lambda: None)
+    monkeypatch.setattr("axiom.strategies.registry.get", lambda _sid: registry_obj)
     monkeypatch.setattr(
-        "forven.strategies.registry.resolve_runtime_type",
+        "axiom.strategies.registry.resolve_runtime_type",
         lambda *_a, **_k: (None, {}),
     )
-    monkeypatch.setattr("forven.strategies.registry._TYPE_MAP", {})
+    monkeypatch.setattr("axiom.strategies.registry._TYPE_MAP", {})
     monkeypatch.setattr(
-        "forven.strategies.optimizer.pkgutil",
+        "axiom.strategies.optimizer.pkgutil",
         types.SimpleNamespace(iter_modules=lambda *_a, **_k: []),
     )
 
@@ -646,13 +646,13 @@ def test_optimize_strategy_explicit_risk_axes_survive(monkeypatch):
             }
         ]
 
-    monkeypatch.setattr("forven.strategies.optimizer.grid_search", _fake_grid_search)
+    monkeypatch.setattr("axiom.strategies.optimizer.grid_search", _fake_grid_search)
     monkeypatch.setattr(
-        "forven.strategies.optimizer.walk_forward",
+        "axiom.strategies.optimizer.walk_forward",
         lambda **_kwargs: {"verdict": "PASS", "degradation": 0.1},
     )
-    monkeypatch.setattr("forven.api_core.get_settings", lambda: {"backtest_duration_days": 365})
-    monkeypatch.setattr("forven.vectordb.store_backtest_result", lambda **_kwargs: None)
+    monkeypatch.setattr("axiom.api_core.get_settings", lambda: {"backtest_duration_days": 365})
+    monkeypatch.setattr("axiom.vectordb.store_backtest_result", lambda **_kwargs: None)
 
     result = optimize_strategy(
         strategy_id="S-explicit-risk-axes",
@@ -670,8 +670,8 @@ def test_optimize_strategy_surfaces_grid_timeout(monkeypatch):
     def _raise_timeout(*_args, **_kwargs):
         raise FuturesTimeoutError()
 
-    monkeypatch.setattr("forven.strategies.optimizer.grid_search", _raise_timeout)
-    monkeypatch.setattr("forven.api_core.get_settings", lambda: {"backtest_duration_days": 365})
+    monkeypatch.setattr("axiom.strategies.optimizer.grid_search", _raise_timeout)
+    monkeypatch.setattr("axiom.api_core.get_settings", lambda: {"backtest_duration_days": 365})
 
     result = optimize_strategy(
         strategy_id="S-timeout",

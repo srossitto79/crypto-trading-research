@@ -1,13 +1,13 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { mount, unmount } from 'svelte';
 
-vi.mock('$lib/api/forven', () => ({
+vi.mock('$lib/api/axiom', () => ({
 	getFactoryResetCategories: vi.fn(),
 	performFactoryReset: vi.fn(),
 }));
 
 import SettingsDangerZone from '../lib/components/settings/sections/SettingsDangerZone.svelte';
-import { getFactoryResetCategories, performFactoryReset } from '$lib/api/forven';
+import { getFactoryResetCategories, performFactoryReset } from '$lib/api/axiom';
 
 const mockGet = getFactoryResetCategories as unknown as ReturnType<typeof vi.fn>;
 const mockReset = performFactoryReset as unknown as ReturnType<typeof vi.fn>;

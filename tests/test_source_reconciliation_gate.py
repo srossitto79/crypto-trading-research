@@ -1,4 +1,4 @@
-"""Tests for the source-reconciliation precompute job + the cache-only divergence
+﻿"""Tests for the source-reconciliation precompute job + the cache-only divergence
 promotion gate (#26).
 
 Covers the two halves of the design separately: (1) the out-of-band
@@ -15,9 +15,9 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 import pytest
 
-from forven.db import get_db, kv_set
-import forven.source_reconciliation as sr
-from forven.policy import (
+from axiom.db import get_db, kv_set
+import axiom.source_reconciliation as sr
+from axiom.policy import (
     _evaluate_source_divergence_gate,
     _extract_reason_code,
     evaluate_promotion,
@@ -67,7 +67,7 @@ def test_ts_close_frame_aligns_across_representations():
     lake = sr._ts_close_frame(_lake_frame([100.0, 101.0, 102.0]))
     live = sr._ts_close_frame(_hl_frame([100.0, 101.0, 102.0]))
     assert lake is not None and live is not None
-    from forven.data import reconcile_close_prices
+    from axiom.data import reconcile_close_prices
 
     metrics = reconcile_close_prices(lake, live)
     assert metrics["overlap_bars"] == 3
@@ -79,7 +79,7 @@ def test_ts_close_frame_aligns_across_representations():
 def _patch_sources(monkeypatch, lake_closes, hl_closes, source="binance"):
     monkeypatch.setattr(sr, "load_parquet", lambda s, t: _lake_frame(lake_closes))
     monkeypatch.setattr(sr, "get_dataset_source", lambda s, t: source)
-    import forven.market_data as md
+    import axiom.market_data as md
 
     monkeypatch.setattr(md, "fetch_hyperliquid_candles", lambda coin, **kw: _hl_frame(hl_closes))
 
@@ -108,7 +108,7 @@ def test_reconcile_one_insufficient_overlap(monkeypatch):
     """Disjoint timestamp windows -> zero overlap -> insufficient (NOT a 0% pass)."""
     monkeypatch.setattr(sr, "load_parquet", lambda s, t: _lake_frame([100.0] * 30, start="2026-01-01T00:00:00Z"))
     monkeypatch.setattr(sr, "get_dataset_source", lambda s, t: "binance")
-    import forven.market_data as md
+    import axiom.market_data as md
 
     monkeypatch.setattr(md, "fetch_hyperliquid_candles", lambda coin, **kw: _hl_frame([100.0] * 30, start="2026-06-01T00:00:00Z"))
     out = sr.reconcile_one("SOL/USDT", "1h", min_overlap_bars=20)
@@ -126,7 +126,7 @@ def test_reconcile_one_same_venue_short_circuits(monkeypatch):
 def test_reconcile_one_fetch_error(monkeypatch):
     monkeypatch.setattr(sr, "load_parquet", lambda s, t: _lake_frame([100.0] * 30))
     monkeypatch.setattr(sr, "get_dataset_source", lambda s, t: "binance")
-    import forven.market_data as md
+    import axiom.market_data as md
 
     def _boom(coin, **kw):
         raise RuntimeError("hyperliquid down")
@@ -179,28 +179,28 @@ def _seed_divergence(symbol, timeframe, *, status="ok", max_pct=0.3, checked_at=
     )
 
 
-def test_gate_disabled_allows(forven_db):
+def test_gate_disabled_allows(AXIOM_db):
     _seed_strategy()
     ok, reason = _evaluate_source_divergence_gate("S-DIV", _settings(enabled=False))
     assert ok is True
     assert "disabled" in reason
 
 
-def test_gate_missing_fail_open(forven_db):
+def test_gate_missing_fail_open(AXIOM_db):
     _seed_strategy()
     ok, reason = _evaluate_source_divergence_gate("S-DIV", _settings())
     assert ok is True
     assert "unavailable" in reason
 
 
-def test_gate_missing_blocks_when_block_when_missing(forven_db):
+def test_gate_missing_blocks_when_block_when_missing(AXIOM_db):
     _seed_strategy()
     ok, reason = _evaluate_source_divergence_gate("S-DIV", _settings(block_when_missing=True))
     assert ok is False
     assert "pending" in reason
 
 
-def test_gate_blocks_high_divergence(forven_db):
+def test_gate_blocks_high_divergence(AXIOM_db):
     _seed_strategy()
     _seed_divergence("BTC/USDT", "1h", status="ok", max_pct=5.0)
     ok, reason = _evaluate_source_divergence_gate("S-DIV", _settings(max_pct=2.0))
@@ -209,7 +209,7 @@ def test_gate_blocks_high_divergence(forven_db):
     assert "5.00%" in reason
 
 
-def test_gate_allows_low_divergence(forven_db):
+def test_gate_allows_low_divergence(AXIOM_db):
     _seed_strategy()
     _seed_divergence("BTC/USDT", "1h", status="ok", max_pct=0.3)
     ok, reason = _evaluate_source_divergence_gate("S-DIV", _settings(max_pct=2.0))
@@ -217,14 +217,14 @@ def test_gate_allows_low_divergence(forven_db):
     assert "within" in reason
 
 
-def test_gate_insufficient_overlap_treated_as_missing(forven_db):
+def test_gate_insufficient_overlap_treated_as_missing(AXIOM_db):
     _seed_strategy()
     _seed_divergence("BTC/USDT", "1h", status="insufficient_overlap", max_pct=0.0)
     ok, _ = _evaluate_source_divergence_gate("S-DIV", _settings())
     assert ok is True  # fail-open, NOT a 0% pass
 
 
-def test_gate_stale_payload_fails_open(forven_db):
+def test_gate_stale_payload_fails_open(AXIOM_db):
     _seed_strategy()
     old = (datetime.now(timezone.utc) - timedelta(hours=48)).isoformat()
     _seed_divergence("BTC/USDT", "1h", status="ok", max_pct=9.0, checked_at=old)
@@ -243,7 +243,7 @@ def test_reason_code_divergence():
 def test_resolve_min_overlap_reads_setting(monkeypatch):
     """The min_overlap_bars setting is live, not a dead knob."""
     from types import SimpleNamespace
-    import forven.dataeng.settings as de
+    import axiom.dataeng.settings as de
 
     monkeypatch.setattr(
         de, "load_data_engine_settings",
@@ -253,7 +253,7 @@ def test_resolve_min_overlap_reads_setting(monkeypatch):
 
 
 def test_resolve_min_overlap_falls_back_on_error(monkeypatch):
-    import forven.dataeng.settings as de
+    import axiom.dataeng.settings as de
 
     def _boom():
         raise RuntimeError("settings unavailable")
@@ -262,21 +262,21 @@ def test_resolve_min_overlap_falls_back_on_error(monkeypatch):
     assert sr._resolve_min_overlap_bars() == sr._MIN_OVERLAP_BARS
 
 
-def test_evaluate_promotion_blocks_paper_on_divergence(forven_db):
+def test_evaluate_promotion_blocks_paper_on_divergence(AXIOM_db):
     """End-to-end: a gauntlet->paper promotion is blocked when divergence is high."""
     _seed_strategy(stage="gauntlet")
     _seed_divergence("BTC/USDT", "1h", status="ok", max_pct=7.5)
-    kv_set("forven:settings", _settings(max_pct=2.0))
+    kv_set("axiom:settings", _settings(max_pct=2.0))
     ok, reason = evaluate_promotion("S-DIV", "gauntlet", "paper")
     assert ok is False
     assert "divergence" in reason.lower()
 
 
-def test_evaluate_promotion_divergence_gate_inert_when_disabled(forven_db):
+def test_evaluate_promotion_divergence_gate_inert_when_disabled(AXIOM_db):
     """With the feature off, the divergence gate never blocks (proves default-inert)."""
     _seed_strategy(stage="gauntlet")
     _seed_divergence("BTC/USDT", "1h", status="ok", max_pct=99.0)
-    kv_set("forven:settings", _settings(enabled=False))
+    kv_set("axiom:settings", _settings(enabled=False))
     # The divergence gate must not be the blocker; whatever the downstream gauntlet
     # gate decides, the reason must not be a divergence rejection.
     ok, reason = evaluate_promotion("S-DIV", "gauntlet", "paper")

@@ -25,7 +25,7 @@
 	// Settings page (the same place the TRADING HALTED banner routes users). Every
 	// user needs a Hyperliquid account to trade, so we offer them one — with a 4%
 	// fee discount for them — via our referral link.
-	const HL_REFERRAL_URL = 'https://app.hyperliquid.xyz/join/FORVEN';
+	const HL_REFERRAL_URL = 'https://app.hyperliquid.xyz/join/AXIOM';
 	let referralCopyFallback = false;
 	async function openReferral(): Promise<void> {
 		// Hand the URL to the system browser via the Tauri opener; window.open is a

@@ -1,11 +1,11 @@
-"""Tests for unified Forven walk-forward validation."""
+﻿"""Tests for unified Axiom walk-forward validation."""
 
 from datetime import datetime, timezone
 
 import numpy as np
 import pandas as pd
 
-from forven.strategies.backtest import walk_forward
+from axiom.strategies.backtest import walk_forward
 
 
 def _fake_ohlcv(n: int) -> pd.DataFrame:
@@ -29,11 +29,11 @@ def _fake_ohlcv(n: int) -> pd.DataFrame:
     )
 
 
-def test_walk_forward_insufficient_data_returns_error(monkeypatch, forven_db):
+def test_walk_forward_insufficient_data_returns_error(monkeypatch, AXIOM_db):
     def _short_candles(*_args, **_kwargs):
         return _fake_ohlcv(200)
 
-    monkeypatch.setattr("forven.scanner.fetch_candles", _short_candles)
+    monkeypatch.setattr("axiom.scanner.fetch_candles", _short_candles)
 
     result = walk_forward(
         strategy_id="wf-short",
@@ -47,11 +47,11 @@ def test_walk_forward_insufficient_data_returns_error(monkeypatch, forven_db):
     assert "Insufficient data" in err or "Parameter lookback" in err
 
 
-def test_walk_forward_returns_valid_structure(monkeypatch, forven_db):
+def test_walk_forward_returns_valid_structure(monkeypatch, AXIOM_db):
     def _full_candles(*_args, **_kwargs):
         return _fake_ohlcv(1000)
 
-    monkeypatch.setattr("forven.scanner.fetch_candles", _full_candles)
+    monkeypatch.setattr("axiom.scanner.fetch_candles", _full_candles)
 
     result = walk_forward(
         strategy_id="wf-valid",
@@ -68,11 +68,11 @@ def test_walk_forward_returns_valid_structure(monkeypatch, forven_db):
     assert isinstance(result["splits"], list)
 
 
-def test_walk_forward_gap_reduces_effective_oos(monkeypatch, forven_db):
+def test_walk_forward_gap_reduces_effective_oos(monkeypatch, AXIOM_db):
     def _candles(*_args, **_kwargs):
         return _fake_ohlcv(1000)
 
-    monkeypatch.setattr("forven.scanner.fetch_candles", _candles)
+    monkeypatch.setattr("axiom.scanner.fetch_candles", _candles)
 
     baseline = walk_forward("wf-gap", "BTC", "rsi_momentum", {}, total_bars=1000, n_splits=2)
     gapped = walk_forward(

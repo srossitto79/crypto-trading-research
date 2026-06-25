@@ -1,4 +1,4 @@
-"""Per-slot fallback chains (aux:<kind>, backup) must round-trip.
+﻿"""Per-slot fallback chains (aux:<kind>, backup) must round-trip.
 
 The Routing & Fallbacks UI stores per-slot fallback lists under slot-scoped
 keys in fallback_chains. Coercion used to drop any non-provider key (so saved
@@ -8,11 +8,11 @@ the write (update_model_routing) and read (model-policy GET) paths.
 
 from __future__ import annotations
 
-from forven import api_core as ac
-from forven import model_routing as mr
+from axiom import api_core as ac
+from axiom import model_routing as mr
 
 
-def test_slot_fallback_chains_persist_through_update(forven_db):
+def test_slot_fallback_chains_persist_through_update(AXIOM_db):
     mr.update_model_routing({
         "fallback_chains": {
             "aux:recall": [
@@ -33,7 +33,7 @@ def test_slot_fallback_chains_persist_through_update(forven_db):
     assert chains["gemini"] == [{"provider": "gemini", "model_id": "gemini-2.5-flash-lite"}]
 
 
-def test_slot_fallback_chains_returned_by_model_policy_get(forven_db):
+def test_slot_fallback_chains_returned_by_model_policy_get(AXIOM_db):
     mr.update_model_routing({
         "fallback_chains": {
             "aux:skill_extraction": [{"provider": "gemini", "model_id": "gemini-2.5-flash"}],
@@ -46,7 +46,7 @@ def test_slot_fallback_chains_returned_by_model_policy_get(forven_db):
     assert fc["backup"] == [{"provider": "groq", "model_id": "llama-3.3-70b-versatile"}]
 
 
-def test_unknown_slot_key_still_dropped(forven_db):
+def test_unknown_slot_key_still_dropped(AXIOM_db):
     mr.update_model_routing({
         "fallback_chains": {"aux:not_a_kind": [{"provider": "openai", "model_id": "gpt-5.2"}],
                             "garbage": [{"provider": "openai", "model_id": "gpt-5.2"}]},

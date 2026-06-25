@@ -1,4 +1,4 @@
-"""Lead-1 regression: the exchange-truth reconciler must not force-close
+﻿"""Lead-1 regression: the exchange-truth reconciler must not force-close
 local-only paper trades. The discriminator is is_local_only_paper_trade — a
 paper/paper_challenger trade with no exchange correlation id never reached the
 exchange, so its absence there is not a ghost.
@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 
-from forven.trade_state import is_local_only_paper_trade, trade_reached_exchange
+from axiom.trade_state import is_local_only_paper_trade, trade_reached_exchange
 
 
 def test_local_paper_trade_is_protected():

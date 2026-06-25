@@ -175,7 +175,7 @@
 					data-testid="strategy-import-textarea"
 					class="min-h-[160px] w-full resize-y rounded border border-[#2b2b2b] bg-black p-3 font-mono text-[11px] leading-relaxed text-gray-200 outline-none focus:border-sky-700"
 					spellcheck="false"
-					placeholder="Paste a Forven strategy export here…"
+					placeholder="Paste an Axiom strategy export here…"
 					value={rawText}
 					on:input={(e) => reparse((e.target as HTMLTextAreaElement).value)}
 				></textarea>

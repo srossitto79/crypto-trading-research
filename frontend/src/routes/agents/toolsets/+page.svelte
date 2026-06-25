@@ -4,18 +4,18 @@
 	import {
 		deleteAgentToolsetOverrides,
 		getAgentToolsets,
-		getForvenAgents,
+		getAxiomAgents,
 		putAgentToolsetOverrides,
 		type AgentToolsetsResponse,
-		type ForvenAgent,
+		type AxiomAgent,
 		type ToolDefinition,
 		type ToolsetEffectiveEntry,
 		type ToolsetOverrideRule,
-	} from '$lib/api/forven';
+	} from '$lib/api/axiom';
 
 	type RowState = 'default' | 'enable' | 'disable';
 
-	let agents: ForvenAgent[] = [];
+	let agents: AxiomAgent[] = [];
 	let agentsLoading = true;
 	let agentsError: string | null = null;
 	let selectedAgentId = '';
@@ -59,7 +59,7 @@
 		agentsLoading = true;
 		agentsError = null;
 		try {
-			const list = await getForvenAgents();
+			const list = await getAxiomAgents();
 			agents = (list || []).filter((a) => !!a.id);
 			const requested = $page.url.searchParams.get('agent');
 			const preselect =
@@ -223,7 +223,7 @@
 	onMount(loadAgents);
 </script>
 
-<svelte:head><title>Agent Toolsets | Forven</title></svelte:head>
+<svelte:head><title>Agent Toolsets | Axiom</title></svelte:head>
 
 <div class="flex h-screen overflow-hidden">
 	<aside class="w-64 border-r border-[#222] bg-[#0a0a0a] overflow-y-auto">

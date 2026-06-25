@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-# Forven Hardened Setup
+# Axiom Hardened Setup
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 cd "$DIR"
 
-echo "=== Forven Pre-flight Checks ==="
+echo "=== Axiom Pre-flight Checks ==="
 
 # 1. Check Python version
 python_version=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
@@ -25,11 +25,11 @@ pip install -e .
 
 # 4. Run database migrations
 echo "Running database migrations..."
-python3 -c "from forven.db import init_db; init_db()"
+python3 -c "from axiom.db import init_db; init_db()"
 
 # 5. Install frontend dependencies
 if [ -d "frontend" ]; then
-    echo "Installing Forven frontend dependencies..."
+    echo "Installing Axiom frontend dependencies..."
     cd frontend
     if command -v npm &> /dev/null; then
         npm install

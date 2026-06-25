@@ -1,4 +1,4 @@
-"""Verify Hyperliquid sub-account (direction-book) routing on TESTNET.
+﻿"""Verify Hyperliquid sub-account (direction-book) routing on TESTNET.
 
 Approach C routes live orders to a sub-account via the SDK `vault_address` (the
 master key signs; the order executes on behalf of the sub-account). Whether the
@@ -29,8 +29,8 @@ def _resolve_subaccount(explicit: str | None) -> str | None:
     if explicit:
         return explicit.strip()
     try:
-        from forven.db import kv_get
-        s = kv_get("forven:settings", {}) or {}
+        from axiom.db import kv_get
+        s = kv_get("axiom:settings", {}) or {}
         for key in ("hyperliquid_short_book_address", "hyperliquid_long_book_address"):
             addr = str(s.get(key) or "").strip()
             if addr:
@@ -54,7 +54,7 @@ def main() -> int:
         print("FAIL: no sub-account address given and none configured in settings.")
         return 2
 
-    from forven.exchange.hyperliquid import (
+    from axiom.exchange.hyperliquid import (
         cancel_order,
         get_account_value,
         get_all_mids,

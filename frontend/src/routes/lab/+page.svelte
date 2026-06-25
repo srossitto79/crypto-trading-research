@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import {
-		getForvenStrategiesQuery,
+		getAxiomStrategiesQuery,
 		getNowWorking,
 		getPipelineSettings,
 		transitionStage,
@@ -27,7 +27,7 @@
 	import SortableTh from '$lib/components/ui/SortableTh.svelte';
 	import StrategyExportMenu from '$lib/components/strategy/StrategyExportMenu.svelte';
 	import StrategyImportDialog from '$lib/components/strategy/StrategyImportDialog.svelte';
-	import { getHealthStatus } from '$lib/api/forven';
+	import { getHealthStatus } from '$lib/api/axiom';
 	import type { HealthStatusResponse } from '$lib/api/types';
 	import type { StrategyImportResult } from '$lib/api';
 
@@ -137,7 +137,7 @@
 			if (remaining <= 0) break;
 			const pageLimit = maxRows === null ? STRATEGY_FETCH_PAGE_SIZE : Math.min(STRATEGY_FETCH_PAGE_SIZE, remaining);
 			const offset = pageIndex * STRATEGY_FETCH_PAGE_SIZE;
-			const page = await getForvenStrategiesQuery({
+			const page = await getAxiomStrategiesQuery({
 				status,
 				limit: pageLimit,
 				offset,
@@ -847,7 +847,7 @@
 </script>
 
 <svelte:head>
-	<title>The Forge | Forven</title>
+	<title>The Forge | Axiom</title>
 	<meta name="description" content="Manage all containers of the strategy type, complete with research metrics." />
 </svelte:head>
 

@@ -1,12 +1,12 @@
-"""Tests for the Forven risk module — kill-switch, daily loss, mode-aware limits."""
+﻿"""Tests for the Axiom risk module — kill-switch, daily loss, mode-aware limits."""
 
 import json
 from datetime import timedelta
 from unittest.mock import patch
 
-from forven.db import get_db, kv_set
+from axiom.db import get_db, kv_set
 
-from forven.exchange.risk import (
+from axiom.exchange.risk import (
     _get_risk_limits,
     _MAINNET_LIMITS,
     _TESTNET_LIMITS,
@@ -19,27 +19,27 @@ from forven.exchange.risk import (
     set_kill_switch_enabled,
     update_equity,
 )
-from forven.sim.clock import get_now
-from forven.system_pause import set_system_paused
+from axiom.sim.clock import get_now
+from axiom.system_pause import set_system_paused
 
 
 class TestModeAwareRiskLimits:
     """Risk limits change based on execution mode."""
 
     def test_testnet_limits(self):
-        with patch("forven.config.get_execution_mode", return_value="paper"):
+        with patch("axiom.config.get_execution_mode", return_value="paper"):
             limits = _get_risk_limits()
         assert limits["max_drawdown"] == 0.10
         assert limits["daily_loss_limit"] == 0.05
         assert limits["max_risk_per_trade"] == 0.02
 
     def test_live_uses_testnet_limits(self):
-        with patch("forven.config.get_execution_mode", return_value="live"):
+        with patch("axiom.config.get_execution_mode", return_value="live"):
             limits = _get_risk_limits()
         assert limits == _TESTNET_LIMITS
 
     def test_mainnet_limits_are_tighter(self):
-        with patch("forven.config.get_execution_mode", return_value="mainnet"):
+        with patch("axiom.config.get_execution_mode", return_value="mainnet"):
             limits = _get_risk_limits()
         assert limits["max_drawdown"] == 0.05
         assert limits["daily_loss_limit"] == 0.03
@@ -52,9 +52,9 @@ class TestModeAwareRiskLimits:
                 f"Mainnet {key}={_MAINNET_LIMITS[key]} should be <= testnet {_TESTNET_LIMITS[key]}"
             )
 
-    def test_canonical_risk_aliases_override_legacy_fields(self, forven_db):
+    def test_canonical_risk_aliases_override_legacy_fields(self, AXIOM_db):
         kv_set(
-            "forven:settings",
+            "axiom:settings",
             {
                 "initial_capital": 10000,
                 "max_position_size_pct": 5,
@@ -64,7 +64,7 @@ class TestModeAwareRiskLimits:
             },
         )
 
-        with patch("forven.config.get_execution_mode", return_value="paper"):
+        with patch("axiom.config.get_execution_mode", return_value="paper"):
             limits = _get_risk_limits()
 
         assert limits["max_risk_per_trade"] == 0.01
@@ -163,14 +163,14 @@ class TestPositionSizing:
 class TestKillSwitch:
     """Kill-switch triggers and resets."""
 
-    def test_kill_switch_triggers_on_drawdown(self, forven_db):
+    def test_kill_switch_triggers_on_drawdown(self, AXIOM_db):
         # Set HWM high, then report low equity
         update_equity(10000.0)  # sets HWM
         result = update_equity(8900.0)  # 11% drawdown > 10% limit
         assert result["action"] == "kill_switch"
         assert result["kill_switch"] is True
 
-    def test_kill_switch_stays_active(self, forven_db):
+    def test_kill_switch_stays_active(self, AXIOM_db):
         update_equity(10000.0)
         update_equity(8900.0)  # triggers
         # Subsequent calls should still show kill_switch=True
@@ -178,14 +178,14 @@ class TestKillSwitch:
         assert result["kill_switch"] is True
         assert result["action"] is None  # no re-trigger
 
-    def test_kill_switch_blocks_trading(self, forven_db):
+    def test_kill_switch_blocks_trading(self, AXIOM_db):
         update_equity(10000.0)
         update_equity(8900.0)
         allowed, reason = is_trading_allowed()
         assert allowed is False
         assert "Kill-switch" in reason
 
-    def test_kill_switch_reset(self, forven_db):
+    def test_kill_switch_reset(self, AXIOM_db):
         update_equity(10000.0)
         update_equity(8900.0)  # triggers kill switch (11% drawdown)
         reset_kill_switch()
@@ -200,7 +200,7 @@ class TestKillSwitch:
         assert result["action"] is None
         assert result["high_water_mark"] == 8900.0
 
-    def test_kill_switch_reset_prevents_retrigger(self, forven_db):
+    def test_kill_switch_reset_prevents_retrigger(self, AXIOM_db):
         """After a gradual drawdown triggers the kill switch, resetting
         should re-baseline HWM so the same equity doesn't re-trigger."""
         update_equity(10000.0)
@@ -218,9 +218,9 @@ class TestKillSwitch:
         assert result["action"] is None
         assert result["high_water_mark"] == 5500.0
 
-    def test_kill_switch_reset_clears_daily_halt(self, forven_db):
+    def test_kill_switch_reset_clears_daily_halt(self, AXIOM_db):
         """Reset should clear daily_loss_halt to avoid blocking after reset."""
-        from forven.db import kv_get, kv_set
+        from axiom.db import kv_get, kv_set
 
         update_equity(10000.0)
         update_equity(8900.0)  # triggers kill switch
@@ -238,7 +238,7 @@ class TestKillSwitch:
         assert state_after["kill_switch_active"] is False
         assert state_after["daily_loss_halt"] is False
 
-    def test_paper_to_exchange_rebaselines_automatically(self, forven_db):
+    def test_paper_to_exchange_rebaselines_automatically(self, AXIOM_db):
         """When equity source changes from paper to exchange,
         auto re-baseline HWM and daily tracking regardless of amount."""
 
@@ -259,7 +259,7 @@ class TestKillSwitch:
         assert result["kill_switch"] is False
         assert result["high_water_mark"] == 1000.0
 
-    def test_paper_to_exchange_any_wallet_amount(self, forven_db):
+    def test_paper_to_exchange_any_wallet_amount(self, AXIOM_db):
         """Source change works regardless of wallet balance —
         even if testnet wallet has $50K or $10."""
 
@@ -269,7 +269,7 @@ class TestKillSwitch:
         assert result["kill_switch"] is False
         assert result["high_water_mark"] == 50000.0
 
-    def test_paper_to_exchange_tiny_wallet(self, forven_db):
+    def test_paper_to_exchange_tiny_wallet(self, AXIOM_db):
         """Source change works with very small testnet wallets."""
         update_equity(10000.0, source="paper")
         result = update_equity(10.0, source="exchange")
@@ -277,14 +277,14 @@ class TestKillSwitch:
         assert result["high_water_mark"] == 10.0
         assert result["daily_pnl_pct"] == 0.0
 
-    def test_exchange_to_exchange_still_triggers(self, forven_db):
+    def test_exchange_to_exchange_still_triggers(self, AXIOM_db):
         """Real drawdown on the exchange still triggers the kill switch."""
         update_equity(10000.0, source="exchange")
         result = update_equity(8900.0, source="exchange")  # 11% drawdown
         assert result["kill_switch"] is True
         assert result["action"] == "kill_switch"
 
-    def test_no_trigger_within_threshold(self, forven_db):
+    def test_no_trigger_within_threshold(self, AXIOM_db):
         update_equity(10000.0)
         result = update_equity(9600.0)  # 4% drawdown < 10%, 4% daily loss < 5%
         assert result["action"] is None
@@ -294,7 +294,7 @@ class TestKillSwitch:
 class TestKillSwitchToggle:
     """Kill-switch auto-trigger enable/disable toggle."""
 
-    def test_disable_prevents_auto_trigger(self, forven_db):
+    def test_disable_prevents_auto_trigger(self, AXIOM_db):
         """When kill switch is disabled, drawdown does NOT trigger it."""
         set_kill_switch_enabled(False)
         update_equity(10000.0)
@@ -302,7 +302,7 @@ class TestKillSwitchToggle:
         assert result["kill_switch"] is False
         assert result["action"] != "kill_switch"  # may be daily_halt, but NOT kill_switch
 
-    def test_reenable_allows_trigger(self, forven_db):
+    def test_reenable_allows_trigger(self, AXIOM_db):
         """After re-enabling, kill switch can trigger again."""
         set_kill_switch_enabled(False)
         update_equity(10000.0)
@@ -312,7 +312,7 @@ class TestKillSwitchToggle:
         assert result["kill_switch"] is True
         assert result["action"] == "kill_switch"
 
-    def test_toggle_persists_in_kv(self, forven_db):
+    def test_toggle_persists_in_kv(self, AXIOM_db):
         """Toggle value is persisted and readable from risk status."""
         set_kill_switch_enabled(False)
         status = get_risk_status()
@@ -322,7 +322,7 @@ class TestKillSwitchToggle:
         status = get_risk_status()
         assert status["kill_switch_enabled"] is True
 
-    def test_disabled_still_tracks_drawdown(self, forven_db):
+    def test_disabled_still_tracks_drawdown(self, AXIOM_db):
         """With kill switch disabled, HWM and drawdown are still tracked."""
         set_kill_switch_enabled(False)
         update_equity(10000.0)
@@ -335,13 +335,13 @@ class TestKillSwitchToggle:
 class TestDailyLossLimit:
     """Daily loss halt."""
 
-    def test_daily_loss_triggers(self, forven_db):
+    def test_daily_loss_triggers(self, AXIOM_db):
         update_equity(10000.0)  # sets daily start
         result = update_equity(9400.0)  # -6% > 5% limit
         assert result["action"] == "daily_halt"
         assert result["daily_halt"] is True
 
-    def test_daily_loss_blocks_trading(self, forven_db):
+    def test_daily_loss_blocks_trading(self, AXIOM_db):
         update_equity(10000.0)
         update_equity(9400.0)
         allowed, reason = is_trading_allowed()
@@ -352,7 +352,7 @@ class TestDailyLossLimit:
 class TestManualPause:
     """Operator pause state blocks trading through the shared helper."""
 
-    def test_manual_pause_blocks_and_resumes_trading(self, forven_db):
+    def test_manual_pause_blocks_and_resumes_trading(self, AXIOM_db):
         set_system_paused(True, paused_at="2026-03-06T00:00:00+00:00")
         allowed, reason = is_trading_allowed()
         assert allowed is False
@@ -367,7 +367,7 @@ class TestManualPause:
 class TestRecoveryGate:
     """Daemon recovery state blocks new entries independently of operator pause."""
 
-    def test_recovery_active_blocks_trading(self, forven_db):
+    def test_recovery_active_blocks_trading(self, AXIOM_db):
         kv_set(
             "daemon_state",
             {
@@ -383,7 +383,7 @@ class TestRecoveryGate:
         assert "Startup exchange recovery active" in reason
         assert "1 discrepancy" in reason
 
-    def test_operator_pause_remains_blocking_after_recovery_clears(self, forven_db):
+    def test_operator_pause_remains_blocking_after_recovery_clears(self, AXIOM_db):
         set_system_paused(True, paused_at="2026-03-12T09:00:00+00:00")
         kv_set(
             "daemon_state",
@@ -403,7 +403,7 @@ class TestRecoveryGate:
         assert resumed_allowed is False
         assert resumed_reason == "System paused by operator"
 
-    def test_risk_status_includes_recovery_fields(self, forven_db):
+    def test_risk_status_includes_recovery_fields(self, AXIOM_db):
         kv_set(
             "daemon_state",
             {
@@ -438,14 +438,14 @@ class TestRecoveryGate:
 class TestCanOpen:
     """Position gating checks."""
 
-    def test_blocks_when_kill_switch_active(self, forven_db):
+    def test_blocks_when_kill_switch_active(self, AXIOM_db):
         update_equity(10000.0)
         update_equity(8900.0)  # trigger kill switch
         allowed, risk, reason = can_open("BTC", "long", "test_strat")
         assert allowed is False
         assert "Kill-switch" in reason
 
-    def test_ungrouped_asset_is_singleton_group_not_bypass(self, forven_db):
+    def test_ungrouped_asset_is_singleton_group_not_bypass(self, AXIOM_db):
         # H5: an asset outside crypto_major is now its OWN singleton group — a
         # single small position is allowed (within budget), no longer bypassing
         # the per-asset / portfolio-budget gates.
@@ -454,7 +454,7 @@ class TestCanOpen:
         assert allowed is True
         assert "doge" in reason.lower()
 
-    def test_ungrouped_asset_blocks_duplicate(self, forven_db):
+    def test_ungrouped_asset_blocks_duplicate(self, AXIOM_db):
         # H5: a second position on the same ungrouped asset is now rejected
         # (previously it bypassed the dedup rule entirely).
         update_equity(10000.0)
@@ -471,14 +471,14 @@ class TestCanOpen:
         assert allowed is False
         assert "asset conflict" in reason.lower()
 
-    def test_rejects_excessive_risk(self, forven_db):
+    def test_rejects_excessive_risk(self, AXIOM_db):
         update_equity(10000.0)
         allowed, risk, reason = can_open("BTC", "long", "test_strat", risk_pct=0.05)
         assert allowed is False
         assert "exceeds" in reason.lower()
 
-    def test_blocks_when_max_concurrent_positions_reached(self, forven_db):
-        kv_set("forven:settings", {"max_concurrent_positions": 1})
+    def test_blocks_when_max_concurrent_positions_reached(self, AXIOM_db):
+        kv_set("axiom:settings", {"max_concurrent_positions": 1})
 
         with get_db() as conn:
             conn.execute(
@@ -495,8 +495,8 @@ class TestCanOpen:
         assert risk == 0.0
         assert "max concurrent positions" in reason.lower()
 
-    def test_blocks_strategy_during_loss_cooldown(self, forven_db):
-        kv_set("forven:settings", {"cooldown_after_loss_hours": 4})
+    def test_blocks_strategy_during_loss_cooldown(self, AXIOM_db):
+        kv_set("axiom:settings", {"cooldown_after_loss_hours": 4})
         closed_at = (get_now() - timedelta(hours=1)).isoformat()
 
         with get_db() as conn:
@@ -554,8 +554,8 @@ class TestPaperLivePositionScoping:
     never count against each other.
     """
 
-    def test_paper_sessions_do_not_block_each_other(self, forven_db):
-        kv_set("forven:settings", {"max_concurrent_positions": 1, "paper_max_concurrent_positions": 0})
+    def test_paper_sessions_do_not_block_each_other(self, AXIOM_db):
+        kv_set("axiom:settings", {"max_concurrent_positions": 1, "paper_max_concurrent_positions": 0})
         _seed_position("p-a", "ETH", "long", "strat-A", "paper_challenger")
         # strat-B is a separate paper session — must NOT be blocked by strat-A.
         allowed, _risk, reason = can_open(
@@ -563,24 +563,24 @@ class TestPaperLivePositionScoping:
         )
         assert allowed is True, reason
 
-    def test_paper_two_strategies_can_hold_same_asset(self, forven_db):
-        kv_set("forven:settings", {"max_concurrent_positions": 1, "paper_max_concurrent_positions": 0})
+    def test_paper_two_strategies_can_hold_same_asset(self, AXIOM_db):
+        kv_set("axiom:settings", {"max_concurrent_positions": 1, "paper_max_concurrent_positions": 0})
         _seed_position("p-a", "BTC", "long", "strat-A", "paper_challenger")
         allowed, _risk, reason = can_open(
             "BTC", "long", "strat-B", risk_pct=0.01, execution_type="paper_challenger"
         )
         assert allowed is True, reason
 
-    def test_paper_long_and_short_same_asset_across_sessions(self, forven_db):
-        kv_set("forven:settings", {"max_concurrent_positions": 1, "paper_max_concurrent_positions": 0})
+    def test_paper_long_and_short_same_asset_across_sessions(self, AXIOM_db):
+        kv_set("axiom:settings", {"max_concurrent_positions": 1, "paper_max_concurrent_positions": 0})
         _seed_position("p-a", "BTC", "long", "strat-A", "paper_challenger")
         allowed, _risk, reason = can_open(
             "BTC", "short", "strat-B", risk_pct=0.01, execution_type="paper_challenger"
         )
         assert allowed is True, reason
 
-    def test_paper_same_strategy_cannot_double_open_same_asset(self, forven_db):
-        kv_set("forven:settings", {"paper_max_concurrent_positions": 0})
+    def test_paper_same_strategy_cannot_double_open_same_asset(self, AXIOM_db):
+        kv_set("axiom:settings", {"paper_max_concurrent_positions": 0})
         _seed_position("p-a", "BTC", "long", "strat-A", "paper_challenger")
         allowed, _risk, reason = can_open(
             "BTC", "long", "strat-A", risk_pct=0.01, execution_type="paper_challenger"
@@ -588,9 +588,9 @@ class TestPaperLivePositionScoping:
         assert allowed is False
         assert "already has an open" in reason.lower()
 
-    def test_paper_respects_per_session_cap_when_set(self, forven_db):
+    def test_paper_respects_per_session_cap_when_set(self, AXIOM_db):
         # A non-zero paper cap applies within a single session (per-strategy scope).
-        kv_set("forven:settings", {"paper_max_concurrent_positions": 1})
+        kv_set("axiom:settings", {"paper_max_concurrent_positions": 1})
         _seed_position("p-a", "BTC", "long", "strat-A", "paper_challenger")
         allowed, _risk, reason = can_open(
             "SOL", "long", "strat-A", risk_pct=0.01, execution_type="paper_challenger"
@@ -598,8 +598,8 @@ class TestPaperLivePositionScoping:
         assert allowed is False
         assert "max concurrent positions" in reason.lower()
 
-    def test_live_positions_still_globally_capped(self, forven_db):
-        kv_set("forven:settings", {"max_concurrent_positions": 1})
+    def test_live_positions_still_globally_capped(self, AXIOM_db):
+        kv_set("axiom:settings", {"max_concurrent_positions": 1})
         _seed_position("l-a", "ETH", "long", "strat-A", "live")
         allowed, _risk, reason = can_open(
             "SOL", "long", "strat-B", risk_pct=0.01, execution_type="live"
@@ -607,8 +607,8 @@ class TestPaperLivePositionScoping:
         assert allowed is False
         assert "max concurrent positions" in reason.lower()
 
-    def test_live_keeps_one_net_position_per_asset(self, forven_db):
-        kv_set("forven:settings", {"max_concurrent_positions": 5})
+    def test_live_keeps_one_net_position_per_asset(self, AXIOM_db):
+        kv_set("axiom:settings", {"max_concurrent_positions": 5})
         _seed_position("l-a", "BTC", "long", "strat-A", "live")
         allowed, _risk, reason = can_open(
             "BTC", "short", "strat-B", risk_pct=0.01, execution_type="live"
@@ -616,23 +616,23 @@ class TestPaperLivePositionScoping:
         assert allowed is False
         assert "asset conflict" in reason.lower()
 
-    def test_paper_position_does_not_consume_live_slot(self, forven_db):
-        kv_set("forven:settings", {"max_concurrent_positions": 1, "paper_max_concurrent_positions": 0})
+    def test_paper_position_does_not_consume_live_slot(self, AXIOM_db):
+        kv_set("axiom:settings", {"max_concurrent_positions": 1, "paper_max_concurrent_positions": 0})
         _seed_position("p-a", "ETH", "long", "strat-A", "paper_challenger")
         allowed, _risk, reason = can_open(
             "BTC", "long", "strat-live", risk_pct=0.01, execution_type="live"
         )
         assert allowed is True, reason
 
-    def test_live_position_does_not_block_paper_session(self, forven_db):
-        kv_set("forven:settings", {"max_concurrent_positions": 1, "paper_max_concurrent_positions": 0})
+    def test_live_position_does_not_block_paper_session(self, AXIOM_db):
+        kv_set("axiom:settings", {"max_concurrent_positions": 1, "paper_max_concurrent_positions": 0})
         _seed_position("l-a", "ETH", "long", "strat-live", "live")
         allowed, _risk, reason = can_open(
             "BTC", "long", "strat-paper", risk_pct=0.01, execution_type="paper_challenger"
         )
         assert allowed is True, reason
 
-    def test_live_risk_display_excludes_paper_positions(self, forven_db):
+    def test_live_risk_display_excludes_paper_positions(self, AXIOM_db):
         # The "(live)" risk widgets must show only the real-wallet view; paper
         # sandbox rows are reported separately, not folded into live exposure.
         _seed_position("l-a", "ETH", "long", "strat-live", "live")
@@ -650,7 +650,7 @@ class TestPaperLivePositionScoping:
 class TestRiskStatus:
     """Risk status endpoint data."""
 
-    def test_includes_execution_mode(self, forven_db):
+    def test_includes_execution_mode(self, AXIOM_db):
         update_equity(10000.0)
         status = get_risk_status()
         assert "execution_mode" in status
@@ -661,8 +661,8 @@ class TestRiskStatus:
 class TestCloseAllPositionsPartialFailure:
     """Kill-switch per-position DB updates."""
 
-    def test_successful_close_marks_trade_closed(self, forven_db):
-        from forven.db import get_db
+    def test_successful_close_marks_trade_closed(self, AXIOM_db):
+        from axiom.db import get_db
         from datetime import datetime, timezone
         import sys
         import types
@@ -681,11 +681,11 @@ class TestCloseAllPositionsPartialFailure:
             }]
         }
 
-        fake_hl = types.ModuleType("forven.exchange.hyperliquid")
+        fake_hl = types.ModuleType("axiom.exchange.hyperliquid")
         fake_hl.get_positions = lambda: mock_positions
         fake_hl.close_position = lambda coin, size, side, **kwargs: {"close_price": 50000}
 
-        with patch.dict(sys.modules, {"forven.exchange.hyperliquid": fake_hl}):
+        with patch.dict(sys.modules, {"axiom.exchange.hyperliquid": fake_hl}):
             results = close_all_positions()
 
         assert len(results) == 1
@@ -697,8 +697,8 @@ class TestCloseAllPositionsPartialFailure:
         assert row["status"] == "CLOSED"
         assert row["exit_price"] == 50000
 
-    def test_failed_close_leaves_trade_open(self, forven_db):
-        from forven.db import get_db
+    def test_failed_close_leaves_trade_open(self, AXIOM_db):
+        from axiom.db import get_db
         from datetime import datetime, timezone
         import sys
         import types
@@ -716,7 +716,7 @@ class TestCloseAllPositionsPartialFailure:
             }]
         }
 
-        fake_hl = types.ModuleType("forven.exchange.hyperliquid")
+        fake_hl = types.ModuleType("axiom.exchange.hyperliquid")
         fake_hl.get_positions = lambda: mock_positions
 
         def _raise_exchange_error(coin, size, side):
@@ -724,7 +724,7 @@ class TestCloseAllPositionsPartialFailure:
 
         fake_hl.close_position = _raise_exchange_error
 
-        with patch.dict(sys.modules, {"forven.exchange.hyperliquid": fake_hl}):
+        with patch.dict(sys.modules, {"axiom.exchange.hyperliquid": fake_hl}):
             results = close_all_positions()
 
         assert any("error" in r for r in results)
@@ -734,8 +734,8 @@ class TestCloseAllPositionsPartialFailure:
             row = conn.execute("SELECT status FROM trades WHERE id='t2'").fetchone()
         assert row["status"] == "OPEN"
 
-    def test_error_response_marks_trade_pending_reconcile(self, forven_db):
-        from forven.db import get_db
+    def test_error_response_marks_trade_pending_reconcile(self, AXIOM_db):
+        from axiom.db import get_db
         from datetime import datetime, timezone
         import sys
         import types
@@ -758,12 +758,12 @@ class TestCloseAllPositionsPartialFailure:
             attempts["count"] += 1
             return {"error": f"{coin} exchange unavailable"}
 
-        fake_hl = types.ModuleType("forven.exchange.hyperliquid")
+        fake_hl = types.ModuleType("axiom.exchange.hyperliquid")
         fake_hl.get_positions = lambda: mock_positions
         fake_hl.close_position = _error_response
 
-        with patch.dict(sys.modules, {"forven.exchange.hyperliquid": fake_hl}):
-            with patch("forven.exchange.risk.time.sleep", lambda *_args, **_kwargs: None):
+        with patch.dict(sys.modules, {"axiom.exchange.hyperliquid": fake_hl}):
+            with patch("axiom.exchange.risk.time.sleep", lambda *_args, **_kwargs: None):
                 results = close_all_positions()
 
         assert attempts["count"] == 3
@@ -783,8 +783,8 @@ class TestCloseAllPositionsPartialFailure:
         assert signal_data["kill_switch_close_error"] == "SOL exchange unavailable"
         assert signal_data["kill_switch_close_attempts"] == 3
 
-    def test_transient_close_error_retries_then_closes_trade(self, forven_db):
-        from forven.db import get_db
+    def test_transient_close_error_retries_then_closes_trade(self, AXIOM_db):
+        from axiom.db import get_db
         from datetime import datetime, timezone
         import sys
         import types
@@ -811,12 +811,12 @@ class TestCloseAllPositionsPartialFailure:
             calls.append((coin, size, side))
             return responses.pop(0)
 
-        fake_hl = types.ModuleType("forven.exchange.hyperliquid")
+        fake_hl = types.ModuleType("axiom.exchange.hyperliquid")
         fake_hl.get_positions = lambda: mock_positions
         fake_hl.close_position = _flaky_close
 
-        with patch.dict(sys.modules, {"forven.exchange.hyperliquid": fake_hl}):
-            with patch("forven.exchange.risk.time.sleep", lambda *_args, **_kwargs: None):
+        with patch.dict(sys.modules, {"axiom.exchange.hyperliquid": fake_hl}):
+            with patch("axiom.exchange.risk.time.sleep", lambda *_args, **_kwargs: None):
                 results = close_all_positions()
 
         assert len(calls) == 2

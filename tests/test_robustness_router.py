@@ -1,12 +1,12 @@
-import json
+﻿import json
 import time
 
 import pandas as pd
 import pytest
 from fastapi import HTTPException
 
-from forven.db import create_strategy_container, get_db, init_db
-from forven.routers import robustness as robustness_router
+from axiom.db import create_strategy_container, get_db, init_db
+from axiom.routers import robustness as robustness_router
 
 
 def _create_strategy(
@@ -62,18 +62,18 @@ def _insert_result(
         )
 
 
-def test_load_strategy_row_uses_db_context_manager(forven_db):
+def test_load_strategy_row_uses_db_context_manager(AXIOM_db):
     strategy_id = _create_strategy()
     row = robustness_router._load_strategy_row(strategy_id)
     assert row["id"] == strategy_id
     assert row["type"] == "rsi_momentum"
 
 
-def test_walk_forward_persists_result_row_and_payload(forven_db, monkeypatch):
+def test_walk_forward_persists_result_row_and_payload(AXIOM_db, monkeypatch):
     strategy_id = _create_strategy()
 
     monkeypatch.setattr(
-        "forven.strategies.backtest.walk_forward",
+        "axiom.strategies.backtest.walk_forward",
         lambda **_kwargs: {
             "splits": [
                 {
@@ -131,11 +131,11 @@ def test_walk_forward_persists_result_row_and_payload(forven_db, monkeypatch):
     assert '"verdict":"PASS"' in (row["metrics_json"] or "")
 
 
-def test_submit_monte_carlo_returns_placeholder_and_finalizes(forven_db, monkeypatch):
+def test_submit_monte_carlo_returns_placeholder_and_finalizes(AXIOM_db, monkeypatch):
     strategy_id = _create_strategy()
 
     monkeypatch.setattr(
-        "forven.api_core.get_backtest_result",
+        "axiom.api_core.get_backtest_result",
         lambda _result_id, remote_skip=False: {
             "result_id": "baseline-mc",
             "strategy_id": strategy_id,
@@ -184,11 +184,11 @@ def test_submit_monte_carlo_returns_placeholder_and_finalizes(forven_db, monkeyp
     assert persisted["payload"]["n_trades"] == 2
 
 
-def test_monte_carlo_requires_persisted_trade_rows(forven_db, monkeypatch):
+def test_monte_carlo_requires_persisted_trade_rows(AXIOM_db, monkeypatch):
     strategy_id = _create_strategy()
 
     monkeypatch.setattr(
-        "forven.api_core.get_backtest_result",
+        "axiom.api_core.get_backtest_result",
         lambda _result_id, remote_skip=False: {
             "result_id": "baseline-no-trades",
             "strategy_id": strategy_id,
@@ -212,11 +212,11 @@ def test_monte_carlo_requires_persisted_trade_rows(forven_db, monkeypatch):
     assert "Run a fresh baseline backtest" in str(excinfo.value.detail)
 
 
-def test_regime_split_fails_when_regime_labeling_is_unavailable(forven_db, monkeypatch):
+def test_regime_split_fails_when_regime_labeling_is_unavailable(AXIOM_db, monkeypatch):
     strategy_id = _create_strategy()
 
     monkeypatch.setattr(
-        "forven.api_core.get_backtest_result",
+        "axiom.api_core.get_backtest_result",
         lambda _result_id, remote_skip=False: {
             "result_id": "baseline-regime",
             "strategy_id": strategy_id,
@@ -242,8 +242,8 @@ def test_regime_split_fails_when_regime_labeling_is_unavailable(forven_db, monke
         },
         index=index,
     )
-    monkeypatch.setattr("forven.strategies.backtest.load_backtest_candles", lambda **_kwargs: candles)
-    monkeypatch.setattr("forven.strategies.backtest._detect_entry_regime", lambda _candles: "")
+    monkeypatch.setattr("axiom.strategies.backtest.load_backtest_candles", lambda **_kwargs: candles)
+    monkeypatch.setattr("axiom.strategies.backtest._detect_entry_regime", lambda _candles: "")
 
     with pytest.raises(HTTPException) as excinfo:
         robustness_router.post_regime_split(
@@ -253,11 +253,11 @@ def test_regime_split_fails_when_regime_labeling_is_unavailable(forven_db, monke
     assert "Regime labeling is unavailable" in str(excinfo.value.detail)
 
 
-def test_walk_forward_rejects_zero_trade_analysis(forven_db, monkeypatch):
+def test_walk_forward_rejects_zero_trade_analysis(AXIOM_db, monkeypatch):
     strategy_id = _create_strategy()
 
     monkeypatch.setattr(
-        "forven.strategies.backtest.walk_forward",
+        "axiom.strategies.backtest.walk_forward",
         lambda **_kwargs: {
             "splits": [],
             "aggregate_oos": {"total_trades": 0},
@@ -283,11 +283,11 @@ def test_walk_forward_rejects_zero_trade_analysis(forven_db, monkeypatch):
     assert "produced zero trades in the selected window" in str(excinfo.value.detail)
 
 
-def test_param_jitter_rejects_zero_trade_baseline(forven_db, monkeypatch):
+def test_param_jitter_rejects_zero_trade_baseline(AXIOM_db, monkeypatch):
     strategy_id = _create_strategy()
 
     monkeypatch.setattr(
-        "forven.api_core.get_backtest_result",
+        "axiom.api_core.get_backtest_result",
         lambda _result_id, remote_skip=False: {
             "result_id": "baseline-zero-trade",
             "strategy_id": strategy_id,
@@ -303,7 +303,7 @@ def test_param_jitter_rejects_zero_trade_baseline(forven_db, monkeypatch):
         },
     )
     monkeypatch.setattr(
-        "forven.strategies.backtest.load_backtest_candles",
+        "axiom.strategies.backtest.load_backtest_candles",
         lambda **_kwargs: (_ for _ in ()).throw(AssertionError("load_backtest_candles should not run")),
     )
 
@@ -320,14 +320,14 @@ def test_param_jitter_rejects_zero_trade_baseline(forven_db, monkeypatch):
     assert "produced zero trades in the selected window" in str(excinfo.value.detail)
 
 
-def test_param_jitter_fast_fails_low_trade_baseline(forven_db, monkeypatch):
+def test_param_jitter_fast_fails_low_trade_baseline(AXIOM_db, monkeypatch):
     """A baseline with 1..few trades (below the wired floor) must short-circuit BEFORE
     loading candles or running any rerun — the degenerate-baseline churn that hit the
     600s timeout overnight."""
     strategy_id = _create_strategy()
 
     monkeypatch.setattr(
-        "forven.api_core.get_backtest_result",
+        "axiom.api_core.get_backtest_result",
         lambda _result_id, remote_skip=False: {
             "result_id": "baseline-low-trade",
             "strategy_id": strategy_id,
@@ -343,7 +343,7 @@ def test_param_jitter_fast_fails_low_trade_baseline(forven_db, monkeypatch):
         },
     )
     monkeypatch.setattr(
-        "forven.strategies.backtest.load_backtest_candles",
+        "axiom.strategies.backtest.load_backtest_candles",
         lambda **_kwargs: (_ for _ in ()).throw(AssertionError("load_backtest_candles should not run")),
     )
 
@@ -363,7 +363,7 @@ def test_param_jitter_fast_fails_low_trade_baseline(forven_db, monkeypatch):
     assert "zero trades in the selected window" not in detail
 
 
-def test_cost_stress_rejects_zero_trade_reruns(forven_db, monkeypatch):
+def test_cost_stress_rejects_zero_trade_reruns(AXIOM_db, monkeypatch):
     strategy_id = _create_strategy()
 
     index = pd.date_range("2024-01-01", periods=120, freq="h", tz="UTC")
@@ -377,9 +377,9 @@ def test_cost_stress_rejects_zero_trade_reruns(forven_db, monkeypatch):
         },
         index=index,
     )
-    monkeypatch.setattr("forven.strategies.backtest.load_backtest_candles", lambda **_kwargs: candles)
+    monkeypatch.setattr("axiom.strategies.backtest.load_backtest_candles", lambda **_kwargs: candles)
     monkeypatch.setattr(
-        "forven.strategies.backtest.backtest_strategy",
+        "axiom.strategies.backtest.backtest_strategy",
         lambda **_kwargs: {
             "metrics": {
                 "total_trades": 0,
@@ -422,13 +422,13 @@ def _flat_candles(periods: int = 720) -> pd.DataFrame:
     )
 
 
-def test_param_jitter_reruns_disable_strategy_state_sync(forven_db, monkeypatch):
+def test_param_jitter_reruns_disable_strategy_state_sync(AXIOM_db, monkeypatch):
     """B-6: jitter sweeps run perturbed params the strategy doesn't have — they
     must never let backtest_strategy overwrite stored metrics or auto-promote."""
     strategy_id = _create_strategy(params={"rsi_period": 14, "rsi_oversold": 30})
 
     monkeypatch.setattr(
-        "forven.api_core.get_backtest_result",
+        "axiom.api_core.get_backtest_result",
         lambda _result_id, remote_skip=False: {
             "result_id": "baseline-jitter-sync",
             "strategy_id": strategy_id,
@@ -443,7 +443,7 @@ def test_param_jitter_reruns_disable_strategy_state_sync(forven_db, monkeypatch)
             },
         },
     )
-    monkeypatch.setattr("forven.strategies.backtest.load_backtest_candles", lambda **_kwargs: _flat_candles())
+    monkeypatch.setattr("axiom.strategies.backtest.load_backtest_candles", lambda **_kwargs: _flat_candles())
 
     captured: list[dict] = []
 
@@ -460,7 +460,7 @@ def test_param_jitter_reruns_disable_strategy_state_sync(forven_db, monkeypatch)
             }
         }
 
-    monkeypatch.setattr("forven.strategies.backtest.backtest_strategy", _capture_backtest)
+    monkeypatch.setattr("axiom.strategies.backtest.backtest_strategy", _capture_backtest)
 
     result = robustness_router._run_param_jitter_analysis(
         robustness_router.ParamJitterBody(
@@ -479,12 +479,12 @@ def test_param_jitter_reruns_disable_strategy_state_sync(forven_db, monkeypatch)
     )
 
 
-def test_cost_stress_reruns_disable_strategy_state_sync(forven_db, monkeypatch):
+def test_cost_stress_reruns_disable_strategy_state_sync(AXIOM_db, monkeypatch):
     """B-6: cost-stress baseline + stressed runs use a short 720-bar window and
     stressed fees — neither may refresh stored metrics or auto-promote."""
     strategy_id = _create_strategy()
 
-    monkeypatch.setattr("forven.strategies.backtest.load_backtest_candles", lambda **_kwargs: _flat_candles())
+    monkeypatch.setattr("axiom.strategies.backtest.load_backtest_candles", lambda **_kwargs: _flat_candles())
 
     captured: list[dict] = []
 
@@ -501,7 +501,7 @@ def test_cost_stress_reruns_disable_strategy_state_sync(forven_db, monkeypatch):
             }
         }
 
-    monkeypatch.setattr("forven.strategies.backtest.backtest_strategy", _capture_backtest)
+    monkeypatch.setattr("axiom.strategies.backtest.backtest_strategy", _capture_backtest)
 
     result = robustness_router._run_cost_stress_analysis(
         robustness_router.CostStressBody(
@@ -521,13 +521,13 @@ def test_cost_stress_reruns_disable_strategy_state_sync(forven_db, monkeypatch):
     )
 
 
-def test_recalculate_robustness_score_reconciles_gauntlet_to_paper(forven_db):
+def test_recalculate_robustness_score_reconciles_gauntlet_to_paper(AXIOM_db):
     strategy_id = _create_strategy()
     with get_db() as conn:
         conn.execute(
             "INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?)",
             (
-                "forven:pipeline:settings",
+                "axiom:pipeline:settings",
                 json.dumps(
                     {
                         "gate_multi_tf_sweep_enabled": False,
@@ -542,7 +542,7 @@ def test_recalculate_robustness_score_reconciles_gauntlet_to_paper(forven_db):
         # (added in the gauntlet audit) doesn't block the reconcile path.
         conn.execute(
             "INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?)",
-            ("forven:settings", json.dumps({"auto_approve_promotions": "true"})),
+            ("axiom:settings", json.dumps({"auto_approve_promotions": "true"})),
         )
         conn.execute(
             "UPDATE strategies SET stage = 'gauntlet', status = 'gauntlet', metrics = ? WHERE id = ?",
@@ -620,15 +620,15 @@ def test_recalculate_robustness_score_reconciles_gauntlet_to_paper(forven_db):
     assert metrics["composite_robustness_score"] == 100.0
 
 
-def test_low_sample_monte_carlo_and_failed_optimization_do_not_promote(forven_db):
-    from forven.policy import evaluate_promotion
+def test_low_sample_monte_carlo_and_failed_optimization_do_not_promote(AXIOM_db):
+    from axiom.policy import evaluate_promotion
 
     strategy_id = _create_strategy()
     with get_db() as conn:
         conn.execute(
             "INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?)",
             (
-                "forven:pipeline_thresholds",
+                "axiom:pipeline_thresholds",
                 json.dumps(
                     {
                         "gauntlet": {
@@ -643,7 +643,7 @@ def test_low_sample_monte_carlo_and_failed_optimization_do_not_promote(forven_db
         conn.execute(
             "INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?)",
             (
-                "forven:pipeline:settings",
+                "axiom:pipeline:settings",
                 json.dumps(
                     {
                         "gate_multi_tf_sweep_enabled": False,
@@ -656,7 +656,7 @@ def test_low_sample_monte_carlo_and_failed_optimization_do_not_promote(forven_db
         )
         conn.execute(
             "INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?)",
-            ("forven:settings", json.dumps({"auto_approve_promotions": "true"})),
+            ("axiom:settings", json.dumps({"auto_approve_promotions": "true"})),
         )
         conn.execute(
             "UPDATE strategies SET stage = 'gauntlet', status = 'gauntlet', metrics = ? WHERE id = ?",

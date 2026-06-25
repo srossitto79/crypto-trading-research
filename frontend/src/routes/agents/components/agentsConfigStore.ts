@@ -12,20 +12,20 @@
  */
 import { writable, derived, get, type Readable } from 'svelte/store';
 import {
-	getForvenAuthProviders,
-	getForvenAgentModelOptions,
-	getForvenModelPolicy,
-	type ForvenAuthProviderStatus,
-	type ForvenAgentModelOption,
-	type ForvenModelPolicyResponse,
+	getAxiomAuthProviders,
+	getAxiomAgentModelOptions,
+	getAxiomModelPolicy,
+	type AxiomAuthProviderStatus,
+	type AxiomAgentModelOption,
+	type AxiomModelPolicyResponse,
 } from '$lib/api';
 
 export interface AgentsConfigState {
-	providers: ForvenAuthProviderStatus[];
+	providers: AxiomAuthProviderStatus[];
 	authFile: string | null;
-	modelOptions: ForvenAgentModelOption[];
+	modelOptions: AxiomAgentModelOption[];
 	enabledKeys: Set<string>;
-	policy: ForvenModelPolicyResponse | null;
+	policy: AxiomModelPolicyResponse | null;
 	loading: boolean;
 	error: string | null;
 }
@@ -49,7 +49,7 @@ const store = writable<AgentsConfigState>(emptyState());
  * backend says so via the new `connected` flag. Until that field ships we fall
  * back to the strongest pre-existing signal: a configured + active credential.
  */
-export function isProviderConnected(p: ForvenAuthProviderStatus): boolean {
+export function isProviderConnected(p: AxiomAuthProviderStatus): boolean {
 	if (typeof p.connected === 'boolean') return p.connected;
 	return Boolean(p.configured) && p.status === 'active';
 }
@@ -62,9 +62,9 @@ export const agentsConfig = {
 	async load(opts: { refreshModels?: boolean } = {}): Promise<void> {
 		store.update((s) => ({ ...s, loading: true, error: null }));
 		const [authRes, modelRes, policyRes] = await Promise.allSettled([
-			getForvenAuthProviders(),
-			getForvenAgentModelOptions(Boolean(opts.refreshModels)),
-			getForvenModelPolicy(),
+			getAxiomAuthProviders(),
+			getAxiomAgentModelOptions(Boolean(opts.refreshModels)),
+			getAxiomModelPolicy(),
 		]);
 
 		store.update((s) => {
@@ -98,13 +98,13 @@ export const agentsConfig = {
 	},
 
 	/** Optimistically reflect a freshly-saved policy without a full reload. */
-	setPolicy(policy: ForvenModelPolicyResponse): void {
+	setPolicy(policy: AxiomModelPolicyResponse): void {
 		store.update((s) => ({ ...s, policy }));
 	},
 };
 
 /** Providers the operator has connected (authorized spend). */
-export const connectedProviders: Readable<ForvenAuthProviderStatus[]> = derived(store, ($s) =>
+export const connectedProviders: Readable<AxiomAuthProviderStatus[]> = derived(store, ($s) =>
 	$s.providers.filter(isProviderConnected)
 );
 
@@ -129,7 +129,7 @@ export const connectedProviderIds: Readable<Set<string>> = derived(connectedProv
  * renders an agent's CURRENT saved model even when it's absent from this set, and
  * only flags it when its *provider* is disconnected (not merely un-enabled).
  */
-export const selectableModelOptions: Readable<ForvenAgentModelOption[]> = derived(
+export const selectableModelOptions: Readable<AxiomAgentModelOption[]> = derived(
 	[store, connectedProviderIds],
 	([$s, $ids]) =>
 		$s.modelOptions.filter((o) => $ids.has(String(o.provider)) && $s.enabledKeys.has(o.key))

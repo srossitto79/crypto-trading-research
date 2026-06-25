@@ -1,8 +1,8 @@
-import asyncio
+﻿import asyncio
 import logging
 logging.basicConfig(level=logging.INFO)
-from forven.simulation import _runner, start_simulation
-from forven.db import kv_get
+from axiom.simulation import _runner, start_simulation
+from axiom.db import kv_get
 
 async def main():
     await start_simulation('2023-01-01T00:00:00Z', '2023-01-02T00:00:00Z', '1h', 10000.0, 'direct')

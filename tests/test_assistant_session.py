@@ -1,11 +1,11 @@
-"""Tests for the unified in-app assistant: thread store, run loop, NL strategy
+﻿"""Tests for the unified in-app assistant: thread store, run loop, NL strategy
 creation wiring, confirm-gating, page-awareness, and the cost cap."""
 from __future__ import annotations
 
 import asyncio
 
-import forven.assistant_db as adb
-import forven.assistant_session as asess
+import axiom.assistant_db as adb
+import axiom.assistant_session as asess
 
 
 def _collect(thread_id, **kwargs):
@@ -22,7 +22,7 @@ def _collect(thread_id, **kwargs):
 # Thread store
 # ---------------------------------------------------------------------------
 
-def test_thread_reuse_and_monotonic_seq(forven_db):
+def test_thread_reuse_and_monotonic_seq(AXIOM_db):
     t1 = adb.create_or_get_active_thread("global", None)
     t2 = adb.create_or_get_active_thread("global", None)
     assert t1["id"] == t2["id"], "active global thread should be reused"
@@ -36,7 +36,7 @@ def test_thread_reuse_and_monotonic_seq(forven_db):
     assert [m["role"] for m in msgs] == ["user", "assistant", "tool"]
 
 
-def test_strategy_scoped_thread_is_separate(forven_db):
+def test_strategy_scoped_thread_is_separate(AXIOM_db):
     g = adb.create_or_get_active_thread("global", None)
     s = adb.create_or_get_active_thread("strategy", "S00001")
     assert g["id"] != s["id"]
@@ -48,7 +48,7 @@ def test_strategy_scoped_thread_is_separate(forven_db):
 # Run loop: NL -> create_strategy tool call actually dispatches
 # ---------------------------------------------------------------------------
 
-def test_run_turn_dispatches_create_strategy_from_nl(forven_db, monkeypatch):
+def test_run_turn_dispatches_create_strategy_from_nl(AXIOM_db, monkeypatch):
     thread = adb.create_or_get_active_thread("global", None)
     calls = {"n": 0}
 
@@ -102,7 +102,7 @@ def test_run_turn_dispatches_create_strategy_from_nl(forven_db, monkeypatch):
 # Confirm-gating: a write action is proposed, NOT executed, until confirmed
 # ---------------------------------------------------------------------------
 
-def test_run_turn_gates_confirm_actions(forven_db, monkeypatch):
+def test_run_turn_gates_confirm_actions(AXIOM_db, monkeypatch):
     thread = adb.create_or_get_active_thread("global", None)
     calls = {"n": 0}
 
@@ -151,7 +151,7 @@ def test_run_turn_gates_confirm_actions(forven_db, monkeypatch):
     assert adb.get_message(action_id)["status"] == "executed"
 
 
-def test_confirm_action_reject_does_not_execute(forven_db, monkeypatch):
+def test_confirm_action_reject_does_not_execute(AXIOM_db, monkeypatch):
     thread = adb.create_or_get_active_thread("global", None)
 
     # one-shot: first call proposes, second call finishes
@@ -187,7 +187,7 @@ def test_confirm_action_reject_does_not_execute(forven_db, monkeypatch):
 # Actions can be globally disabled (read-only conversation)
 # ---------------------------------------------------------------------------
 
-def test_no_action_tools_when_actions_disabled(forven_db):
+def test_no_action_tools_when_actions_disabled(AXIOM_db):
     auto_only = {t["name"] for t in asess._build_assistant_tools(False)}
     full = {t["name"] for t in asess._build_assistant_tools(True)}
     assert "promote_strategy" in full
@@ -199,8 +199,8 @@ def test_no_action_tools_when_actions_disabled(forven_db):
 # Cost cap blocks before any model call
 # ---------------------------------------------------------------------------
 
-def test_cost_cap_blocks_turn(forven_db, monkeypatch):
-    from forven.db import kv_set
+def test_cost_cap_blocks_turn(AXIOM_db, monkeypatch):
+    from axiom.db import kv_set
 
     kv_set("assistant.cost_cap_usd", 0)
     thread = adb.create_or_get_active_thread("global", None)
@@ -218,10 +218,10 @@ def test_cost_cap_blocks_turn(forven_db, monkeypatch):
 # Page-awareness: the structured page context lands in the system prompt
 # ---------------------------------------------------------------------------
 
-def test_assistant_create_strategy_end_to_end(forven_db):
+def test_assistant_create_strategy_end_to_end(AXIOM_db):
     """The real NL->strategy path: mint an operator hypothesis + register a
     strategy in one tool call (the gap that made chat unable to create before)."""
-    from forven.agents.tools_assistant import _tool_assistant_create_strategy
+    from axiom.agents.tools_assistant import _tool_assistant_create_strategy
 
     out = _tool_assistant_create_strategy(
         idea="BTC mean reversion on oversold RSI",
@@ -240,7 +240,7 @@ def test_assistant_create_strategy_end_to_end(forven_db):
     assert payload["hypothesis_id"].startswith("HYP-")
 
     # The strategy is really in the DB at quick_screen, tied to the new hypothesis.
-    from forven.db import get_db
+    from axiom.db import get_db
 
     with get_db() as conn:
         row = conn.execute(
@@ -253,9 +253,9 @@ def test_assistant_create_strategy_end_to_end(forven_db):
     assert row["type"] == "rsi_momentum"
 
 
-def test_assistant_create_strategy_rejects_unknown_family(forven_db):
-    from forven.agents.tools_assistant import _tool_assistant_create_strategy
-    from forven.db import get_db
+def test_assistant_create_strategy_rejects_unknown_family(AXIOM_db):
+    from axiom.agents.tools_assistant import _tool_assistant_create_strategy
+    from axiom.db import get_db
 
     with get_db() as conn:
         before = conn.execute("SELECT COUNT(*) FROM hypotheses").fetchone()[0]
@@ -275,7 +275,7 @@ def test_assistant_create_strategy_rejects_unknown_family(forven_db):
 
 
 def test_page_context_block_renders_entity_and_summary():
-    from forven.assistant_context import _format_page_context
+    from axiom.assistant_context import _format_page_context
 
     block = _format_page_context({
         "route": "/lab/strategy/S00007",

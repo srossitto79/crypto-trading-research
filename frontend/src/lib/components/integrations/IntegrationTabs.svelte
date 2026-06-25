@@ -6,13 +6,13 @@
 			id: 'ai-clients',
 			href: '/integrations',
 			label: 'AI Clients',
-			description: 'Connect outside assistants to Forven and watch Drop Zone sessions',
+			description: 'Connect outside assistants to Axiom and watch Drop Zone sessions',
 		},
 		{
 			id: 'tool-servers',
 			href: '/integrations/mcp',
 			label: 'Agent Tool Servers',
-			description: 'Connect external MCP tools for Forven agents to call',
+			description: 'Connect external MCP tools for Axiom agents to call',
 		},
 	] as const;
 </script>
@@ -23,8 +23,8 @@
 			<div>
 				<h1 class="text-sm font-semibold uppercase tracking-[0.22em] text-gray-200">Integrations</h1>
 				<p class="mt-1 max-w-3xl text-[11px] leading-5 text-gray-500">
-					One MCP control room: AI clients connect into Forven, while agent tool servers let
-					Forven agents connect out to external tools.
+					One MCP control room: AI clients connect into Axiom, while agent tool servers let
+					Axiom agents connect out to external tools.
 				</p>
 			</div>
 

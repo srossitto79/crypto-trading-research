@@ -1,6 +1,6 @@
-"""Phase 5 / P5-T02 — SSRF guard at ``forven/security/url_safety.py``.
+﻿"""Phase 5 / P5-T02 — SSRF guard at ``Axiom/security/url_safety.py``.
 
-The blocklist used to live in ``forven/research_sources/_http.py``; Phase 5
+The blocklist used to live in ``Axiom/research_sources/_http.py``; Phase 5
 extracted it so MCP HTTP transport (P5-T02b) and any future external-fetch
 path can call the same canonical guard. Tests cover:
 
@@ -17,7 +17,7 @@ from unittest import mock
 
 import pytest
 
-from forven.security.url_safety import (
+from axiom.security.url_safety import (
     UnsafeUrlError,
     is_blocked_ip,
     validate_public_url,
@@ -119,7 +119,7 @@ class TestValidatePublicUrlWithDns:
     def test_rejects_when_any_resolved_ip_is_blocked(self) -> None:
         """DNS-pinning defense: domain that resolves to RFC1918 is rejected."""
         fake = [(socket.AF_INET, None, None, "", ("10.0.0.7", 0))]
-        with mock.patch("forven.security.url_safety.socket.getaddrinfo", return_value=fake):
+        with mock.patch("axiom.security.url_safety.socket.getaddrinfo", return_value=fake):
             with pytest.raises(UnsafeUrlError):
                 validate_public_url("https://attacker.example/")
 
@@ -129,7 +129,7 @@ class TestValidatePublicUrlWithDns:
             (socket.AF_INET, None, None, "", ("8.8.8.8", 0)),
             (socket.AF_INET, None, None, "", ("169.254.169.254", 0)),
         ]
-        with mock.patch("forven.security.url_safety.socket.getaddrinfo", return_value=fake):
+        with mock.patch("axiom.security.url_safety.socket.getaddrinfo", return_value=fake):
             with pytest.raises(UnsafeUrlError):
                 validate_public_url("https://mixed.example/")
 
@@ -138,12 +138,12 @@ class TestValidatePublicUrlWithDns:
             (socket.AF_INET, None, None, "", ("8.8.8.8", 0)),
             (socket.AF_INET, None, None, "", ("1.1.1.1", 0)),
         ]
-        with mock.patch("forven.security.url_safety.socket.getaddrinfo", return_value=fake):
+        with mock.patch("axiom.security.url_safety.socket.getaddrinfo", return_value=fake):
             validate_public_url("https://example.com/")  # no exception
 
     def test_dns_failure_raises(self) -> None:
         with mock.patch(
-            "forven.security.url_safety.socket.getaddrinfo",
+            "axiom.security.url_safety.socket.getaddrinfo",
             side_effect=socket.gaierror("nodename nor servname"),
         ):
             with pytest.raises(UnsafeUrlError):
@@ -152,7 +152,7 @@ class TestValidatePublicUrlWithDns:
     def test_skip_dns_bypasses_resolution(self) -> None:
         """``skip_dns=True`` is for test harnesses that stub HTTP entirely."""
         with mock.patch(
-            "forven.security.url_safety.socket.getaddrinfo",
+            "axiom.security.url_safety.socket.getaddrinfo",
             side_effect=AssertionError("DNS should not be called"),
         ):
             validate_public_url("https://example.com/", skip_dns=True)
@@ -167,13 +167,13 @@ class TestValidatePublicUrlWithDns:
 
 def test_research_sources_http_reexports_unsafe_url_error() -> None:
     """Legacy callers in research_sources/_http.py still see the same symbol."""
-    from forven.research_sources._http import UnsafeUrlError as Legacy
+    from axiom.research_sources._http import UnsafeUrlError as Legacy
     assert Legacy is UnsafeUrlError
 
 
 def test_underscore_aliases_present() -> None:
     """Underscored aliases retained for ``research_sources/_http`` callers."""
-    from forven.security import url_safety as us
+    from axiom.security import url_safety as us
     assert us._is_blocked_ip is is_blocked_ip
     assert us._validate_public_url is validate_public_url
     assert us._validate_public_url_static is validate_public_url_static

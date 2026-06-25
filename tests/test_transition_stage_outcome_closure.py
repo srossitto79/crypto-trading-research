@@ -1,25 +1,25 @@
-"""P3-T09 — outcome closure hook in transition_stage."""
+﻿"""P3-T09 — outcome closure hook in transition_stage."""
 from __future__ import annotations
 
 import json
 
 import pytest
 
-from forven import db as forven_db
-from forven import quant_skills as qs
-from forven import skill_outcomes as so
-from forven.brain import transition_stage
+from axiom import db as AXIOM_db
+from axiom import quant_skills as qs
+from axiom import skill_outcomes as so
+from axiom.brain import transition_stage
 
 
 @pytest.fixture
-def env(tmp_path, monkeypatch, forven_db):
+def env(tmp_path, monkeypatch, AXIOM_db):
     skills_dir = tmp_path / "quant-skills"
     skills_dir.mkdir()
     (skills_dir / "_hypotheses").mkdir()
     (skills_dir / "_archived").mkdir()
-    monkeypatch.setattr("forven.quant_skills.SKILLS_DIR", skills_dir)
-    monkeypatch.setattr("forven.quant_skills.HYPOTHESES_DIR", skills_dir / "_hypotheses")
-    monkeypatch.setattr("forven.quant_skills.ARCHIVED_DIR", skills_dir / "_archived")
+    monkeypatch.setattr("axiom.quant_skills.SKILLS_DIR", skills_dir)
+    monkeypatch.setattr("axiom.quant_skills.HYPOTHESES_DIR", skills_dir / "_hypotheses")
+    monkeypatch.setattr("axiom.quant_skills.ARCHIVED_DIR", skills_dir / "_archived")
     yield skills_dir
 
 
@@ -51,7 +51,7 @@ def _seed_strategy(strategy_id: str, stage: str = "paper"):
         "total_return_pct": 15.0,
         "total_trades": 25,
     })
-    with forven_db.get_db() as conn:
+    with AXIOM_db.get_db() as conn:
         conn.execute(
             "INSERT INTO strategies (id, name, type, status, stage, owner, display_id, metrics) "
             "VALUES (?, ?, 'rsi_momentum', ?, ?, 'brain', ?, ?)",
@@ -60,7 +60,7 @@ def _seed_strategy(strategy_id: str, stage: str = "paper"):
 
 
 def _seed_task_with_citations(strategy_id: str, skills: list[str]) -> int:
-    with forven_db.get_db() as conn:
+    with AXIOM_db.get_db() as conn:
         conn.execute(
             "INSERT OR IGNORE INTO agents (id, name, role) VALUES (?, ?, ?)",
             ("brain", "Brain", "brain"),
@@ -121,9 +121,9 @@ def test_paper_to_live_graduated_triggers_positive_closure(env, monkeypatch):
     """Brain-driven promotion exercises the positive-closure branch.
     The promotion-gate (symbol resolution, robustness, etc.) is patched out —
     this test is about the closure hook, not the gauntlet of promotion checks."""
-    forven_db.kv_set("forven:settings", {"auto_approve_promotions": "true"})
+    AXIOM_db.kv_set("axiom:settings", {"auto_approve_promotions": "true"})
     monkeypatch.setattr(
-        "forven.brain.evaluate_promotion",
+        "axiom.brain.evaluate_promotion",
         lambda *a, **k: (True, "ok"),
     )
     _seed_skill("regime-trend-rsi", confidence=0.6)
@@ -155,18 +155,18 @@ def test_record_outcome_failure_does_not_block_transition(env, monkeypatch):
     def _boom(*args, **kwargs):
         raise RuntimeError("simulated record_outcome bug")
 
-    monkeypatch.setattr("forven.skill_outcomes.record_outcome", _boom)
+    monkeypatch.setattr("axiom.skill_outcomes.record_outcome", _boom)
 
     result = transition_stage("S00204", "archived", reason="boom", actor="brain")
     assert result["to"] == "archived"
 
-    with forven_db.get_db() as conn:
+    with AXIOM_db.get_db() as conn:
         row = conn.execute("SELECT stage FROM strategies WHERE id = ?", ("S00204",)).fetchone()
     assert row["stage"] == "archived"
 
 
 def _container_exists_audit_rows(strategy_id: str) -> int:
-    with forven_db.get_db() as conn:
+    with AXIOM_db.get_db() as conn:
         try:
             row = conn.execute(
                 "SELECT COUNT(*) AS c FROM pipeline_audit_log "

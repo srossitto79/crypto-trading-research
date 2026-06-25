@@ -1,9 +1,9 @@
-"""Test that the dashboard response exposes circuit breaker states."""
+﻿"""Test that the dashboard response exposes circuit breaker states."""
 
 from __future__ import annotations
 
-from forven.circuit_breaker import State
-from forven.control_plane import status as control_plane_status
+from axiom.circuit_breaker import State
+from axiom.control_plane import status as control_plane_status
 
 
 def _stub_dashboard_deps(monkeypatch, *, breaker_states=None):
@@ -55,13 +55,13 @@ def _stub_dashboard_deps(monkeypatch, *, breaker_states=None):
     )
 
     # Patch the breaker module-level instances
-    import forven.circuit_breaker as cb_mod
+    import axiom.circuit_breaker as cb_mod
     for attr, key in [("hl_price_breaker", "price"), ("hl_trade_breaker", "trade"), ("hl_account_breaker", "account")]:
         breaker = getattr(cb_mod, attr)
         monkeypatch.setattr(breaker, "state", breaker_states[key])
 
 
-def test_dashboard_includes_circuit_breakers_all_closed(forven_db, monkeypatch):
+def test_dashboard_includes_circuit_breakers_all_closed(AXIOM_db, monkeypatch):
     _stub_dashboard_deps(monkeypatch)
 
     payload = control_plane_status.get_dashboard()
@@ -74,7 +74,7 @@ def test_dashboard_includes_circuit_breakers_all_closed(forven_db, monkeypatch):
     }
 
 
-def test_dashboard_circuit_breakers_reflect_open_state(forven_db, monkeypatch):
+def test_dashboard_circuit_breakers_reflect_open_state(AXIOM_db, monkeypatch):
     _stub_dashboard_deps(monkeypatch, breaker_states={
         "price": State.OPEN,
         "trade": State.HALF_OPEN,
@@ -88,7 +88,7 @@ def test_dashboard_circuit_breakers_reflect_open_state(forven_db, monkeypatch):
     assert payload["circuit_breakers"]["hl_account"] == "closed"
 
 
-def test_dashboard_circuit_breakers_all_open(forven_db, monkeypatch):
+def test_dashboard_circuit_breakers_all_open(AXIOM_db, monkeypatch):
     _stub_dashboard_deps(monkeypatch, breaker_states={
         "price": State.OPEN,
         "trade": State.OPEN,

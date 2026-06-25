@@ -1,4 +1,4 @@
-"""Tests for the hypothesis_discipline settings block.
+﻿"""Tests for the hypothesis_discipline settings block.
 
 Phase 1 of docs/plans/2026-04-17-hypothesis-refinement-loop-plan.md.
 """
@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from forven.research_contract import (
+from axiom.research_contract import (
     _HYPOTHESIS_DISCIPLINE_RANGES,
     default_research_settings,
     get_hypothesis_discipline_settings,

@@ -1,6 +1,6 @@
-from forven.crucibles import get_crucible, mark_crucible_viable
-from forven.db import get_approval, get_db, kv_set
-from forven.hypotheses import (
+﻿from axiom.crucibles import get_crucible, mark_crucible_viable
+from axiom.db import get_approval, get_db, kv_set
+from axiom.hypotheses import (
     archive_hypothesis,
     bulk_trash_hypotheses,
     create_hypothesis,
@@ -24,7 +24,7 @@ def _make_crucible(idx: int = 1) -> dict:
     )
 
 
-def test_archive_unprotected_crucible_still_archives(forven_db):
+def test_archive_unprotected_crucible_still_archives(AXIOM_db):
     crucible = _make_crucible()
 
     archived = archive_hypothesis(crucible["id"])
@@ -33,7 +33,7 @@ def test_archive_unprotected_crucible_still_archives(forven_db):
     assert archived.get("approval_required") is not True
 
 
-def test_archive_protected_crucible_creates_approval_instead(forven_db):
+def test_archive_protected_crucible_creates_approval_instead(AXIOM_db):
     crucible = _make_crucible()
     mark_crucible_viable(
         crucible["id"],
@@ -55,7 +55,7 @@ def test_archive_protected_crucible_creates_approval_instead(forven_db):
     assert approval["target_id"] == crucible["id"]
 
 
-def test_trash_protected_crucible_creates_approval_with_trash_intent(forven_db):
+def test_trash_protected_crucible_creates_approval_with_trash_intent(AXIOM_db):
     crucible = _make_crucible()
     mark_crucible_viable(
         crucible["id"],
@@ -75,7 +75,7 @@ def test_trash_protected_crucible_creates_approval_with_trash_intent(forven_db):
     assert approval["payload"]["recommended_action"] == "dethrone/trash"
 
 
-def test_status_demotion_of_protected_crucible_creates_approval_instead(forven_db):
+def test_status_demotion_of_protected_crucible_creates_approval_instead(AXIOM_db):
     crucible = _make_crucible()
     mark_crucible_viable(
         crucible["id"],
@@ -104,7 +104,7 @@ def test_status_demotion_of_protected_crucible_creates_approval_instead(forven_d
     assert approval["payload"]["new_evidence"]["requested_status"] == "disproven"
 
 
-def test_status_demotion_of_unprotected_crucible_still_updates(forven_db):
+def test_status_demotion_of_unprotected_crucible_still_updates(AXIOM_db):
     crucible = _make_crucible()
 
     result = update_hypothesis_status(
@@ -119,7 +119,7 @@ def test_status_demotion_of_unprotected_crucible_still_updates(forven_db):
     assert result.get("approval_required") is not True
 
 
-def test_bulk_trash_mixed_unprotected_and_protected_returns_approval(forven_db):
+def test_bulk_trash_mixed_unprotected_and_protected_returns_approval(AXIOM_db):
     unprotected = _make_crucible(1)
     protected = _make_crucible(2)
     mark_crucible_viable(
@@ -140,7 +140,7 @@ def test_bulk_trash_mixed_unprotected_and_protected_returns_approval(forven_db):
     assert approval["requested_status"] == "trash"
 
 
-def test_repeated_archive_and_trash_reuse_pending_approval(forven_db):
+def test_repeated_archive_and_trash_reuse_pending_approval(AXIOM_db):
     crucible = _make_crucible()
     mark_crucible_viable(
         crucible["id"],
@@ -160,9 +160,9 @@ def test_repeated_archive_and_trash_reuse_pending_approval(forven_db):
     assert approval["payload"]["recommended_action"] == "dethrone/trash"
 
 
-def test_active_pool_eviction_skips_protected_crucibles(forven_db):
+def test_active_pool_eviction_skips_protected_crucibles(AXIOM_db):
     kv_set(
-        "forven:settings",
+        "axiom:settings",
         {"research_settings": {"hypothesis_discipline": {"active_pool_cap": 2}}},
     )
     protected = _make_crucible(1)

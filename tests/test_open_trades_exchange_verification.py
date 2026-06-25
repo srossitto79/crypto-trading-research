@@ -1,7 +1,7 @@
-from types import SimpleNamespace
+﻿from types import SimpleNamespace
 
-from forven.api_domains import trading as trading_domain
-from forven.db import get_db, kv_set
+from axiom.api_domains import trading as trading_domain
+from axiom.db import get_db, kv_set
 
 
 def _sample_trade() -> dict:
@@ -27,7 +27,7 @@ def _sample_exchange_position() -> dict:
     }
 
 
-def test_read_open_trades_auto_skips_exchange_verification_in_paper_mode(forven_db, monkeypatch):
+def test_read_open_trades_auto_skips_exchange_verification_in_paper_mode(AXIOM_db, monkeypatch):
     calls = {"extract": 0}
     trade = _sample_trade()
 
@@ -45,7 +45,7 @@ def test_read_open_trades_auto_skips_exchange_verification_in_paper_mode(forven_
     assert calls["extract"] == 0
 
 
-def test_read_open_trades_auto_verifies_exchange_in_live_mode(forven_db, monkeypatch):
+def test_read_open_trades_auto_verifies_exchange_in_live_mode(AXIOM_db, monkeypatch):
     calls = {"extract": 0}
     trade = _sample_trade()
 
@@ -65,7 +65,7 @@ def test_read_open_trades_auto_verifies_exchange_in_live_mode(forven_db, monkeyp
     assert calls["extract"] >= 1
 
 
-def test_read_open_trades_explicit_verification_overrides_paper_mode(forven_db, monkeypatch):
+def test_read_open_trades_explicit_verification_overrides_paper_mode(AXIOM_db, monkeypatch):
     calls = {"extract": 0}
     trade = _sample_trade()
 
@@ -166,7 +166,7 @@ def test_cleanup_stale_unfilled_open_trades_skips_local_paper_trades(monkeypatch
     assert result == [paper_trade]
 
 
-def test_read_open_trades_verifies_pending_open_reconcile_even_in_paper_mode(forven_db, monkeypatch):
+def test_read_open_trades_verifies_pending_open_reconcile_even_in_paper_mode(AXIOM_db, monkeypatch):
     calls = {"extract": 0}
     trade = {
         **_sample_trade(),
@@ -190,7 +190,7 @@ def test_read_open_trades_verifies_pending_open_reconcile_even_in_paper_mode(for
     assert calls["extract"] >= 1
 
 
-def test_read_open_trades_auto_verifies_exchange_during_recovery_in_paper_mode(forven_db, monkeypatch):
+def test_read_open_trades_auto_verifies_exchange_during_recovery_in_paper_mode(AXIOM_db, monkeypatch):
     calls = {"extract": 0}
 
     def _extract_positions(testnet: bool = True):
@@ -212,7 +212,7 @@ def test_read_open_trades_auto_verifies_exchange_during_recovery_in_paper_mode(f
     assert result[0]["signal_data"]["source"] == "exchange_sync"
 
 
-def test_read_open_trades_auto_verifies_exchange_when_reconciliation_issues_exist(forven_db, monkeypatch):
+def test_read_open_trades_auto_verifies_exchange_when_reconciliation_issues_exist(AXIOM_db, monkeypatch):
     calls = {"extract": 0}
     trade = _sample_trade()
 
@@ -233,7 +233,7 @@ def test_read_open_trades_auto_verifies_exchange_when_reconciliation_issues_exis
     assert calls["extract"] >= 1
 
 
-def test_read_open_trades_repairs_missing_portfolio_row_for_recovered_trade(forven_db, monkeypatch):
+def test_read_open_trades_repairs_missing_portfolio_row_for_recovered_trade(AXIOM_db, monkeypatch):
     with get_db() as conn:
         conn.execute(
             """
@@ -273,7 +273,7 @@ def test_read_open_trades_repairs_missing_portfolio_row_for_recovered_trade(forv
     assert portfolio_row is not None
 
 
-def test_read_open_trades_preserves_exchange_mark_and_roe_fields(forven_db, monkeypatch):
+def test_read_open_trades_preserves_exchange_mark_and_roe_fields(AXIOM_db, monkeypatch):
     monkeypatch.setattr(trading_domain, "get_execution_mode", lambda: "paper")
     monkeypatch.setattr(trading_domain, "get_open_trades", lambda: [])
     monkeypatch.setattr(trading_domain, "_resolve_exchange_testnet", lambda: True)
@@ -312,7 +312,7 @@ def test_read_open_trades_preserves_exchange_mark_and_roe_fields(forven_db, monk
     assert result[0]["signal_data"]["liquidation_price"] == 50.0
 
 
-def test_force_close_trade_closes_exchange_backed_position(forven_db, monkeypatch):
+def test_force_close_trade_closes_exchange_backed_position(AXIOM_db, monkeypatch):
     cancelled: list[tuple[str, int, bool]] = []
     logged: list[tuple[str, str, str, dict | None]] = []
 
@@ -332,14 +332,14 @@ def test_force_close_trade_closes_exchange_backed_position(forven_db, monkeypatc
         ],
     )
     monkeypatch.setattr(
-        "forven.exchange.hyperliquid.close_position",
+        "axiom.exchange.hyperliquid.close_position",
         lambda asset, size, side, testnet=True: {
             "close_price": 110.0,
             "order_id": "close-123",
         },
     )
     monkeypatch.setattr(
-        "forven.exchange.hyperliquid.get_open_orders",
+        "axiom.exchange.hyperliquid.get_open_orders",
         lambda testnet=True: [
             {"coin": "BTC", "oid": 101, "reduceOnly": True},
             {"coin": "BTC", "oid": 202, "reduceOnly": False},
@@ -347,7 +347,7 @@ def test_force_close_trade_closes_exchange_backed_position(forven_db, monkeypatc
         ],
     )
     monkeypatch.setattr(
-        "forven.exchange.hyperliquid.cancel_order",
+        "axiom.exchange.hyperliquid.cancel_order",
         lambda asset, oid, testnet=True: cancelled.append((asset, oid, testnet)) or {"ok": True},
     )
     monkeypatch.setattr(
@@ -375,13 +375,13 @@ def test_force_close_trade_closes_exchange_backed_position(forven_db, monkeypatc
     assert logged and "exchange-backed position" in logged[0][2]
 
 
-def test_force_close_route_raises_on_failure(forven_db, monkeypatch):
+def test_force_close_route_raises_on_failure(AXIOM_db, monkeypatch):
     """A failed force-close must surface as a non-2xx so the operator isn't
     told the position closed when it may still be open."""
     import pytest
     from fastapi import HTTPException
 
-    from forven.routers import trading as trading_router
+    from axiom.routers import trading as trading_router
 
     monkeypatch.setattr(
         trading_router.trading_domain,

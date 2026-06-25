@@ -1,9 +1,9 @@
 <script lang="ts">
 	import PaperTrades from '$lib/components/trading/PaperTrades.svelte';
 	import PaperSessionSummary from '$lib/components/dashboard/PaperSessionSummary.svelte';
-	import type { ForvenDashboardResponse } from '$lib/api';
+	import type { AxiomDashboardResponse } from '$lib/api';
 
-	export let data: { dashboard: ForvenDashboardResponse | null };
+	export let data: { dashboard: AxiomDashboardResponse | null };
 
 	// Session scope. 'paper' is the default (fast); 'live' / 'all' pull in deployed
 	// strategies via include_deployed so the manual controls can drive REAL positions.
@@ -17,7 +17,7 @@
 </script>
 
 <svelte:head>
-	<title>Trades | Forven</title>
+	<title>Trades | Axiom</title>
 	<meta name="description" content="Manage paper and live positions with manual controls, chart overlays, signals, and execution history." />
 </svelte:head>
 

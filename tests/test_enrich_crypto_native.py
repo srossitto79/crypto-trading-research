@@ -1,4 +1,4 @@
-"""Strategy enrichment is crypto-native only; daily macro is research-opt-in.
+﻿"""Strategy enrichment is crypto-native only; daily macro is research-opt-in.
 
 Daily macro (fear_greed/VIX/DXY/SPY/treasury/btc_dominance) carries same-day-close
 lookahead, so it must never be joined onto the strategy/backtest path. enrich()
@@ -32,7 +32,7 @@ def _stub_crypto_native(monkeypatch, dm):
 
 
 def test_macro_skipped_on_default_strategy_path(monkeypatch):
-    from forven.data_manager import get_data_manager
+    from axiom.data_manager import get_data_manager
 
     dm = get_data_manager()
     calls: list[str] = []
@@ -45,7 +45,7 @@ def test_macro_skipped_on_default_strategy_path(monkeypatch):
 
 
 def test_macro_included_only_when_opted_in(monkeypatch):
-    from forven.data_manager import get_data_manager
+    from axiom.data_manager import get_data_manager
 
     dm = get_data_manager()
     calls: list[str] = []

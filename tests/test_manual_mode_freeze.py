@@ -1,10 +1,10 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 
-from forven.control_plane import ops as control_plane_ops
-from forven.db import claim_pending_agent_tasks, claim_pending_tasks, create_task_container, get_db
-from forven.system_mode_policy import (
+from axiom.control_plane import ops as control_plane_ops
+from axiom.db import claim_pending_agent_tasks, claim_pending_tasks, create_task_container, get_db
+from axiom.system_mode_policy import (
     reconcile_manual_mode_backlog,
     thaw_manual_mode_backlog,
 )
@@ -33,7 +33,7 @@ def _set_agent_task_status(task_id: int, status: str) -> None:
         conn.execute("UPDATE agent_tasks SET status = ? WHERE id = ?", (status, task_id))
 
 
-def test_manual_mode_freezes_autonomous_backlog_and_auto_mode_thaws_it(forven_db):
+def test_manual_mode_freezes_autonomous_backlog_and_auto_mode_thaws_it(AXIOM_db):
     with get_db() as conn:
         system_agent_id, _ = create_task_container(
             conn=conn,
@@ -139,7 +139,7 @@ def test_manual_mode_freezes_autonomous_backlog_and_auto_mode_thaws_it(forven_db
     }
 
 
-def test_thaw_manual_mode_backlog_skips_duplicate_agent_tasks(forven_db):
+def test_thaw_manual_mode_backlog_skips_duplicate_agent_tasks(AXIOM_db):
     with get_db() as conn:
         first = conn.execute(
             """
@@ -175,7 +175,7 @@ def test_thaw_manual_mode_backlog_skips_duplicate_agent_tasks(forven_db):
     }
 
 
-def test_reconcile_thaws_stale_paused_manual_when_mode_is_auto(forven_db):
+def test_reconcile_thaws_stale_paused_manual_when_mode_is_auto(AXIOM_db):
     """Regression for app-restart silent killer: paused_manual rows linger from a
     prior manual session, system has since flipped to auto. Reconcile must thaw
     them so the queue actually drains, not just return a count.
@@ -226,14 +226,14 @@ def test_reconcile_thaws_stale_paused_manual_when_mode_is_auto(forven_db):
         ).fetchone()["status"] == "pending"
 
 
-def test_reconcile_is_noop_when_auto_and_no_stuck_rows(forven_db):
+def test_reconcile_is_noop_when_auto_and_no_stuck_rows(AXIOM_db):
     """No paused_manual rows → reconcile must not invoke thaw or perturb queue."""
     control_plane_ops.update_system_mode("auto")
     counts = reconcile_manual_mode_backlog()
     assert counts == {"agent_tasks": 0, "brain_tasks": 0, "total": 0}
 
 
-def test_claim_pending_agent_tasks_in_manual_mode_only_claims_user_work(forven_db):
+def test_claim_pending_agent_tasks_in_manual_mode_only_claims_user_work(AXIOM_db):
     control_plane_ops.update_system_mode("manual")
 
     with get_db() as conn:
@@ -273,7 +273,7 @@ def test_claim_pending_agent_tasks_in_manual_mode_only_claims_user_work(forven_d
     }
 
 
-def test_claim_pending_brain_tasks_in_manual_mode_only_claims_user_work(forven_db):
+def test_claim_pending_brain_tasks_in_manual_mode_only_claims_user_work(AXIOM_db):
     control_plane_ops.update_system_mode("manual")
 
     system_task_id = _insert_brain_task(status="pending", source="system")

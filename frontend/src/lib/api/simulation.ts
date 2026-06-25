@@ -1,5 +1,5 @@
 import { fetchApi } from './core';
-import type { ForvenTrade } from './forven';
+import type { AxiomTrade } from './axiom';
 
 export interface SimulationStatus {
     active: boolean;
@@ -69,7 +69,7 @@ export async function getSimulationAnalytics(): Promise<SimulationAnalytics> {
     return fetchApi('/simulation/analytics');
 }
 
-export async function getSimTrades(): Promise<ForvenTrade[]> {
+export async function getSimTrades(): Promise<AxiomTrade[]> {
     return fetchApi('/simulation/trades');
 }
 

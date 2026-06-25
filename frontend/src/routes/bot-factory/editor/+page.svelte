@@ -243,7 +243,7 @@
 </script>
 
 <svelte:head>
-	<title>{editId ? 'Edit Bot' : 'Create Bot'} | Bot Factory | Forven</title>
+	<title>{editId ? 'Edit Bot' : 'Create Bot'} | Bot Factory | Axiom</title>
 </svelte:head>
 
 <div class="mx-auto max-w-4xl px-4 py-6">

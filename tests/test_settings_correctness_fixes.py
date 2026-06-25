@@ -1,4 +1,4 @@
-"""Settings-correctness regressions from the 2026-06-09 full audit.
+﻿"""Settings-correctness regressions from the 2026-06-09 full audit.
 
 Four trust leads: every knob on the Settings page must display the value the
 backend actually enforces, and a save must never silently corrupt or reset
@@ -21,7 +21,7 @@ sibling settings.
 import pytest
 from fastapi import HTTPException
 
-from forven.api_core import (
+from axiom.api_core import (
     PipelineSettingsUpdateBody,
     _load_settings_payload,
     get_pipeline_settings,
@@ -37,30 +37,30 @@ from forven.api_core import (
 
 
 class TestMaxDrawdownKeyCollision:
-    def test_settings_shows_blob_kill_switch_not_pipeline_threshold(self, forven_db):
+    def test_settings_shows_blob_kill_switch_not_pipeline_threshold(self, AXIOM_db):
         # Defaults already collide: blob 30 (enforced) vs pipeline 40 (legacy).
         assert get_pipeline_settings()["max_drawdown_pct"] == 40
         assert get_settings()["max_drawdown_pct"] == 30
 
-    def test_risk_edit_sticks_across_reload(self, forven_db):
+    def test_risk_edit_sticks_across_reload(self, AXIOM_db):
         put_settings_section("risk", {"max_drawdown_pct": 12})
         # The operator must see the edited (enforced) value, not the pipeline 40.
         assert get_settings()["max_drawdown_pct"] == 12
         # And the value enforcement reads (the raw blob) matches the display.
         assert _load_settings_payload()["max_drawdown_pct"] == 12
 
-    def test_pipeline_twin_still_reachable_via_pipeline_endpoint(self, forven_db):
+    def test_pipeline_twin_still_reachable_via_pipeline_endpoint(self, AXIOM_db):
         put_settings_section("risk", {"max_drawdown_pct": 12})
         # The legacy pipeline promotion threshold keeps its own value and route.
         assert get_pipeline_settings()["max_drawdown_pct"] == 40
 
-    def test_enforcement_reads_the_displayed_value(self, forven_db):
+    def test_enforcement_reads_the_displayed_value(self, AXIOM_db):
         put_settings_section("risk", {"max_drawdown_pct": 12})
-        from forven.exchange.risk import _get_risk_limits
+        from axiom.exchange.risk import _get_risk_limits
 
         assert _get_risk_limits()["max_drawdown"] == pytest.approx(0.12)
 
-    def test_non_colliding_pipeline_keys_still_overlay(self, forven_db):
+    def test_non_colliding_pipeline_keys_still_overlay(self, AXIOM_db):
         # The shadow exclusion is surgical: other flat pipeline keys (which have
         # no blob twin) must keep flowing into get_settings for the UI.
         assert get_settings()["autopilot_enabled"] is True
@@ -72,52 +72,52 @@ class TestMaxDrawdownKeyCollision:
 
 
 class TestRiskTwinKeys:
-    def test_max_risk_per_trade_pct_write_path_exists_and_round_trips(self, forven_db):
+    def test_max_risk_per_trade_pct_write_path_exists_and_round_trips(self, AXIOM_db):
         put_settings_section("risk", {"max_risk_per_trade_pct": 7})
         payload = _load_settings_payload()
         assert payload["max_risk_per_trade_pct"] == 7
         # Legacy twin synced so older readers (brain/bot summaries) agree.
         assert payload["max_position_size_pct"] == 7
 
-    def test_max_risk_per_trade_pct_reaches_enforcement(self, forven_db):
+    def test_max_risk_per_trade_pct_reaches_enforcement(self, AXIOM_db):
         put_settings_section("risk", {"max_risk_per_trade_pct": 7})
-        from forven.exchange.risk import _get_risk_limits
+        from axiom.exchange.risk import _get_risk_limits
 
         assert _get_risk_limits()["max_risk_per_trade"] == pytest.approx(0.07)
 
-    def test_legacy_max_position_size_pct_write_is_not_a_placebo(self, forven_db):
+    def test_legacy_max_position_size_pct_write_is_not_a_placebo(self, AXIOM_db):
         # Enforcement prefers max_risk_per_trade_pct (always seeded), so a write
         # to the legacy key must sync the preferred key to take effect.
         put_settings_section("risk", {"max_position_size_pct": 4})
         payload = _load_settings_payload()
         assert payload["max_position_size_pct"] == 4
         assert payload["max_risk_per_trade_pct"] == 4
-        from forven.exchange.risk import _get_risk_limits
+        from axiom.exchange.risk import _get_risk_limits
 
         assert _get_risk_limits()["max_risk_per_trade"] == pytest.approx(0.04)
 
-    def test_max_daily_loss_pct_write_path_exists_and_derives_usd_twin(self, forven_db):
+    def test_max_daily_loss_pct_write_path_exists_and_derives_usd_twin(self, AXIOM_db):
         put_settings_section("risk", {"max_daily_loss_pct": 3})
         payload = _load_settings_payload()
         assert payload["max_daily_loss_pct"] == 3
         # USD twin derived from initial_capital (default 10000) on save.
         assert payload["max_daily_loss"] == pytest.approx(300.0)
-        from forven.exchange.risk import _get_risk_limits
+        from axiom.exchange.risk import _get_risk_limits
 
         assert _get_risk_limits()["daily_loss_limit"] == pytest.approx(0.03)
 
-    def test_legacy_max_daily_loss_usd_write_is_not_a_placebo(self, forven_db):
+    def test_legacy_max_daily_loss_usd_write_is_not_a_placebo(self, AXIOM_db):
         # Enforcement uses max_daily_loss_pct whenever present (it always is),
         # so the legacy USD write must recompute the pct twin to take effect.
         put_settings_section("risk", {"max_daily_loss": 500})
         payload = _load_settings_payload()
         assert payload["max_daily_loss"] == 500
         assert payload["max_daily_loss_pct"] == pytest.approx(5.0)
-        from forven.exchange.risk import _get_risk_limits
+        from axiom.exchange.risk import _get_risk_limits
 
         assert _get_risk_limits()["daily_loss_limit"] == pytest.approx(0.05)
 
-    def test_explicit_both_twins_in_one_payload_are_respected(self, forven_db):
+    def test_explicit_both_twins_in_one_payload_are_respected(self, AXIOM_db):
         put_settings_section(
             "risk",
             {"max_risk_per_trade_pct": 6, "max_position_size_pct": 9},
@@ -126,7 +126,7 @@ class TestRiskTwinKeys:
         assert payload["max_risk_per_trade_pct"] == 6
         assert payload["max_position_size_pct"] == 9
 
-    def test_seed_defaults_unchanged(self, forven_db):
+    def test_seed_defaults_unchanged(self, AXIOM_db):
         payload = _load_settings_payload()
         assert payload["max_risk_per_trade_pct"] == 10
         assert payload["max_position_size_pct"] == 10
@@ -140,7 +140,7 @@ class TestRiskTwinKeys:
 
 
 class TestPipelineNullRejection:
-    def test_nested_threshold_null_is_rejected_with_clear_message(self, forven_db):
+    def test_nested_threshold_null_is_rejected_with_clear_message(self, AXIOM_db):
         with pytest.raises(HTTPException) as exc:
             put_pipeline_settings(
                 PipelineSettingsUpdateBody(updates={"gauntlet": {"min_trades": None}})
@@ -148,8 +148,8 @@ class TestPipelineNullRejection:
         assert exc.value.status_code == 400
         assert "gauntlet.min_trades" in str(exc.value.detail)
 
-    def test_rejected_null_does_not_poison_gate_config(self, forven_db):
-        from forven.policy import load_pipeline_config
+    def test_rejected_null_does_not_poison_gate_config(self, AXIOM_db):
+        from axiom.policy import load_pipeline_config
 
         before = load_pipeline_config()["gauntlet"].get("min_trades")
         with pytest.raises(HTTPException):
@@ -162,7 +162,7 @@ class TestPipelineNullRejection:
         # Gate evaluation reads this with int(...) — must not raise.
         int(after)
 
-    def test_flat_pipeline_null_is_rejected(self, forven_db):
+    def test_flat_pipeline_null_is_rejected(self, AXIOM_db):
         with pytest.raises(HTTPException) as exc:
             put_pipeline_settings(
                 PipelineSettingsUpdateBody(updates={"min_sharpe_ratio": None})
@@ -170,7 +170,7 @@ class TestPipelineNullRejection:
         assert exc.value.status_code == 400
         assert get_pipeline_settings()["min_sharpe_ratio"] == 0.5
 
-    def test_normalize_crash_path_null_is_rejected_not_500(self, forven_db):
+    def test_normalize_crash_path_null_is_rejected_not_500(self, AXIOM_db):
         # quick_screen.min_sharpe used to crash _normalize_pipeline_config
         # (float(None)) inside save — now refused cleanly at the boundary.
         with pytest.raises(HTTPException) as exc:
@@ -179,8 +179,8 @@ class TestPipelineNullRejection:
             )
         assert exc.value.status_code == 400
 
-    def test_valid_updates_still_save(self, forven_db):
-        from forven.policy import load_pipeline_config
+    def test_valid_updates_still_save(self, AXIOM_db):
+        from axiom.policy import load_pipeline_config
 
         result = put_pipeline_settings(
             PipelineSettingsUpdateBody(
@@ -197,7 +197,7 @@ class TestPipelineNullRejection:
 
 
 class TestDataEngineNestedPartialSave:
-    def test_editing_one_nested_leaf_preserves_siblings(self, forven_db):
+    def test_editing_one_nested_leaf_preserves_siblings(self, AXIOM_db):
         put_settings_section(
             "data-engine",
             {"data_engine_settings": {"source_reconciliation": {"enabled": True}}},
@@ -220,7 +220,7 @@ class TestDataEngineNestedPartialSave:
         assert sr["block_when_missing"] is False
         assert sr["staleness_hours"] == 24
 
-    def test_editing_one_source_priority_preserves_other_streams(self, forven_db):
+    def test_editing_one_source_priority_preserves_other_streams(self, AXIOM_db):
         put_settings_section(
             "data-engine",
             {"data_engine_settings": {"source_priority": {"funding": ["bybit", "binance"]}}},
@@ -234,7 +234,7 @@ class TestDataEngineNestedPartialSave:
         assert priority["funding"] == ["bybit", "binance"]
         assert priority["oi"] == ["binance"]
 
-    def test_top_level_keys_still_merge(self, forven_db):
+    def test_top_level_keys_still_merge(self, AXIOM_db):
         put_settings_section(
             "data-engine",
             {"data_engine_settings": {"auto_catchup_enabled": False}},

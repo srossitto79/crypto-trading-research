@@ -1,6 +1,6 @@
-import pytest
+﻿import pytest
 
-from forven.config import (
+from axiom.config import (
     get_execution_mode,
     load_config,
     save_config,
@@ -37,7 +37,7 @@ class TestExecutionMode:
         # A manually-forced 'live' config is honored on read, but an env var
         # still takes precedence.
         _force_config_mode("live")
-        monkeypatch.setenv("FORVEN_EXECUTION_MODE", "paper")
+        monkeypatch.setenv("AXIOM_EXECUTION_MODE", "paper")
         assert get_execution_mode() == "paper"
 
     def test_forced_live_config_is_honored_on_read(self):
@@ -48,15 +48,15 @@ class TestExecutionMode:
 
 
 class TestBetaPaperLock:
-    """FORVEN_ENV=beta hard-locks execution mode to paper (packaged builds)."""
+    """AXIOM_ENV=beta hard-locks execution mode to paper (packaged builds)."""
 
     def test_set_live_rejected_in_beta_too(self, monkeypatch):
-        monkeypatch.setenv("FORVEN_ENV", "beta")
+        monkeypatch.setenv("AXIOM_ENV", "beta")
         with pytest.raises(ValueError, match="Unsupported execution mode"):
             set_execution_mode("live")
 
     def test_beta_build_still_allows_paper(self, monkeypatch):
-        monkeypatch.setenv("FORVEN_ENV", "beta")
+        monkeypatch.setenv("AXIOM_ENV", "beta")
         set_execution_mode("paper")
         assert get_execution_mode() == "paper"
 
@@ -66,5 +66,5 @@ class TestBetaPaperLock:
         # Simulate a stale config.json with a forced 'live' value.
         _force_config_mode("live")
         assert get_execution_mode() == "live"
-        monkeypatch.setenv("FORVEN_ENV", "beta")
+        monkeypatch.setenv("AXIOM_ENV", "beta")
         assert get_execution_mode() == "paper"

@@ -1,8 +1,8 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
-from forven.control_plane import approvals as control_plane_approvals
-from forven.control_plane.models import ApprovalDecisionBody, ApprovalHandoffBody, ApprovalTroubleshootBody
-from forven.db import create_approval, get_approval, get_db, kv_get
+from axiom.control_plane import approvals as control_plane_approvals
+from axiom.control_plane.models import ApprovalDecisionBody, ApprovalHandoffBody, ApprovalTroubleshootBody
+from axiom.db import create_approval, get_approval, get_db, kv_get
 
 
 def _insert_blocked_agent_task(task_id: int, display_id: str = "AT0007") -> None:
@@ -22,7 +22,7 @@ def _insert_blocked_agent_task(task_id: int, display_id: str = "AT0007") -> None
         )
 
 
-def test_post_approve_approval_requeues_blocked_task(forven_db):
+def test_post_approve_approval_requeues_blocked_task(AXIOM_db):
     _insert_blocked_agent_task(101, "AT0101")
     approval_id = create_approval(
         "code_change",
@@ -43,7 +43,7 @@ def test_post_approve_approval_requeues_blocked_task(forven_db):
     assert row["error"] is None
 
 
-def test_post_deny_approval_marks_blocked_task_failed_with_reason(forven_db):
+def test_post_deny_approval_marks_blocked_task_failed_with_reason(AXIOM_db):
     _insert_blocked_agent_task(202, "AT0202")
     approval_id = create_approval(
         "code_change",
@@ -66,7 +66,7 @@ def test_post_deny_approval_marks_blocked_task_failed_with_reason(forven_db):
     assert "unsafe patch" in row["error"]
 
 
-def test_post_revise_approval_preserves_response_contract(forven_db):
+def test_post_revise_approval_preserves_response_contract(AXIOM_db):
     approval_id = create_approval(
         "code_change",
         target_type="strategy",
@@ -82,7 +82,7 @@ def test_post_revise_approval_preserves_response_contract(forven_db):
     assert result == {"ok": True, "approval_id": approval_id, "status": "revised"}
 
 
-def test_post_handoff_approval_updates_owner(forven_db):
+def test_post_handoff_approval_updates_owner(AXIOM_db):
     approval_id = create_approval(
         "code_change",
         target_type="strategy",
@@ -101,7 +101,7 @@ def test_post_handoff_approval_updates_owner(forven_db):
     assert approval["owner"] == "ceo"
 
 
-def test_get_approvals_list_enriches_linked_task(forven_db):
+def test_get_approvals_list_enriches_linked_task(AXIOM_db):
     _insert_blocked_agent_task(303, "AT0303")
     approval_id = create_approval(
         "code_change",
@@ -119,7 +119,7 @@ def test_get_approvals_list_enriches_linked_task(forven_db):
     assert record["linked_task"]["status"] == "blocked"
 
 
-def test_post_troubleshoot_approval_creates_diagnosis_task(forven_db):
+def test_post_troubleshoot_approval_creates_diagnosis_task(AXIOM_db):
     _insert_blocked_agent_task(404, "AT0404")
     approval_id = create_approval(
         "code_change",
@@ -149,7 +149,7 @@ def test_post_troubleshoot_approval_creates_diagnosis_task(forven_db):
     assert task["status"] == "pending"
 
 
-def test_post_troubleshoot_approval_reuses_existing_task(forven_db):
+def test_post_troubleshoot_approval_reuses_existing_task(AXIOM_db):
     _insert_blocked_agent_task(505, "AT0505")
     approval_id = create_approval(
         "code_change",
@@ -172,7 +172,7 @@ def test_post_troubleshoot_approval_reuses_existing_task(forven_db):
     assert second["created"] is False
 
 
-def test_get_approval_context_includes_linked_and_troubleshoot_details(forven_db):
+def test_get_approval_context_includes_linked_and_troubleshoot_details(AXIOM_db):
     _insert_blocked_agent_task(606, "AT0606")
     approval_id = create_approval(
         "code_change",
@@ -195,7 +195,7 @@ def test_get_approval_context_includes_linked_and_troubleshoot_details(forven_db
     assert context["troubleshoot_task_detail"]["task"]["display_id"] == troubleshoot["task"]["display_id"]
 
 
-def test_approve_dethrone_recommendation_transitions_strategy(forven_db):
+def test_approve_dethrone_recommendation_transitions_strategy(AXIOM_db):
     with get_db() as conn:
         conn.execute(
             """
@@ -232,7 +232,7 @@ def test_approve_dethrone_recommendation_transitions_strategy(forven_db):
     assert row["status"] == "gauntlet"
 
 
-def test_deny_dethrone_recommendation_sets_cooldown(forven_db):
+def test_deny_dethrone_recommendation_sets_cooldown(AXIOM_db):
     with get_db() as conn:
         conn.execute(
             """
@@ -265,7 +265,7 @@ def test_deny_dethrone_recommendation_sets_cooldown(forven_db):
             "SELECT stage, status FROM strategies WHERE id = 's-dethrone-deny'"
         ).fetchone()
 
-    cooldown = kv_get("forven:dethrone:cooldown:s-dethrone-deny")
+    cooldown = kv_get("axiom:dethrone:cooldown:s-dethrone-deny")
 
     assert result["ok"] is True
     assert result["strategy_id"] == "s-dethrone-deny"
@@ -275,14 +275,14 @@ def test_deny_dethrone_recommendation_sets_cooldown(forven_db):
     assert isinstance(cooldown, str)
 
 
-def test_approve_promotion_recommendation_transitions_strategy(forven_db, monkeypatch):
+def test_approve_promotion_recommendation_transitions_strategy(AXIOM_db, monkeypatch):
     """Approving a promotion approval advances the strategy through the gate."""
     monkeypatch.setattr(
-        "forven.brain.verify_backtest_exists_for_stage_transition",
+        "axiom.brain.verify_backtest_exists_for_stage_transition",
         lambda *_args, **_kwargs: (True, "ok"),
     )
     monkeypatch.setattr(
-        "forven.brain.evaluate_promotion",
+        "axiom.brain.evaluate_promotion",
         lambda *_args, **_kwargs: (True, "ok"),
     )
     with get_db() as conn:
@@ -322,19 +322,19 @@ def test_approve_promotion_recommendation_transitions_strategy(forven_db, monkey
     assert row["stage"] == "paper"
 
 
-def test_promotion_approval_gate_detects_gauntlet_to_paper(forven_db):
-    from forven.brain import _requires_operator_promotion_approval
-    from forven.db import kv_set
+def test_promotion_approval_gate_detects_gauntlet_to_paper(AXIOM_db):
+    from axiom.brain import _requires_operator_promotion_approval
+    from axiom.db import kv_set
 
     # Semi mode (manual): every capital-promotion transition requires a click.
-    kv_set("forven:settings", {"auto_approve_promotions": "false"})
-    kv_set("forven:pipeline:settings", {"promotion_mode": "manual"})
+    kv_set("axiom:settings", {"auto_approve_promotions": "false"})
+    kv_set("axiom:pipeline:settings", {"promotion_mode": "manual"})
     assert _requires_operator_promotion_approval("gauntlet", "paper") is True
     assert _requires_operator_promotion_approval("paper", "live_graduated") is True
 
     # Auto mode = fully autonomous: BOTH gauntlet→paper AND paper→live_graduated
     # self-approve so the pipeline can run unattended end-to-end.
-    kv_set("forven:pipeline:settings", {"promotion_mode": "auto"})
+    kv_set("axiom:pipeline:settings", {"promotion_mode": "auto"})
     assert _requires_operator_promotion_approval("gauntlet", "paper") is False
     assert _requires_operator_promotion_approval("paper", "live_graduated") is False
 
@@ -344,12 +344,12 @@ def test_promotion_approval_gate_detects_gauntlet_to_paper(forven_db):
     assert _requires_operator_promotion_approval("gauntlet", "archived") is False
 
     # With auto_approve enabled, gate is disabled entirely.
-    kv_set("forven:settings", {"auto_approve_promotions": "true"})
+    kv_set("axiom:settings", {"auto_approve_promotions": "true"})
     assert _requires_operator_promotion_approval("gauntlet", "paper") is False
     assert _requires_operator_promotion_approval("paper", "live_graduated") is False
 
 
-def test_concurrent_approve_and_deny_returns_409_on_loser(forven_db):
+def test_concurrent_approve_and_deny_returns_409_on_loser(AXIOM_db):
     """Regression for C4 — atomic CAS rejects the second decision instead
     of silently overwriting state set by a concurrent operator."""
     import pytest
@@ -382,8 +382,8 @@ def test_concurrent_approve_and_deny_returns_409_on_loser(forven_db):
 
 def _make_protected_crucible() -> str:
     """Create a proven+protected crucible and return its id."""
-    from forven.crucibles import mark_crucible_viable
-    from forven.hypotheses import create_hypothesis
+    from axiom.crucibles import mark_crucible_viable
+    from axiom.hypotheses import create_hypothesis
 
     hyp = create_hypothesis(
         title="Protected thesis",
@@ -401,9 +401,9 @@ def _make_protected_crucible() -> str:
     return str(hyp["id"])
 
 
-def test_approve_crucible_dethrone_archives_and_clears_protection(forven_db):
-    from forven.crucibles import get_crucible
-    from forven.hypotheses import archive_hypothesis
+def test_approve_crucible_dethrone_archives_and_clears_protection(AXIOM_db):
+    from axiom.crucibles import get_crucible
+    from axiom.hypotheses import archive_hypothesis
 
     crucible_id = _make_protected_crucible()
     # Archiving a protected crucible does not archive — it queues a dethrone approval
@@ -426,9 +426,9 @@ def test_approve_crucible_dethrone_archives_and_clears_protection(forven_db):
     assert not after.get("contested_at")
 
 
-def test_deny_crucible_dethrone_restores_protection(forven_db):
-    from forven.crucibles import get_crucible
-    from forven.hypotheses import archive_hypothesis
+def test_deny_crucible_dethrone_restores_protection(AXIOM_db):
+    from axiom.crucibles import get_crucible
+    from axiom.hypotheses import archive_hypothesis
 
     crucible_id = _make_protected_crucible()
     approval_id = archive_hypothesis(crucible_id)["approval_id"]

@@ -1,14 +1,14 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 import json
 
-from forven.db import factory_reset, get_db
+from axiom.db import factory_reset, get_db
 
 
-def test_run_ideation_step_delegates_to_crucible_planner(monkeypatch, forven_db):
-    from forven import evolution
-    import forven.crucible_planner as crucible_planner_mod
+def test_run_ideation_step_delegates_to_crucible_planner(monkeypatch, AXIOM_db):
+    from axiom import evolution
+    import axiom.crucible_planner as crucible_planner_mod
 
     calls: list[int] = []
 
@@ -28,9 +28,9 @@ def test_run_ideation_step_delegates_to_crucible_planner(monkeypatch, forven_db)
     assert calls == [3]
 
 
-def test_run_coding_step_delegates_to_crucible_planner(monkeypatch, forven_db):
-    from forven import evolution
-    import forven.crucible_planner as crucible_planner_mod
+def test_run_coding_step_delegates_to_crucible_planner(monkeypatch, AXIOM_db):
+    from axiom import evolution
+    import axiom.crucible_planner as crucible_planner_mod
 
     calls: list[int] = []
 
@@ -50,7 +50,7 @@ def test_run_coding_step_delegates_to_crucible_planner(monkeypatch, forven_db):
     assert calls == [3]
 
 
-def test_factory_reset_queues_strategy_developer_bootstrap_prompt(forven_db):
+def test_factory_reset_queues_strategy_developer_bootstrap_prompt(AXIOM_db):
     result = factory_reset([])
 
     assert result["status"] == "ok"
@@ -70,20 +70,20 @@ def test_factory_reset_queues_strategy_developer_bootstrap_prompt(forven_db):
     assert "quant-researcher: generate new strategy container hypotheses" not in message
 
 
-def test_bot_bootstrap_queues_strategy_developer_startup_prompt(monkeypatch, forven_db):
-    from forven.bot import ForvenBot
+def test_bot_bootstrap_queues_strategy_developer_startup_prompt(monkeypatch, AXIOM_db):
+    from axiom.bot import AxiomBot
 
-    monkeypatch.setattr("forven.workspace.init_workspace", lambda: None)
-    monkeypatch.setattr("forven.scheduler.get_jobs", lambda: [{"id": "existing-job"}])
-    monkeypatch.setattr("forven.scheduler.reconcile_forven_jobs", lambda: {"removed": 0, "added": 0})
-    monkeypatch.setattr("forven.scheduler.ensure_monitoring_jobs", lambda: 0)
-    monkeypatch.setattr("forven.scheduler.seed_forven_jobs", lambda: None)
-    monkeypatch.setattr("forven.db.log_activity", lambda *args, **kwargs: None)
-    monkeypatch.setattr("forven.agents.manager.create_agent", lambda **kwargs: None)
-    monkeypatch.setattr("forven.agents.manager.update_agent", lambda *args, **kwargs: None)
-    monkeypatch.setattr("forven.agents.manager.delete_agent", lambda *args, **kwargs: None)
+    monkeypatch.setattr("axiom.workspace.init_workspace", lambda: None)
+    monkeypatch.setattr("axiom.scheduler.get_jobs", lambda: [{"id": "existing-job"}])
+    monkeypatch.setattr("axiom.scheduler.reconcile_AXIOM_jobs", lambda: {"removed": 0, "added": 0})
+    monkeypatch.setattr("axiom.scheduler.ensure_monitoring_jobs", lambda: 0)
+    monkeypatch.setattr("axiom.scheduler.seed_AXIOM_jobs", lambda: None)
+    monkeypatch.setattr("axiom.db.log_activity", lambda *args, **kwargs: None)
+    monkeypatch.setattr("axiom.agents.manager.create_agent", lambda **kwargs: None)
+    monkeypatch.setattr("axiom.agents.manager.update_agent", lambda *args, **kwargs: None)
+    monkeypatch.setattr("axiom.agents.manager.delete_agent", lambda *args, **kwargs: None)
 
-    bot = ForvenBot(agent_id=None)
+    bot = AxiomBot(agent_id=None)
     monkeypatch.setattr(bot, "get_channel", lambda channel_id: None)
 
     asyncio.run(bot._bootstrap())

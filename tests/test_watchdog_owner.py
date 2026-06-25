@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import subprocess
 import sys
@@ -18,7 +18,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, {str(project_root)!r})
-from forven.watchdog_owner import acquire_watchdog_owner_lock, release_watchdog_owner_lock
+from axiom.watchdog_owner import acquire_watchdog_owner_lock, release_watchdog_owner_lock
 
 repo_root = Path(sys.argv[1])
 release_file = Path(sys.argv[2])
@@ -44,7 +44,7 @@ finally:
         while time.time() < deadline and not owner_file.exists():
             time.sleep(0.1)
 
-        from forven.watchdog_owner import acquire_watchdog_owner_lock, get_watchdog_owner_status
+        from axiom.watchdog_owner import acquire_watchdog_owner_lock, get_watchdog_owner_status
 
         status = get_watchdog_owner_status(repo_root)
         assert status["other_process_active"] is True
@@ -66,7 +66,7 @@ def test_watchdog_owner_status_recovers_stale_owner_file(tmp_path):
         encoding="utf-8",
     )
 
-    from forven.watchdog_owner import acquire_watchdog_owner_lock, get_watchdog_owner_status, release_watchdog_owner_lock
+    from axiom.watchdog_owner import acquire_watchdog_owner_lock, get_watchdog_owner_status, release_watchdog_owner_lock
 
     stale_status = get_watchdog_owner_status(repo_root)
     assert stale_status["stale_pid"] is True

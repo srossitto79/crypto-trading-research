@@ -1,4 +1,4 @@
-"""Test seed strategy variants to find best configs."""
+﻿"""Test seed strategy variants to find best configs."""
 import sys, json
 sys.path.insert(0, '.')
 
@@ -15,7 +15,7 @@ SEEDS = [
 
 
 if __name__ == '__main__':
-    from forven.strategies.backtest import backtest_strategy
+    from axiom.strategies.backtest import backtest_strategy
 
     for sid, asset, stype, params, tf in SEEDS:
         print(f"\n{'='*60}")

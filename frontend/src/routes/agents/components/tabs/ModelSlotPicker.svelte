@@ -8,7 +8,7 @@
 	 * already-filtered `selectable` options. An empty fallback list explicitly
 	 * means "no fallback (fail closed)".
 	 */
-	import type { ForvenAgentModelOption } from '$lib/api';
+	import type { AxiomAgentModelOption } from '$lib/api';
 	import { createEventDispatcher } from 'svelte';
 	import ModelPicker from './ModelPicker.svelte';
 
@@ -19,7 +19,7 @@
 	/** Ordered fallback list, each a "provider:model_id" key. */
 	export let fallbacks: string[] = [];
 	/** Connected + enabled options only. */
-	export let selectable: ForvenAgentModelOption[] = [];
+	export let selectable: AxiomAgentModelOption[] = [];
 	export let allowUnset = false;
 	export let unsetLabel = '— select —';
 	export let dirty = false;

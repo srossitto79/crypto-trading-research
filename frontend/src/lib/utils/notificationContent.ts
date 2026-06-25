@@ -1,4 +1,4 @@
-import type { ForvenNotification } from '$lib/api';
+import type { AxiomNotification } from '$lib/api';
 
 export interface NotificationFormattedSection {
 	label: string;
@@ -28,7 +28,7 @@ const SECTION_LABEL_BLOCKLIST = new Set([
 	'ideation cycle results',
 ]);
 
-export function formatNotificationContent(item: Pick<ForvenNotification, 'summary' | 'body'>): NotificationFormattedContent {
+export function formatNotificationContent(item: Pick<AxiomNotification, 'summary' | 'body'>): NotificationFormattedContent {
 	const summaryText = cleanInlineText(String(item.summary ?? ''));
 	const bodyText = normalizeNotificationBody(String(item.body ?? ''));
 	const paragraphs = splitParagraphs(bodyText);

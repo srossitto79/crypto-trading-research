@@ -1,4 +1,4 @@
-"""Phase 9: end-to-end smoke for the hypothesis refinement loop.
+﻿"""Phase 9: end-to-end smoke for the hypothesis refinement loop.
 
 Simulates the full discipline lifecycle without a running scheduler:
   1. Cap pressure valve: with cap=3, a fourth create_hypothesis evicts the
@@ -18,12 +18,12 @@ from datetime import datetime, timezone
 from unittest.mock import patch
 
 
-from forven.db import create_strategy_container, get_db, kv_set
-from forven.hypotheses import create_hypothesis
-from forven.hypothesis_graduation import is_canonical
-from forven.hypothesis_promotion import _score_rows
-from forven.hypothesis_revisit import force_revisit
-from forven.hypothesis_verdict import write_verdict_memo
+from axiom.db import create_strategy_container, get_db, kv_set
+from axiom.hypotheses import create_hypothesis
+from axiom.hypothesis_graduation import is_canonical
+from axiom.hypothesis_promotion import _score_rows
+from axiom.hypothesis_revisit import force_revisit
+from axiom.hypothesis_verdict import write_verdict_memo
 
 
 def _hyp(idx: int) -> dict:
@@ -37,7 +37,7 @@ def _hyp(idx: int) -> dict:
 
 def _set_discipline(**overrides) -> None:
     kv_set(
-        "forven:settings",
+        "axiom:settings",
         {"research_settings": {"hypothesis_discipline": overrides}},
     )
 
@@ -88,7 +88,7 @@ def _bump_dispatch_signal(hypothesis_id: str, n: int) -> None:
             conn.commit()
 
 
-def test_e2e_full_discipline_lifecycle(forven_db):
+def test_e2e_full_discipline_lifecycle(AXIOM_db):
     """Run all 5 stages back-to-back."""
     # ── Stage 1: cap=3 pressure valve (fourth create evicts weakest) ──
     _set_discipline(
@@ -171,7 +171,7 @@ def test_e2e_full_discipline_lifecycle(forven_db):
     _attach_passing_child(h1["id"], sid_seed=4, symbol="ETH", sharpe=0.9)
 
     fake_llm_response = json.dumps({"verdict": "proven", "rationale": "evidence strong"})
-    with patch("forven.hypothesis_verdict._call_llm", return_value=fake_llm_response):
+    with patch("axiom.hypothesis_verdict._call_llm", return_value=fake_llm_response):
         verdict = write_verdict_memo(h1["id"])
 
     assert verdict["ok"]

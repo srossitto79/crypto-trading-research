@@ -1,4 +1,4 @@
-"""Regression: prebuilt/system reference containers must not spam unclaimable WFA
+﻿"""Regression: prebuilt/system reference containers must not spam unclaimable WFA
 tasks, and a transient ownership mismatch must self-heal instead of dead-lettering.
 
 Root cause that motivated this (2026-06-05): normalize_stage('prebuilt') silently
@@ -10,12 +10,12 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from forven.db import (
+from axiom.db import (
     claim_pending_agent_tasks,
     create_task_container,
     get_db,
 )
-from forven.evolution import _is_pipeline_candidate_strategy
+from axiom.evolution import _is_pipeline_candidate_strategy
 
 
 def test_prebuilt_and_system_owned_excluded_from_pipeline_candidates():
@@ -39,7 +39,7 @@ def _insert_system_owned_strategy(strategy_id: str) -> None:
         )
 
 
-def test_ownership_mismatch_requeues_then_fails_at_cap(forven_db):
+def test_ownership_mismatch_requeues_then_fails_at_cap(AXIOM_db):
     _insert_system_owned_strategy("S-sys-1")
     with get_db() as conn:
         # source='user' so the task is immediately claimable regardless of the test

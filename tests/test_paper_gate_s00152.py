@@ -1,10 +1,10 @@
-"""Tests for S00152 overfitting guardrails in _evaluate_paper_gate."""
+﻿"""Tests for S00152 overfitting guardrails in _evaluate_paper_gate."""
 
 import json
 from datetime import datetime, timezone, timedelta
 
-from forven.db import get_db
-from forven.policy import _evaluate_paper_gate, DEFAULT_PIPELINE_CONFIG
+from axiom.db import get_db
+from axiom.policy import _evaluate_paper_gate, DEFAULT_PIPELINE_CONFIG
 
 
 def _insert_strategy(conn, sid, *, metrics=None, stage_changed_at=None):
@@ -37,7 +37,7 @@ def _insert_paper_trades(conn, sid, pnls, *, stage_changed_at=None):
 # ---------------------------------------------------------------------------
 
 
-def test_oos_sharpe_much_higher_than_is_sharpe_rejects(forven_db):
+def test_oos_sharpe_much_higher_than_is_sharpe_rejects(AXIOM_db):
     """OOS Sharpe > 1.5x IS Sharpe should be rejected as overfitting risk."""
     with get_db() as conn:
         _insert_strategy(conn, "s-overfit", metrics={
@@ -52,7 +52,7 @@ def test_oos_sharpe_much_higher_than_is_sharpe_rejects(forven_db):
     assert "OVERFITTING" in msg
 
 
-def test_oos_sharpe_within_ratio_passes(forven_db):
+def test_oos_sharpe_within_ratio_passes(AXIOM_db):
     """OOS Sharpe <= 1.5x IS Sharpe should not trigger overfitting flag."""
     with get_db() as conn:
         _insert_strategy(conn, "s-ok-sharpe", metrics={
@@ -66,7 +66,7 @@ def test_oos_sharpe_within_ratio_passes(forven_db):
     assert passed
 
 
-def test_oos_sharpe_check_skipped_when_is_zero(forven_db):
+def test_oos_sharpe_check_skipped_when_is_zero(AXIOM_db):
     """If IS Sharpe is zero, the OOS/IS ratio check should be skipped."""
     with get_db() as conn:
         _insert_strategy(conn, "s-zero-is", metrics={
@@ -85,7 +85,7 @@ def test_oos_sharpe_check_skipped_when_is_zero(forven_db):
 # ---------------------------------------------------------------------------
 
 
-def test_profit_factor_below_1_5_rejects(forven_db):
+def test_profit_factor_below_1_5_rejects(AXIOM_db):
     """PF < 1.5 should be hard-rejected."""
     with get_db() as conn:
         _insert_strategy(conn, "s-low-pf", metrics={
@@ -99,7 +99,7 @@ def test_profit_factor_below_1_5_rejects(forven_db):
     assert "Profit Factor" in msg
 
 
-def test_profit_factor_between_1_5_and_2_0_passes_with_size_reduction(forven_db):
+def test_profit_factor_between_1_5_and_2_0_passes_with_size_reduction(AXIOM_db):
     """PF between 1.5 and 2.0 should pass but with 50% position sizing reduction."""
     with get_db() as conn:
         _insert_strategy(conn, "s-mid-pf", metrics={
@@ -113,7 +113,7 @@ def test_profit_factor_between_1_5_and_2_0_passes_with_size_reduction(forven_db)
     assert "S00152 PF warning" in msg
 
 
-def test_profit_factor_above_2_0_passes_normally(forven_db):
+def test_profit_factor_above_2_0_passes_normally(AXIOM_db):
     """PF >= 2.0 should pass without size reduction."""
     with get_db() as conn:
         _insert_strategy(conn, "s-good-pf", metrics={
@@ -131,7 +131,7 @@ def test_profit_factor_above_2_0_passes_normally(forven_db):
 # ---------------------------------------------------------------------------
 
 
-def test_insufficient_paper_trades_rejects(forven_db):
+def test_insufficient_paper_trades_rejects(AXIOM_db):
     """Fewer than the Default min_closed_trades (10) should be rejected."""
     with get_db() as conn:
         _insert_strategy(conn, "s-few-trades", metrics={"profit_factor": 3.0})
@@ -142,7 +142,7 @@ def test_insufficient_paper_trades_rejects(forven_db):
     assert "5/10" in msg
 
 
-def test_insufficient_paper_sample_precedes_static_pf_reject(forven_db):
+def test_insufficient_paper_sample_precedes_static_pf_reject(AXIOM_db):
     """Forward paper evidence should block before static PF hard-fails."""
     with get_db() as conn:
         _insert_strategy(conn, "s-few-trades-low-pf", metrics={"profit_factor": 1.2})
@@ -153,7 +153,7 @@ def test_insufficient_paper_sample_precedes_static_pf_reject(forven_db):
     assert msg == "Insufficient paper sample: 5/10 closed trades"
 
 
-def test_exactly_50_trades_passes(forven_db):
+def test_exactly_50_trades_passes(AXIOM_db):
     """Exactly 50 trades should meet the minimum."""
     with get_db() as conn:
         _insert_strategy(conn, "s-fifty", metrics={"profit_factor": 3.0})
@@ -168,7 +168,7 @@ def test_exactly_50_trades_passes(forven_db):
 # ---------------------------------------------------------------------------
 
 
-def test_negative_paper_return_rejects(forven_db):
+def test_negative_paper_return_rejects(AXIOM_db):
     """Paper return <= 0 should be rejected even with enough trades."""
     with get_db() as conn:
         _insert_strategy(conn, "s-neg-return", metrics={"profit_factor": 3.0})
@@ -182,7 +182,7 @@ def test_negative_paper_return_rejects(forven_db):
     assert "return" in msg.lower()
 
 
-def test_zero_paper_return_rejects(forven_db):
+def test_zero_paper_return_rejects(AXIOM_db):
     """Paper return of exactly 0 should be rejected (must be > 0)."""
     with get_db() as conn:
         _insert_strategy(conn, "s-zero-return", metrics={"profit_factor": 3.0})
@@ -199,7 +199,7 @@ def test_zero_paper_return_rejects(forven_db):
 # ---------------------------------------------------------------------------
 
 
-def test_paper_drawdown_exceeding_limit_rejects(forven_db):
+def test_paper_drawdown_exceeding_limit_rejects(AXIOM_db):
     """Paper max drawdown >= 15% should be rejected."""
     with get_db() as conn:
         _insert_strategy(conn, "s-high-dd", metrics={"profit_factor": 3.0})
@@ -218,7 +218,7 @@ def test_paper_drawdown_exceeding_limit_rejects(forven_db):
 # ---------------------------------------------------------------------------
 
 
-def test_missing_strategy_rejects(forven_db):
+def test_missing_strategy_rejects(AXIOM_db):
     """Non-existent strategy should be rejected gracefully."""
     passed, msg = _evaluate_paper_gate("nonexistent-id", DEFAULT_PIPELINE_CONFIG)
     assert not passed
@@ -230,7 +230,7 @@ def test_missing_strategy_rejects(forven_db):
 # ---------------------------------------------------------------------------
 
 
-def test_oos_profit_factor_used_when_available(forven_db):
+def test_oos_profit_factor_used_when_available(AXIOM_db):
     """OOS profit factor should be used for evaluation when available."""
     with get_db() as conn:
         _insert_strategy(conn, "s-oos-pf", metrics={
@@ -244,7 +244,7 @@ def test_oos_profit_factor_used_when_available(forven_db):
     assert "Profit Factor" in msg
 
 
-def test_general_pf_fallback_when_no_oos(forven_db):
+def test_general_pf_fallback_when_no_oos(AXIOM_db):
     """When OOS PF not available, general PF should be used."""
     with get_db() as conn:
         _insert_strategy(conn, "s-gen-pf", metrics={

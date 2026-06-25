@@ -1,9 +1,9 @@
-import sqlite3
+﻿import sqlite3
 import json
 from pathlib import Path
 
 def read_funding_tasks():
-    db_path = Path.home() / ".forven" / "forven.db"
+    db_path = Path.home() / ".Axiom" / "axiom.db"
     if not db_path.exists():
         print(f"DB not found at {db_path}")
         return
@@ -38,7 +38,7 @@ import json
 from pathlib import Path
 
 def read_funding_tasks():
-    db_path = Path.home() / ".forven" / "forven.db"
+    db_path = Path.home() / ".Axiom" / "axiom.db"
     if not db_path.exists():
         print(f"DB not found at {db_path}")
         return

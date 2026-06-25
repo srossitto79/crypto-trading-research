@@ -1,4 +1,4 @@
-"""Regression tests for Batch G reliability hardening (H-R1..H-R5)."""
+﻿"""Regression tests for Batch G reliability hardening (H-R1..H-R5)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import os
 
 import pytest
 
-from forven.db import init_db, kv_set
+from axiom.db import init_db, kv_set
 
 
 @pytest.fixture(autouse=True)
@@ -19,7 +19,7 @@ def _ensure_db():
 # -----------------------------------------------------------------------
 def test_h_r1_popen_failure_closes_log_file(monkeypatch, tmp_path):
     """If Popen raises, the log file handle we opened must still be closed."""
-    from forven.bot_factory import manager as mgr
+    from axiom.bot_factory import manager as mgr
 
     closed_flags = []
 
@@ -73,7 +73,7 @@ def test_h_r1_popen_failure_closes_log_file(monkeypatch, tmp_path):
 # -----------------------------------------------------------------------
 def test_h_r3_lock_fd_never_leaked_on_failure(monkeypatch):
     """Simulate a failure between lock acquisition and FD storage. FD closed."""
-    from forven import runtime_worker as rw
+    from axiom import runtime_worker as rw
 
     # reset any existing lock
     monkeypatch.setattr(rw, "_runtime_worker_lock_fd", None, raising=False)
@@ -116,12 +116,12 @@ def test_h_r3_lock_fd_never_leaked_on_failure(monkeypatch):
 def test_h_r4_phantom_future_exception_is_logged(caplog):
     """The done_callback must call log.exception when the future raised."""
     from concurrent.futures import Future
-    from forven.phantom_recovery import _log_phantom_future_exception
+    from axiom.phantom_recovery import _log_phantom_future_exception
 
     future: Future = Future()
     callback = _log_phantom_future_exception("SOCRATES-001", context="unit-test")
 
-    with caplog.at_level("ERROR", logger="forven.phantom_recovery"):
+    with caplog.at_level("ERROR", logger="axiom.phantom_recovery"):
         future.set_exception(RuntimeError("kaboom"))
         callback(future)
 
@@ -134,13 +134,13 @@ def test_h_r4_phantom_future_exception_is_logged(caplog):
 def test_h_r4_phantom_future_success_is_silent(caplog):
     """If the future completes normally the callback logs nothing."""
     from concurrent.futures import Future
-    from forven.phantom_recovery import _log_phantom_future_exception
+    from axiom.phantom_recovery import _log_phantom_future_exception
 
     future: Future = Future()
     callback = _log_phantom_future_exception("SOCRATES-002", context="unit-test")
     future.set_result(None)
 
-    with caplog.at_level("ERROR", logger="forven.phantom_recovery"):
+    with caplog.at_level("ERROR", logger="axiom.phantom_recovery"):
         callback(future)
 
     errors = [r for r in caplog.records if r.levelname == "ERROR"]
@@ -151,9 +151,9 @@ def test_h_r4_phantom_future_success_is_silent(caplog):
 # H-R5: /api/health/status surfaces the monitor-unavailable flag
 # -----------------------------------------------------------------------
 def test_h_r5_health_status_exposes_unavailable_flag():
-    from forven.routers.health import get_health_status
+    from axiom.routers.health import get_health_status
 
-    kv_set("forven:health_monitor:unavailable", True)
+    kv_set("axiom:health_monitor:unavailable", True)
     try:
         out = get_health_status()
         assert out.get("monitor_unavailable") is True
@@ -161,12 +161,12 @@ def test_h_r5_health_status_exposes_unavailable_flag():
         if not out.get("monitor_running"):
             assert out.get("overall") == "red"
     finally:
-        kv_set("forven:health_monitor:unavailable", False)
+        kv_set("axiom:health_monitor:unavailable", False)
 
 
 def test_h_r5_health_status_clears_when_healthy():
-    from forven.routers.health import get_health_status
+    from axiom.routers.health import get_health_status
 
-    kv_set("forven:health_monitor:unavailable", False)
+    kv_set("axiom:health_monitor:unavailable", False)
     out = get_health_status()
     assert out.get("monitor_unavailable") is False

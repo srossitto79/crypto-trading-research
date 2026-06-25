@@ -1,4 +1,4 @@
-"""Regression: get_account_value must include SPOT USDC in total equity.
+﻿"""Regression: get_account_value must include SPOT USDC in total equity.
 
 Surfaced during the testnet rehearsal — sub-account collateral sat in the spot
 wallet; once an isolated perp position opened, the perp marginSummary.accountValue
@@ -10,7 +10,7 @@ whether collateral is in spot or perp, flat or in a position.
 
 import pytest
 
-import forven.exchange.hyperliquid as hl
+import axiom.exchange.hyperliquid as hl
 
 
 class _FakeInfo:
@@ -22,7 +22,7 @@ class _FakeInfo:
 
 
 def _patch(monkeypatch, perp_account_value, spot_total, spot_free, margin_used="0.0"):
-    monkeypatch.setattr("forven.sim.clock.is_sim_active", lambda: False)
+    monkeypatch.setattr("axiom.sim.clock.is_sim_active", lambda: False)
     monkeypatch.setattr(hl, "_get_account_info_client", lambda testnet: (_FakeInfo(), "0xacct"))
     state = {
         "marginSummary": {

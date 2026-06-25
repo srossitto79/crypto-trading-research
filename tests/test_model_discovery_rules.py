@@ -1,4 +1,4 @@
-"""Discovery belong-rules for auto-updating model lists.
+﻿"""Discovery belong-rules for auto-updating model lists.
 
 Covers the provider /models → catalog pipeline added for Anthropic, Groq, and
 Gemini so new releases (e.g. a newer Claude Opus) surface without a catalog
@@ -8,7 +8,7 @@ the per-provider "belongs to this provider" filter.
 
 from __future__ import annotations
 
-from forven import api_core as ac
+from axiom import api_core as ac
 
 
 def test_gemini_models_prefix_is_stripped() -> None:

@@ -1,12 +1,12 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 from copy import deepcopy
 
 import httpx
 
-from forven import ai
-from forven import api_core
+from axiom import ai
+from axiom import api_core
 
 
 def test_upsert_auth_provider_lmstudio_accepts_base_url_without_token(monkeypatch):
@@ -213,7 +213,7 @@ def test_extract_lmstudio_response_text_prefers_message_content():
 
 
 def test_lmstudio_tool_provider_omits_auth_header_without_token(monkeypatch):
-    from forven.agents import providers
+    from axiom.agents import providers
 
     captured: dict[str, object] = {}
 
@@ -254,9 +254,9 @@ def test_lmstudio_tool_provider_omits_auth_header_without_token(monkeypatch):
     assert result.text == "ok"
 
 
-def test_model_policy_save_preserves_auxiliary(forven_db):
+def test_model_policy_save_preserves_auxiliary(AXIOM_db):
     """Saving model-policy must NOT reset auxiliary routing to the defaults."""
-    from forven import model_routing
+    from axiom import model_routing
 
     policy = model_routing.get_model_routing()
     policy["auxiliary"]["recall"] = {
@@ -275,11 +275,11 @@ def test_model_policy_save_preserves_auxiliary(forven_db):
     assert after["auxiliary"]["recall"]["model_id"] == "gemini-2.5-flash-lite"
 
 
-def test_auth_provider_connected_matches_runtime_gate(forven_db, monkeypatch):
+def test_auth_provider_connected_matches_runtime_gate(AXIOM_db, monkeypatch):
     """payload['connected'] must equal model_selection.provider_is_connected —
     membership AND a usable token — so an expired/gone token shows NOT connected
     even though the provider is still in the connected set."""
-    from forven import model_selection as ms
+    from axiom import model_selection as ms
 
     # In the connected set but the token resolves -> connected.
     monkeypatch.setattr(ms, "list_connected_providers", lambda: {"openai"})
@@ -292,10 +292,10 @@ def test_auth_provider_connected_matches_runtime_gate(forven_db, monkeypatch):
     assert api_core._build_auth_provider_payload("openai")["connected"] is False
 
 
-def test_model_policy_save_warns_on_not_connected_provider(forven_db, monkeypatch):
+def test_model_policy_save_warns_on_not_connected_provider(AXIOM_db, monkeypatch):
     """Saving a policy pointing at a not-connected provider still persists but
     returns a structured warnings array naming the (provider, model)."""
-    from forven import model_selection as ms
+    from axiom import model_selection as ms
 
     monkeypatch.setattr(ms, "provider_is_connected", lambda provider: provider == "openai")
 
@@ -314,8 +314,8 @@ def test_model_policy_save_warns_on_not_connected_provider(forven_db, monkeypatc
     assert all("not connected" in w["reason"] for w in result["warnings"])
 
 
-def test_model_policy_save_no_warnings_when_all_connected(forven_db, monkeypatch):
-    from forven import model_selection as ms
+def test_model_policy_save_no_warnings_when_all_connected(AXIOM_db, monkeypatch):
+    from axiom import model_selection as ms
 
     monkeypatch.setattr(ms, "provider_is_connected", lambda provider: True)
     result = api_core._update_model_policy(
@@ -326,9 +326,9 @@ def test_model_policy_save_no_warnings_when_all_connected(forven_db, monkeypatch
     assert result["warnings"] == []
 
 
-def test_patch_agent_model_warns_on_not_connected_provider(forven_db, monkeypatch):
-    from forven import model_selection as ms
-    from forven.db import get_db
+def test_patch_agent_model_warns_on_not_connected_provider(AXIOM_db, monkeypatch):
+    from axiom import model_selection as ms
+    from axiom.db import get_db
 
     with get_db() as conn:
         conn.execute(
@@ -349,9 +349,9 @@ def test_patch_agent_model_warns_on_not_connected_provider(forven_db, monkeypatc
     assert "not connected" in result["warnings"][0]["reason"]
 
 
-def test_patch_agent_model_no_warning_when_connected(forven_db, monkeypatch):
-    from forven import model_selection as ms
-    from forven.db import get_db
+def test_patch_agent_model_no_warning_when_connected(AXIOM_db, monkeypatch):
+    from axiom import model_selection as ms
+    from axiom.db import get_db
 
     with get_db() as conn:
         conn.execute(
@@ -369,7 +369,7 @@ def test_patch_agent_model_no_warning_when_connected(forven_db, monkeypatch):
 
 
 def test_lmstudio_fallback_chain_is_fail_closed_no_forced_appends(monkeypatch):
-    from forven import model_routing
+    from axiom import model_routing
 
     legacy_policy = deepcopy(model_routing._DEFAULT_MODEL_ROUTING)
     legacy_policy["fallback_chains"]["lmstudio"] = [

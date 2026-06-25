@@ -1,10 +1,10 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
-from forven.agents import runner
-from forven.db import get_db
+from axiom.agents import runner
+from axiom.db import get_db
 
 
-def test_autonomous_research_completion_queues_follow_through_for_fresh_hypothesis(forven_db, monkeypatch):
+def test_autonomous_research_completion_queues_follow_through_for_fresh_hypothesis(AXIOM_db, monkeypatch):
     queued: list[dict] = []
 
     monkeypatch.setattr(runner, "_agent_is_strategy_developer", lambda _agent_id: True)
@@ -62,7 +62,7 @@ def test_autonomous_research_completion_queues_follow_through_for_fresh_hypothes
     assert queued[0]["input_data"]["source_task_display_id"] == "T00042"
 
 
-def test_autonomous_research_completion_skips_duplicate_follow_through_tasks(forven_db, monkeypatch):
+def test_autonomous_research_completion_skips_duplicate_follow_through_tasks(AXIOM_db, monkeypatch):
     monkeypatch.setattr(runner, "_agent_is_strategy_developer", lambda _agent_id: True)
     monkeypatch.setattr(
         runner,
@@ -123,7 +123,7 @@ def test_autonomous_research_completion_skips_duplicate_follow_through_tasks(for
     assert called == []
 
 
-def test_crucible_planner_completion_skips_legacy_follow_through(forven_db, monkeypatch):
+def test_crucible_planner_completion_skips_legacy_follow_through(AXIOM_db, monkeypatch):
     queued: list[dict] = []
 
     monkeypatch.setattr(runner, "_agent_is_strategy_developer", lambda _agent_id: True)

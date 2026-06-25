@@ -1,4 +1,4 @@
-import argparse
+﻿import argparse
 import sys
 import logging
 import traceback
@@ -6,10 +6,10 @@ from pathlib import Path
 from multiprocessing import cpu_count
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# Ensure forven is in path
+# Ensure Axiom is in path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from forven.data import fetch_ohlcv_chunked
+from axiom.data import fetch_ohlcv_chunked
 
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s - %(message)s")
 logger = logging.getLogger("data-manager")
@@ -32,7 +32,7 @@ def download_data(ticker, timeframe, exchange, all_available=True):
         return None
 
 def main():
-    parser = argparse.ArgumentParser(description="Forven Standalone Data Manager")
+    parser = argparse.ArgumentParser(description="Axiom Standalone Data Manager")
     parser.add_argument("--ticker", required=True, help="Ticker to download (e.g., BTC/USDT)")
     parser.add_argument("--timeframes", required=True, help="Comma separated timeframes (e.g., 1m,5m,15m,1h,4h,1d)")
     parser.add_argument("--exchange", default="binance", help="Exchange to download from (default: binance)")

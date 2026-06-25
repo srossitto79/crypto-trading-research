@@ -1,4 +1,4 @@
-"""Robustness-suite audit — Phase 1 bug fixes (2026-06-14).
+﻿"""Robustness-suite audit — Phase 1 bug fixes (2026-06-14).
 
 1. cost_stress gate extraction read a top-level `stressed_sharpe` that the test
    never stores (it's nested under `stressed.sharpe`) — the cost floor was a dead
@@ -14,8 +14,8 @@
 
 import numpy as np
 
-from forven.policy import _validation_row_to_verdict_payload
-from forven.routers.robustness import _jitter_pass_rate
+from axiom.policy import _validation_row_to_verdict_payload
+from axiom.routers.robustness import _jitter_pass_rate
 
 
 # --- 1. cost_stress nested extraction -------------------------------------
@@ -44,7 +44,7 @@ def _wf_metrics(folds):
     }
 
 
-def test_wfa_excludes_empty_folds_from_pass_rate(forven_db):
+def test_wfa_excludes_empty_folds_from_pass_rate(AXIOM_db):
     # Positive in all 3 folds it traded; 2 folds had no trades (sat out flat
     # windows). Old behavior: 3/5 = 0.60. New: 3/3 = 1.0 (empty folds dropped).
     metrics = _wf_metrics([(1.2, 20), (0.8, 15), (0.5, 12), (0.0, 0), (0.0, 1)])
@@ -53,7 +53,7 @@ def test_wfa_excludes_empty_folds_from_pass_rate(forven_db):
     assert payload["folds"] == 3  # only the folds that actually traded
 
 
-def test_wfa_falls_back_to_raw_rate_without_fold_trade_counts(forven_db):
+def test_wfa_falls_back_to_raw_rate_without_fold_trade_counts(AXIOM_db):
     # Legacy/fixture splits with no per-fold trade counts -> old sharpe-based rate.
     metrics = {
         "verdict": "PASS",

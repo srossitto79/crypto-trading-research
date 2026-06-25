@@ -1,15 +1,15 @@
 <script lang="ts">
 	import DataTable from '$lib/components/DataTable.svelte';
-	import { getForvenAllTrades, markForvenTradeFailed } from '$lib/api';
-	import type { ForvenTrade, ForvenTradesPage } from '$lib/api';
+	import { getAxiomAllTrades, markAxiomTradeFailed } from '$lib/api';
+	import type { AxiomTrade, AxiomTradesPage } from '$lib/api';
 
-	export let data: { initialPage: ForvenTradesPage | null };
+	export let data: { initialPage: AxiomTradesPage | null };
 
 	const STATUSES = ['ALL', 'OPEN', 'CLOSED', 'FAILED'] as const;
 	type StatusFilter = (typeof STATUSES)[number];
 	const PAGE_SIZE = 200;
 
-	let trades: ForvenTrade[] = data.initialPage?.trades ?? [];
+	let trades: AxiomTrade[] = data.initialPage?.trades ?? [];
 	let total = data.initialPage?.total ?? trades.length;
 	let statusFilter: StatusFilter = 'ALL';
 	let offset = 0;
@@ -38,7 +38,7 @@
 		loading = true;
 		error = '';
 		try {
-			const page = await getForvenAllTrades({
+			const page = await getAxiomAllTrades({
 				status: statusFilter === 'ALL' ? undefined : statusFilter,
 				limit: PAGE_SIZE,
 				offset
@@ -71,7 +71,7 @@
 		await loadPage();
 	}
 
-	async function handleMarkFailed(trade: ForvenTrade): Promise<void> {
+	async function handleMarkFailed(trade: AxiomTrade): Promise<void> {
 		const tradeId = (trade.id ?? '').trim();
 		if (!tradeId) return;
 		const confirmed = window.confirm(
@@ -84,7 +84,7 @@
 		error = '';
 		notice = '';
 		try {
-			await markForvenTradeFailed(tradeId);
+			await markAxiomTradeFailed(tradeId);
 			notice = `Trade ${tradeId} marked FAILED and its position released.`;
 			await loadPage();
 		} catch (e) {
@@ -94,8 +94,8 @@
 		}
 	}
 
-	function asTrade(row: unknown): ForvenTrade {
-		return row as ForvenTrade;
+	function asTrade(row: unknown): AxiomTrade {
+		return row as AxiomTrade;
 	}
 
 	function toNumber(value: unknown): number | null {

@@ -5,7 +5,7 @@
 		getApprovalModes,
 		putApprovalModes,
 		type ApprovalModesSettings,
-	} from '$lib/api/forven';
+	} from '$lib/api/axiom';
 
 	type ModeRow = {
 		category: string;
@@ -168,7 +168,7 @@
 	onMount(load);
 </script>
 
-<svelte:head><title>Approval Modes | Forven</title></svelte:head>
+<svelte:head><title>Approval Modes | Axiom</title></svelte:head>
 
 <div class="space-y-6 p-6 max-w-5xl">
 	<header class="flex items-center justify-between">

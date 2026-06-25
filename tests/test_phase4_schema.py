@@ -1,4 +1,4 @@
-"""Phase 4 / P4-T01 — schema migration v27 verification.
+﻿"""Phase 4 / P4-T01 — schema migration v27 verification.
 
 Confirms ``mcp_servers`` and ``agent_mcp_grants`` exist after migration,
 that the FK ``ON DELETE CASCADE`` cleans grant rows when a server is
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 
-from forven.db import SCHEMA_VERSION, get_db, init_db
+from axiom.db import SCHEMA_VERSION, get_db, init_db
 
 
 def test_schema_version_at_least_27() -> None:
@@ -57,7 +57,7 @@ def test_grant_cascade_on_server_delete() -> None:
     init_db()
     with get_db() as conn:
         # SQLite needs PRAGMA foreign_keys=ON for cascade to fire. Confirm
-        # the connection has it (forven.db sets it via PRAGMA at open).
+        # the connection has it (axiom.db sets it via PRAGMA at open).
         fk_on = conn.execute("PRAGMA foreign_keys").fetchone()[0]
         assert fk_on == 1, "foreign_keys pragma must be enabled"
 

@@ -21,12 +21,12 @@ describe('chatStore', () => {
 		incrementChatUnread(2);
 
 		expect(get(chatUnreadCount)).toBe(3);
-		expect(sessionStorage.getItem('forven_brain_chat_unread')).toBe('3');
+		expect(sessionStorage.getItem('axiom_brain_chat_unread')).toBe('3');
 
 		markChatRead();
 
 		expect(get(chatUnreadCount)).toBe(0);
-		expect(sessionStorage.getItem('forven_brain_chat_unread')).toBe('0');
+		expect(sessionStorage.getItem('axiom_brain_chat_unread')).toBe('0');
 	});
 
 	it('clears unread state when the chat history is cleared', () => {
@@ -42,6 +42,6 @@ describe('chatStore', () => {
 
 		expect(get(chatMessages)).toEqual([]);
 		expect(get(chatUnreadCount)).toBe(0);
-		expect(sessionStorage.getItem('forven_brain_chat')).toBe('[]');
+		expect(sessionStorage.getItem('axiom_brain_chat')).toBe('[]');
 	});
 });

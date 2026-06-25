@@ -1,4 +1,4 @@
-"""Active-pool pressure-valve semantics.
+﻿"""Active-pool pressure-valve semantics.
 
 The active_pool_cap is a *target population size*, not a hard gate. When the pool
 is at cap, create_hypothesis auto-archives the weakest active hypothesis (fewest
@@ -10,8 +10,8 @@ import time
 
 import pytest
 
-from forven.db import get_db, kv_set
-from forven.hypotheses import (
+from axiom.db import get_db, kv_set
+from axiom.hypotheses import (
     HypothesisPoolFullError,
     create_hypothesis,
     update_hypothesis_status,
@@ -35,7 +35,7 @@ def _make_hyp(idx: int) -> dict:
 
 def _set_cap(cap: int) -> None:
     kv_set(
-        "forven:settings",
+        "axiom:settings",
         {"research_settings": {"hypothesis_discipline": {"active_pool_cap": cap}}},
     )
 
@@ -56,7 +56,7 @@ def _manager_state(conn, hypothesis_id: str) -> str:
     return str(row["manager_state"])
 
 
-def test_create_hypothesis_succeeds_below_cap(forven_db):
+def test_create_hypothesis_succeeds_below_cap(AXIOM_db):
     _set_cap(5)
     for i in range(4):
         _make_hyp(i)
@@ -67,7 +67,7 @@ def test_create_hypothesis_succeeds_below_cap(forven_db):
         assert _count_active(conn) == 5
 
 
-def test_at_cap_evicts_weakest_and_admits_new(forven_db):
+def test_at_cap_evicts_weakest_and_admits_new(AXIOM_db):
     """When pool is full, the weakest hypothesis is archived to make room."""
     _set_cap(3)
     earliest = _make_hyp(0)
@@ -91,7 +91,7 @@ def test_at_cap_evicts_weakest_and_admits_new(forven_db):
         assert _manager_state(conn, new["id"]) == "active"
 
 
-def test_eviction_prefers_fewest_strategies_over_age(forven_db):
+def test_eviction_prefers_fewest_strategies_over_age(AXIOM_db):
     """Strategy count dominates updated_at for eviction priority."""
     _set_cap(3)
     oldest = _make_hyp(0)
@@ -121,7 +121,7 @@ def test_eviction_prefers_fewest_strategies_over_age(forven_db):
         assert _manager_state(conn, newest["id"]) == "active"
 
 
-def test_disproven_hypotheses_do_not_count_against_cap(forven_db):
+def test_disproven_hypotheses_do_not_count_against_cap(AXIOM_db):
     _set_cap(5)
     five = [_make_hyp(i) for i in range(5)]
     update_hypothesis_status(
@@ -140,7 +140,7 @@ def test_disproven_hypotheses_do_not_count_against_cap(forven_db):
         assert _manager_state(conn, five[0]["id"]) == "active"
 
 
-def test_proven_hypotheses_do_not_count_against_cap(forven_db):
+def test_proven_hypotheses_do_not_count_against_cap(AXIOM_db):
     _set_cap(3)
     a, _b, _c = (_make_hyp(i) for i in range(3))
     update_hypothesis_status(
@@ -152,7 +152,7 @@ def test_proven_hypotheses_do_not_count_against_cap(forven_db):
         assert _manager_state(conn, new["id"]) == "active"
 
 
-def test_archived_hypotheses_do_not_count_against_cap(forven_db):
+def test_archived_hypotheses_do_not_count_against_cap(AXIOM_db):
     _set_cap(3)
     a, _b, _c = (_make_hyp(i) for i in range(3))
     with get_db() as conn:
@@ -167,15 +167,15 @@ def test_archived_hypotheses_do_not_count_against_cap(forven_db):
         assert _count_active(conn) == 3
 
 
-def test_default_cap_is_one_hundred(forven_db):
+def test_default_cap_is_one_hundred(AXIOM_db):
     """Default cap is 100 — floodgates open."""
-    from forven.research_contract import get_hypothesis_discipline_settings
+    from axiom.research_contract import get_hypothesis_discipline_settings
 
     discipline = get_hypothesis_discipline_settings()
     assert discipline["active_pool_cap"] == 100
 
 
-def test_derived_from_parent_is_protected_from_eviction(forven_db):
+def test_derived_from_parent_is_protected_from_eviction(AXIOM_db):
     """A derived_from parent never gets evicted to admit its own child."""
     _set_cap(2)
     parent = _make_hyp(0)
@@ -204,7 +204,7 @@ def test_derived_from_parent_is_protected_from_eviction(forven_db):
         assert _manager_state(conn, child["id"]) == "active"
 
 
-def test_protected_hypothesis_is_not_pool_pressure_victim(forven_db):
+def test_protected_hypothesis_is_not_pool_pressure_victim(AXIOM_db):
     _set_cap(2)
     protected = _make_hyp(0)
     victim = _make_hyp(1)
@@ -229,12 +229,12 @@ def test_protected_hypothesis_is_not_pool_pressure_victim(forven_db):
         assert _manager_state(conn, victim["id"]) == "archived"
 
 
-def test_pool_full_error_still_raised_if_no_eviction_possible(forven_db, monkeypatch):
+def test_pool_full_error_still_raised_if_no_eviction_possible(AXIOM_db, monkeypatch):
     """Defensive fallback: if the eviction picker returns None, raise the error."""
     _set_cap(1)
     _make_hyp(0)
 
-    import forven.hypotheses as hyp_module
+    import axiom.hypotheses as hyp_module
 
     monkeypatch.setattr(
         hyp_module, "_pick_weakest_active_hypothesis", lambda conn, protect_ids=(): None
@@ -245,7 +245,7 @@ def test_pool_full_error_still_raised_if_no_eviction_possible(forven_db, monkeyp
     assert exc_info.value.active_count == 1
 
 
-def test_pool_full_error_if_defensive_eviction_does_not_archive(forven_db, monkeypatch):
+def test_pool_full_error_if_defensive_eviction_does_not_archive(AXIOM_db, monkeypatch):
     """If a picked victim becomes protected, creation must not pretend eviction happened."""
     _set_cap(1)
     protected = _make_hyp(0)
@@ -261,7 +261,7 @@ def test_pool_full_error_if_defensive_eviction_does_not_archive(forven_db, monke
             (protected["id"],),
         )
 
-    import forven.hypotheses as hyp_module
+    import axiom.hypotheses as hyp_module
 
     monkeypatch.setattr(
         hyp_module,

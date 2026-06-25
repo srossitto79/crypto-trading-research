@@ -1,4 +1,4 @@
-"""Funding-data gate + honest archival (2026-06-14).
+﻿"""Funding-data gate + honest archival (2026-06-14).
 
 Root cause of "winners getting archived": a strategy that passed every robustness
 test (S00955, BNB, robustness 100) was held out of paper by the funding-data
@@ -17,7 +17,7 @@ gate"), which made the operator misdiagnose it as a walk-forward failure.
 import json
 from datetime import datetime, timezone
 
-from forven.db import get_db
+from axiom.db import get_db
 
 
 def _insert_strategy(conn, sid, *, symbol="BNB", funding_complete=False, stage="gauntlet"):
@@ -38,8 +38,8 @@ def _insert_strategy(conn, sid, *, symbol="BNB", funding_complete=False, stage="
 
 # --- 1. Stage-aware funding gate -----------------------------------------
 
-def test_funding_incomplete_allowed_into_paper(forven_db):
-    from forven.policy import evaluate_promotion
+def test_funding_incomplete_allowed_into_paper(AXIOM_db):
+    from axiom.policy import evaluate_promotion
 
     with get_db() as conn:
         _insert_strategy(conn, "fund-paper", funding_complete=False)
@@ -49,8 +49,8 @@ def test_funding_incomplete_allowed_into_paper(forven_db):
     assert "funding" not in msg.lower(), msg
 
 
-def test_funding_incomplete_blocks_live(forven_db):
-    from forven.policy import evaluate_promotion
+def test_funding_incomplete_blocks_live(AXIOM_db):
+    from axiom.policy import evaluate_promotion
 
     with get_db() as conn:
         _insert_strategy(conn, "fund-live", funding_complete=False, stage="paper")
@@ -60,8 +60,8 @@ def test_funding_incomplete_blocks_live(forven_db):
     assert "live" in msg.lower()
 
 
-def test_funding_complete_not_blocked_for_live(forven_db):
-    from forven.policy import evaluate_promotion
+def test_funding_complete_not_blocked_for_live(AXIOM_db):
+    from axiom.policy import evaluate_promotion
 
     with get_db() as conn:
         _insert_strategy(conn, "fund-ok", funding_complete=True, stage="paper")
@@ -72,8 +72,8 @@ def test_funding_complete_not_blocked_for_live(forven_db):
 
 # --- 2. Reconcile covers strategy assets ---------------------------------
 
-def test_funding_reconcile_covers_strategy_assets(forven_db):
-    from forven.market_data_collector import _funding_reconcile_assets
+def test_funding_reconcile_covers_strategy_assets(AXIOM_db):
+    from axiom.market_data_collector import _funding_reconcile_assets
 
     with get_db() as conn:
         _insert_strategy(conn, "u-bnb", symbol="BNB")
@@ -88,8 +88,8 @@ def test_funding_reconcile_covers_strategy_assets(forven_db):
 
 # --- 3. Honest archival reason -------------------------------------------
 
-def test_sweep_archives_with_real_reason(forven_db):
-    from forven.gauntlet.engine import _failed_gate_reason, init_gauntlet_schema
+def test_sweep_archives_with_real_reason(AXIOM_db):
+    from axiom.gauntlet.engine import _failed_gate_reason, init_gauntlet_schema
 
     with get_db() as conn:
         init_gauntlet_schema(conn)

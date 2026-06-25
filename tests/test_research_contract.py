@@ -1,9 +1,9 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import importlib
 
-from forven.db import init_db
-from forven.research_contract import (
+from axiom.db import init_db
+from axiom.research_contract import (
     build_research_contract,
     choose_research_lane,
     default_research_settings,
@@ -118,15 +118,15 @@ def test_benchmarking_contract_allows_external_sources_when_enabled():
 
 
 def test_seed_default_research_settings_adds_missing_defaults(tmp_path, monkeypatch):
-    monkeypatch.setenv("FORVEN_DB_PATH", str(tmp_path / "forven.db"))
+    monkeypatch.setenv("AXIOM_DB_PATH", str(tmp_path / "axiom.db"))
     init_db()
-    from forven import api_core
+    from axiom import api_core
     importlib.reload(api_core)
 
     written: dict[str, object] = {}
 
     def fake_kv_get(key: str, default=None):
-        if key == "forven:settings":
+        if key == "axiom:settings":
             return {"exchange": "hyperliquid"}
         return default
 
@@ -139,19 +139,19 @@ def test_seed_default_research_settings_adds_missing_defaults(tmp_path, monkeypa
     payload = api_core.seed_default_research_settings()
 
     assert payload["research_settings"] == default_research_settings()
-    assert written["forven:settings"]["research_settings"] == default_research_settings()
+    assert written["axiom:settings"]["research_settings"] == default_research_settings()
 
 
 def test_seed_default_research_settings_deep_merges_lane_memory_defaults(tmp_path, monkeypatch):
-    monkeypatch.setenv("FORVEN_DB_PATH", str(tmp_path / "forven.db"))
+    monkeypatch.setenv("AXIOM_DB_PATH", str(tmp_path / "axiom.db"))
     init_db()
-    from forven import api_core
+    from axiom import api_core
     importlib.reload(api_core)
 
     written: dict[str, object] = {}
 
     def fake_kv_get(key: str, default=None):
-        if key == "forven:settings":
+        if key == "axiom:settings":
             return {
                 "exchange": "hyperliquid",
                 "research_settings": {
@@ -176,7 +176,7 @@ def test_seed_default_research_settings_deep_merges_lane_memory_defaults(tmp_pat
         "constraint_memory": True,
         "inspiration_memory": "optional",
     }
-    assert written["forven:settings"]["research_settings"]["memory_modes"]["benchmarking"] == {
+    assert written["axiom:settings"]["research_settings"]["memory_modes"]["benchmarking"] == {
         "constraint_memory": True,
         "inspiration_memory": "optional",
     }

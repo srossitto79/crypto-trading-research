@@ -1,9 +1,9 @@
-import json
+﻿import json
 from unittest.mock import patch
 from fastapi.testclient import TestClient
-from forven.api import app
-from forven.db import get_db, kv_set
-from forven.hypotheses import create_hypothesis
+from axiom.api import app
+from axiom.db import get_db, kv_set
+from axiom.hypotheses import create_hypothesis
 
 
 def _seed_passing_children(hypothesis_id: str, n: int) -> None:
@@ -24,10 +24,10 @@ def _seed_passing_children(hypothesis_id: str, n: int) -> None:
             )
 
 
-def test_verdict_endpoint_triggers_writer(forven_db):
+def test_verdict_endpoint_triggers_writer(AXIOM_db):
     # Lower thresholds so the math floor allows 'proven' with our seed
     kv_set(
-        "forven:settings",
+        "axiom:settings",
         {"research_settings": {"hypothesis_discipline": {
             "verdict_hit_rate_threshold": 0.5,
             "verdict_min_diversity_cells": 2,
@@ -42,7 +42,7 @@ def test_verdict_endpoint_triggers_writer(forven_db):
     )
     _seed_passing_children(hyp["id"], n=4)
     fake = json.dumps({"verdict": "proven", "rationale": "good"})
-    with patch("forven.hypothesis_verdict._call_llm", return_value=fake):
+    with patch("axiom.hypothesis_verdict._call_llm", return_value=fake):
         client = TestClient(app)
         r = client.post(f"/api/hypotheses/{hyp['id']}/verdict")
     assert r.status_code == 200
@@ -51,7 +51,7 @@ def test_verdict_endpoint_triggers_writer(forven_db):
     assert body["hypothesis"]["status"] == "proven"
 
 
-def test_verdict_endpoint_falls_back_to_math_floor_on_llm_failure(forven_db):
+def test_verdict_endpoint_falls_back_to_math_floor_on_llm_failure(AXIOM_db):
     """When the LLM auditor is unavailable, the verdict must NOT freeze the
     pipeline — it falls back to the deterministic mathematical floor and still
     advances the hypothesis (ok=True), flagging the memo llm_unavailable. The
@@ -63,7 +63,7 @@ def test_verdict_endpoint_falls_back_to_math_floor_on_llm_failure(forven_db):
         origin_agent_id="a", origin_role="strategy-developer",
         target_assets=["BTC-PERP"], target_timeframes=["1h"],
     )
-    with patch("forven.hypothesis_verdict._call_llm", side_effect=RuntimeError("boom")):
+    with patch("axiom.hypothesis_verdict._call_llm", side_effect=RuntimeError("boom")):
         client = TestClient(app)
         r = client.post(f"/api/hypotheses/{hyp['id']}/verdict")
     assert r.status_code == 200
@@ -75,7 +75,7 @@ def test_verdict_endpoint_falls_back_to_math_floor_on_llm_failure(forven_db):
     assert body["hypothesis"]["status"] == floor
 
 
-def test_verdict_endpoint_missing_hypothesis_404(forven_db):
+def test_verdict_endpoint_missing_hypothesis_404(AXIOM_db):
     client = TestClient(app)
     r = client.post("/api/hypotheses/HYP-missing/verdict")
     assert r.status_code == 404

@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import importlib
 from uuid import uuid4
@@ -6,10 +6,10 @@ from uuid import uuid4
 import pandas as pd
 from fastapi.testclient import TestClient
 
-from forven.api import app
-from forven.lab_db import create_lab_experiment, create_or_update_model_version, get_lab_experiment, list_lab_jobs
-from forven.lab_models import LabJobState
-from forven.lab_models import DispatchPaperIntentResponse, SelectorDecisionResponse
+from axiom.api import app
+from axiom.lab_db import create_lab_experiment, create_or_update_model_version, get_lab_experiment, list_lab_jobs
+from axiom.lab_models import LabJobState
+from axiom.lab_models import DispatchPaperIntentResponse, SelectorDecisionResponse
 
 
 def test_lab_regime_experiment_enqueue_and_job_lookup():
@@ -105,7 +105,7 @@ def test_lab_regime_worker_start_endpoint(monkeypatch):
     client = TestClient(app)
 
     monkeypatch.setattr(
-        "forven.routers.lab_regime.start_lab_worker_process",
+        "axiom.routers.lab_regime.start_lab_worker_process",
         lambda: {"status": "started", "pid": 4321, "log_path": "C:/tmp/lab_worker.log"},
     )
 
@@ -131,7 +131,7 @@ def test_lab_regime_worker_feed_endpoint(monkeypatch):
             "updated_at": 1710000000.0,
         }
 
-    monkeypatch.setattr("forven.routers.lab_regime.read_lab_worker_feed", _fake_feed)
+    monkeypatch.setattr("axiom.routers.lab_regime.read_lab_worker_feed", _fake_feed)
 
     response = client.get("/api/lab/regime/worker/feed?limit=120")
     assert response.status_code == 200
@@ -147,7 +147,7 @@ def test_lab_regime_orchestrator_routes(monkeypatch):
     start_calls: list[bool] = []
 
     monkeypatch.setattr(
-        "forven.routers.lab_regime.start_lab_worker_process",
+        "axiom.routers.lab_regime.start_lab_worker_process",
         lambda: start_calls.append(True) or {"status": "started", "pid": 9876},
     )
 
@@ -179,7 +179,7 @@ def test_lab_regime_program_routes(monkeypatch):
     client = TestClient(app)
 
     monkeypatch.setattr(
-        "forven.routers.lab_regime.start_lab_worker_process",
+        "axiom.routers.lab_regime.start_lab_worker_process",
         lambda: {"status": "started", "pid": 1111, "log_path": "C:/tmp/lab_worker.log"},
     )
 
@@ -223,7 +223,7 @@ def test_lab_regime_initialize_program_is_idempotent(monkeypatch):
     client = TestClient(app)
 
     monkeypatch.setattr(
-        "forven.routers.lab_regime.start_lab_worker_process",
+        "axiom.routers.lab_regime.start_lab_worker_process",
         lambda: {"status": "started", "pid": 1111, "log_path": "C:/tmp/lab_worker.log"},
     )
 
@@ -285,7 +285,7 @@ def test_lab_regime_pool_report_route(monkeypatch):
     client = TestClient(app)
 
     monkeypatch.setattr(
-        "forven.routers.lab_regime.inspect_strategy_pool",
+        "axiom.routers.lab_regime.inspect_strategy_pool",
         lambda strategy_sources: {
             "requested_sources": list(strategy_sources),
             "included": [{"strategy_id": "S1", "source_pool": "graveyard"}],
@@ -364,12 +364,12 @@ def test_lab_regime_timeline_normalizes_core_regimes_and_uncertainty(monkeypatch
                 "meta_json": dict(self.meta_json),
             }
 
-    monkeypatch.setattr("forven.routers.lab_regime.get_model_version", lambda _model_version_id: _Model())
-    monkeypatch.setattr("forven.routers.lab_regime.get_regime_segments", lambda **_kwargs: [_Segment()])
-    monkeypatch.setattr("forven.routers.lab_regime.get_regime_labels", lambda **_kwargs: [_Label()])
-    monkeypatch.setattr("forven.routers.lab_regime.Path.exists", lambda _self: True)
+    monkeypatch.setattr("axiom.routers.lab_regime.get_model_version", lambda _model_version_id: _Model())
+    monkeypatch.setattr("axiom.routers.lab_regime.get_regime_segments", lambda **_kwargs: [_Segment()])
+    monkeypatch.setattr("axiom.routers.lab_regime.get_regime_labels", lambda **_kwargs: [_Label()])
+    monkeypatch.setattr("axiom.routers.lab_regime.Path.exists", lambda _self: True)
     monkeypatch.setattr(
-        "forven.routers.lab_regime.pd.read_parquet",
+        "axiom.routers.lab_regime.pd.read_parquet",
         lambda *_args, **_kwargs: pd.DataFrame(
             {
                 "timestamp": ["2026-03-02T00:00:00+00:00"],
@@ -398,9 +398,9 @@ def test_lab_regime_heatmap_marks_error_and_summary(monkeypatch):
     class _Model:
         config_json = {"timeframes": {"regime_timeframe": "1h", "execution_timeframe": "15m"}}
 
-    monkeypatch.setattr("forven.routers.lab_regime.get_model_version", lambda _model_version_id: _Model())
+    monkeypatch.setattr("axiom.routers.lab_regime.get_model_version", lambda _model_version_id: _Model())
     monkeypatch.setattr(
-        "forven.routers.lab_regime.list_strategy_regime_scores",
+        "axiom.routers.lab_regime.list_strategy_regime_scores",
         lambda _model_version_id: [
             {
                 "regime": "TRANSITION",
@@ -443,9 +443,9 @@ def test_lab_regime_heatmap_normalizes_legacy_regimes(monkeypatch):
             "diagnostics": {"uncertain_share": 0.1, "bars_classified": 48},
         }
 
-    monkeypatch.setattr("forven.routers.lab_regime.get_model_version", lambda _model_version_id: _Model())
+    monkeypatch.setattr("axiom.routers.lab_regime.get_model_version", lambda _model_version_id: _Model())
     monkeypatch.setattr(
-        "forven.routers.lab_regime.list_strategy_regime_scores",
+        "axiom.routers.lab_regime.list_strategy_regime_scores",
         lambda _model_version_id: [
             {
                 "regime": "TREND_UP_LOW_VOL",
@@ -479,7 +479,7 @@ def test_lab_regime_selector_and_dispatch_endpoints(monkeypatch):
     client = TestClient(app)
 
     monkeypatch.setattr(
-        "forven.routers.lab_regime.decide_current_regime",
+        "axiom.routers.lab_regime.decide_current_regime",
         lambda *_args, **_kwargs: SelectorDecisionResponse(
             status="ok",
             model_version_id="mv_1",
@@ -503,7 +503,7 @@ def test_lab_regime_selector_and_dispatch_endpoints(monkeypatch):
     assert selector_payload["execution_timeframe"] == "15m"
 
     monkeypatch.setattr(
-        "forven.routers.lab_regime.dispatch_paper_intent",
+        "axiom.routers.lab_regime.dispatch_paper_intent",
         lambda *_args, **_kwargs: DispatchPaperIntentResponse(
             status="ok",
             action="long_entry",
@@ -557,9 +557,9 @@ def test_backtests_matrix_enqueue_is_queue_only():
 
 
 def test_lab_regime_router_not_mounted_when_feature_is_dormant(monkeypatch):
-    import forven.api as api_mod
+    import axiom.api as api_mod
 
-    monkeypatch.setenv("FORVEN_ENABLE_REGIME_LAB", "0")
+    monkeypatch.setenv("AXIOM_ENABLE_REGIME_LAB", "0")
     disabled_api = importlib.reload(api_mod)
 
     try:
@@ -567,6 +567,6 @@ def test_lab_regime_router_not_mounted_when_feature_is_dormant(monkeypatch):
         response = client.get("/api/lab/regime/worker/health")
         assert response.status_code == 404
     finally:
-        monkeypatch.setenv("FORVEN_ENABLE_REGIME_LAB", "1")
+        monkeypatch.setenv("AXIOM_ENABLE_REGIME_LAB", "1")
         restored_api = importlib.reload(api_mod)
         globals()["app"] = restored_api.app

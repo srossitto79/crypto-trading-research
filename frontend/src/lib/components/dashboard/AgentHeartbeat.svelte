@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
-	import { getForvenAgents, getForvenAgentTasks, getForvenLogs } from '$lib/api';
-	import type { ForvenAgent, ForvenAgentTask } from '$lib/api';
+	import { getAxiomAgents, getAxiomAgentTasks, getAxiomLogs } from '$lib/api';
+	import type { AxiomAgent, AxiomAgentTask } from '$lib/api';
 	import { createRealtimeRefresh, type RealtimeRefreshController } from '$lib/utils/realtime';
 
 	interface AgentStyle {
@@ -164,14 +164,14 @@
 	async function loadRoster() {
 		try {
 			const [agentsResult, tasksResult] = await Promise.allSettled([
-				getForvenAgents(),
-				getForvenAgentTasks(),
+				getAxiomAgents(),
+				getAxiomAgentTasks(),
 			]);
-			const rawAgents: ForvenAgent[] =
+			const rawAgents: AxiomAgent[] =
 				agentsResult.status === 'fulfilled' && Array.isArray(agentsResult.value)
 					? agentsResult.value
 					: [];
-			const rawTasks: ForvenAgentTask[] =
+			const rawTasks: AxiomAgentTask[] =
 				tasksResult.status === 'fulfilled' && Array.isArray(tasksResult.value)
 					? tasksResult.value
 					: [];
@@ -200,7 +200,7 @@
 
 	async function loadEntries() {
 		try {
-			const rawLogs = await getForvenLogs(120);
+			const rawLogs = await getAxiomLogs(120);
 			const list = Array.isArray(rawLogs) ? rawLogs : [];
 			entries = list
 				.map((entry, index) => normalizeEntry(entry, index))

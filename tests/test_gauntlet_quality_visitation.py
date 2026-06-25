@@ -1,4 +1,4 @@
-"""Quality-aware gauntlet scheduling.
+﻿"""Quality-aware gauntlet scheduling.
 
 Under a backlog larger than a tick's visit budget (the common case in a
 registration flood — the quick_screen stage is not WIP-capped), the order in
@@ -15,15 +15,15 @@ from __future__ import annotations
 
 import json
 
-from forven.db import create_strategy_container, get_db
-from forven.gauntlet.engine import (
+from axiom.db import create_strategy_container, get_db
+from axiom.gauntlet.engine import (
     _VISIT_STALENESS_SECONDS,
     _iso_seconds_ago,
     backfill_missing_quick_screen_workflows,
     list_active_workflow_ids,
 )
-from forven.gauntlet.settings import build_settings_snapshot
-from forven.gauntlet.store import create_or_get_workflow
+from axiom.gauntlet.settings import build_settings_snapshot
+from axiom.gauntlet.store import create_or_get_workflow
 
 
 def _container(*, sharpe, stage="gauntlet"):
@@ -57,7 +57,7 @@ def _workflow(*, sharpe, stage="gauntlet", age_seconds=0):
 
 # --- list_active_workflow_ids: quality tier -------------------------------
 
-def test_fresh_workflows_ordered_by_sharpe_desc(forven_db):
+def test_fresh_workflows_ordered_by_sharpe_desc(AXIOM_db):
     low = _workflow(sharpe=0.5)
     high = _workflow(sharpe=3.0)
     mid = _workflow(sharpe=1.5)
@@ -65,7 +65,7 @@ def test_fresh_workflows_ordered_by_sharpe_desc(forven_db):
     assert order.index(high) < order.index(mid) < order.index(low)
 
 
-def test_null_or_empty_metrics_sort_last_among_fresh(forven_db):
+def test_null_or_empty_metrics_sort_last_among_fresh(AXIOM_db):
     good = _workflow(sharpe=2.0)
     nometrics = _workflow(sharpe=None)  # '{}' -> json_extract NULL -> last under DESC
     order = list_active_workflow_ids()
@@ -74,7 +74,7 @@ def test_null_or_empty_metrics_sort_last_among_fresh(forven_db):
 
 # --- list_active_workflow_ids: anti-starvation floor ----------------------
 
-def test_stale_low_quality_floats_ahead_of_fresh_high_quality(forven_db):
+def test_stale_low_quality_floats_ahead_of_fresh_high_quality(AXIOM_db):
     fresh_high = _workflow(sharpe=5.0)  # just touched, top Sharpe
     stale_low = _workflow(sharpe=-1.0, age_seconds=_VISIT_STALENESS_SECONDS + 600)
     order = list_active_workflow_ids()
@@ -82,7 +82,7 @@ def test_stale_low_quality_floats_ahead_of_fresh_high_quality(forven_db):
     assert order.index(stale_low) < order.index(fresh_high)
 
 
-def test_within_stale_tier_strict_oldest_first(forven_db):
+def test_within_stale_tier_strict_oldest_first(AXIOM_db):
     older = _workflow(sharpe=0.1, age_seconds=_VISIT_STALENESS_SECONDS + 3600)
     newer_stale = _workflow(sharpe=9.9, age_seconds=_VISIT_STALENESS_SECONDS + 600)
     order = list_active_workflow_ids()
@@ -92,7 +92,7 @@ def test_within_stale_tier_strict_oldest_first(forven_db):
 
 # --- backfill: quality-prioritized self-heal ------------------------------
 
-def test_backfill_creates_higher_sharpe_first_under_limit(forven_db):
+def test_backfill_creates_higher_sharpe_first_under_limit(AXIOM_db):
     # Two stranded pre-paper strategies, NO workflow yet. With limit=1 only the
     # higher-Sharpe one should get a workflow this pass.
     hi = _container(sharpe=4.0, stage="quick_screen")

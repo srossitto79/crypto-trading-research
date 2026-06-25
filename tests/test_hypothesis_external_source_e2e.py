@@ -1,6 +1,6 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
-from forven.hypotheses import (
+from axiom.hypotheses import (
     add_hypothesis_artifact,
     create_hypothesis,
     list_hypothesis_artifacts,
@@ -22,7 +22,7 @@ def _make_hypothesis():
     )
 
 
-def test_all_five_source_types_attach_with_cached_content(forven_db):
+def test_all_five_source_types_attach_with_cached_content(AXIOM_db):
     hyp = _make_hypothesis()
 
     payloads = {
@@ -60,7 +60,7 @@ def test_all_five_source_types_attach_with_cached_content(forven_db):
         assert a["content_bytes"] > 0
 
 
-def test_duplicate_content_across_sources_produces_same_hash(forven_db):
+def test_duplicate_content_across_sources_produces_same_hash(AXIOM_db):
     """Shared hash across sources lets agents dedupe identical evidence even when it appears in multiple places."""
     hyp = _make_hypothesis()
 
@@ -81,7 +81,7 @@ def test_duplicate_content_across_sources_produces_same_hash(forven_db):
     assert art_a["id"] != art_b["id"]  # still distinct rows
 
 
-def test_empty_cached_content_permitted(forven_db):
+def test_empty_cached_content_permitted(AXIOM_db):
     """inspect_*() may return empty content (unextractable HTML, deleted post, etc.).
     The artifact still attaches; cached_content is empty string; hash is sha256('').
     """
@@ -98,10 +98,10 @@ def test_empty_cached_content_permitted(forven_db):
     assert art["content_bytes"] == 0
 
 
-def test_detail_api_exposes_all_source_types_with_hash_not_content(forven_db):
+def test_detail_api_exposes_all_source_types_with_hash_not_content(AXIOM_db):
     """Detail API default response strips cached_content but keeps hash/bytes/cached_at."""
     from fastapi.testclient import TestClient
-    from forven.api import app
+    from axiom.api import app
 
     hyp = _make_hypothesis()
     for st, content in (("youtube", "A"), ("reddit", "B"), ("blog", "C"), ("github", "D"), ("forum", "E")):

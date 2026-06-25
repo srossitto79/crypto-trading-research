@@ -1,12 +1,12 @@
-"""Phase 6: graduation flow tests."""
+﻿"""Phase 6: graduation flow tests."""
 
 import json
 from datetime import datetime, timezone
 from unittest.mock import patch
 
-from forven.db import create_strategy_container, get_db, kv_set
-from forven.hypotheses import create_hypothesis
-from forven.hypothesis_graduation import (
+from axiom.db import create_strategy_container, get_db, kv_set
+from axiom.hypotheses import create_hypothesis
+from axiom.hypothesis_graduation import (
     graduate_hypothesis,
     is_canonical,
 )
@@ -56,12 +56,12 @@ def _make_strategy(
 
 def _set_revisit_interval(days: int) -> None:
     kv_set(
-        "forven:settings",
+        "axiom:settings",
         {"research_settings": {"hypothesis_discipline": {"revisit_interval_days": days}}},
     )
 
 
-def test_graduate_sets_manager_state_and_timestamps(forven_db):
+def test_graduate_sets_manager_state_and_timestamps(AXIOM_db):
     _set_revisit_interval(90)
     h = _hyp()
     result = graduate_hypothesis(h["id"])
@@ -81,7 +81,7 @@ def test_graduate_sets_manager_state_and_timestamps(forven_db):
     assert 89 <= delta.days <= 91  # ~90 days
 
 
-def test_graduate_picks_one_canonical_per_cell(forven_db):
+def test_graduate_picks_one_canonical_per_cell(AXIOM_db):
     h = _hyp()
     # 5 children across 3 cells, varying sharpe
     s_btc_low = _make_strategy(h["id"], sid_seed=1, symbol="BTC", sharpe=0.5)
@@ -100,7 +100,7 @@ def test_graduate_picks_one_canonical_per_cell(forven_db):
     assert not is_canonical(s_sol_low)
 
 
-def test_graduate_ignores_non_qualifying_stages(forven_db):
+def test_graduate_ignores_non_qualifying_stages(AXIOM_db):
     """quick_screen children are not eligible for canonical."""
     h = _hyp()
     s_quick = _make_strategy(h["id"], sid_seed=1, symbol="BTC",
@@ -112,7 +112,7 @@ def test_graduate_ignores_non_qualifying_stages(forven_db):
     assert not is_canonical(s_quick)
 
 
-def test_graduate_with_no_qualifying_children_makes_no_canonicals(forven_db):
+def test_graduate_with_no_qualifying_children_makes_no_canonicals(AXIOM_db):
     h = _hyp()
     _make_strategy(h["id"], sid_seed=1, stage="quick_screen")
     result = graduate_hypothesis(h["id"])
@@ -123,7 +123,7 @@ def test_graduate_with_no_qualifying_children_makes_no_canonicals(forven_db):
     assert row["manager_state"] == "graduated"
 
 
-def test_graduate_is_idempotent(forven_db):
+def test_graduate_is_idempotent(AXIOM_db):
     _set_revisit_interval(30)
     h = _hyp()
     s = _make_strategy(h["id"], sid_seed=1, symbol="BTC", sharpe=1.0)
@@ -137,17 +137,17 @@ def test_graduate_is_idempotent(forven_db):
     assert second["next_revisit_at"] >= first["next_revisit_at"]
 
 
-def test_graduation_frees_active_pool_slot(forven_db):
+def test_graduation_frees_active_pool_slot(AXIOM_db):
     """Graduated hypotheses do NOT count against the active-pool cap.
 
     With the pressure-valve model, creating past the cap never errors — it
     evicts the weakest. Graduation should free a slot cleanly so subsequent
     creates don't trigger eviction.
     """
-    from forven.db import get_db
+    from axiom.db import get_db
 
     kv_set(
-        "forven:settings",
+        "axiom:settings",
         {"research_settings": {"hypothesis_discipline": {"active_pool_cap": 2}}},
     )
     h_a = _hyp(0)
@@ -166,9 +166,9 @@ def test_graduation_frees_active_pool_slot(forven_db):
         assert row["manager_state"] == "active"
 
 
-def test_canonical_strategy_blocks_archive(forven_db):
+def test_canonical_strategy_blocks_archive(AXIOM_db):
     """Phase 6.4: archive transitions on canonical strategies are refused."""
-    from forven.brain import transition_stage
+    from axiom.brain import transition_stage
 
     h = _hyp()
     s = _make_strategy(h["id"], sid_seed=1, symbol="BTC", sharpe=2.0)
@@ -184,8 +184,8 @@ def test_canonical_strategy_blocks_archive(forven_db):
     assert row["canonical"] == 1
 
 
-def test_canonical_strategy_blocks_reject(forven_db):
-    from forven.brain import transition_stage
+def test_canonical_strategy_blocks_reject(AXIOM_db):
+    from axiom.brain import transition_stage
 
     h = _hyp()
     s = _make_strategy(h["id"], sid_seed=1, symbol="BTC", sharpe=2.0)
@@ -198,8 +198,8 @@ def test_canonical_strategy_blocks_reject(forven_db):
     assert row["stage"] != "rejected"
 
 
-def test_reopening_terminal_strategy_clears_stale_terminal_metrics(forven_db):
-    from forven.brain import transition_stage
+def test_reopening_terminal_strategy_clears_stale_terminal_metrics(AXIOM_db):
+    from axiom.brain import transition_stage
 
     h = _hyp()
     s = _make_strategy(h["id"], sid_seed=1, symbol="BTC", stage="archived")
@@ -233,13 +233,13 @@ def test_reopening_terminal_strategy_clears_stale_terminal_metrics(forven_db):
     assert row["status_reason"] is None
 
 
-def test_verdict_proven_triggers_graduation(forven_db):
+def test_verdict_proven_triggers_graduation(AXIOM_db):
     """End-to-end: write_verdict_memo with floor='proven' graduates the
     hypothesis and flags canonicals."""
-    from forven.hypothesis_verdict import write_verdict_memo
+    from axiom.hypothesis_verdict import write_verdict_memo
 
     kv_set(
-        "forven:settings",
+        "axiom:settings",
         {"research_settings": {"hypothesis_discipline": {
             "verdict_hit_rate_threshold": 0.5,
             "verdict_min_diversity_cells": 2,
@@ -254,7 +254,7 @@ def test_verdict_proven_triggers_graduation(forven_db):
     _make_strategy(h["id"], sid_seed=4, symbol="ETH", stage="paper", sharpe=0.8)
 
     fake = json.dumps({"verdict": "proven", "rationale": "strong"})
-    with patch("forven.hypothesis_verdict._call_llm", return_value=fake):
+    with patch("axiom.hypothesis_verdict._call_llm", return_value=fake):
         result = write_verdict_memo(h["id"])
     assert result["ok"]
     assert result["hypothesis"]["status"] == "proven"

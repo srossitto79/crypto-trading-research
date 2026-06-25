@@ -1,8 +1,8 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
-from forven.db import create_strategy_container, get_db
-from forven.gauntlet.settings import build_settings_snapshot
-from forven.gauntlet.store import create_or_get_workflow
+from axiom.db import create_strategy_container, get_db
+from axiom.gauntlet.settings import build_settings_snapshot
+from axiom.gauntlet.store import create_or_get_workflow
 
 
 def _strategy() -> str:
@@ -19,7 +19,7 @@ def _strategy() -> str:
     return strategy_id
 
 
-def test_lifecycle_gauntlet_status_delegates_to_unified_projection(forven_db):
+def test_lifecycle_gauntlet_status_delegates_to_unified_projection(AXIOM_db):
     strategy_id = _strategy()
     workflow = create_or_get_workflow(
         strategy_id=strategy_id,
@@ -27,7 +27,7 @@ def test_lifecycle_gauntlet_status_delegates_to_unified_projection(forven_db):
         settings_snapshot=build_settings_snapshot(),
     )
 
-    from forven.routers.lifecycle import read_gauntlet_status
+    from axiom.routers.lifecycle import read_gauntlet_status
 
     status = read_gauntlet_status(strategy_id)
 
@@ -36,14 +36,14 @@ def test_lifecycle_gauntlet_status_delegates_to_unified_projection(forven_db):
     assert "param_jitter" not in status["tests"]
 
 
-def test_gauntlet_router_can_create_and_resume_workflow(forven_db, monkeypatch):
+def test_gauntlet_router_can_create_and_resume_workflow(AXIOM_db, monkeypatch):
     strategy_id = _strategy()
     monkeypatch.setattr(
-        "forven.gauntlet.engine.resume_workflow",
+        "axiom.gauntlet.engine.resume_workflow",
         lambda workflow_id, max_steps=1: {"ok": True, "workflow_id": workflow_id, "steps_run": max_steps},
     )
 
-    from forven.routers.gauntlet import create_strategy_workflow, resume_gauntlet_workflow
+    from axiom.routers.gauntlet import create_strategy_workflow, resume_gauntlet_workflow
 
     created = create_strategy_workflow(strategy_id)
     resumed = resume_gauntlet_workflow(created["workflow_id"], max_steps=3)

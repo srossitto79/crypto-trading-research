@@ -1,12 +1,12 @@
 import type { PageLoad } from './$types';
-import { getForvenAllTrades } from '$lib/api';
-import type { ForvenTradesPage } from '$lib/api';
+import { getAxiomAllTrades } from '$lib/api';
+import type { AxiomTradesPage } from '$lib/api';
 
 export const ssr = false;
 
 export const load: PageLoad = async () => {
-	const [result] = await Promise.allSettled([getForvenAllTrades({ limit: 200 })]);
+	const [result] = await Promise.allSettled([getAxiomAllTrades({ limit: 200 })]);
 	return {
 		initialPage: result.status === 'fulfilled' ? result.value : null,
-	} satisfies { initialPage: ForvenTradesPage | null };
+	} satisfies { initialPage: AxiomTradesPage | null };
 };

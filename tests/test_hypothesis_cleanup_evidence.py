@@ -1,4 +1,4 @@
-"""Phase 4: time-based evidence rule was removed.
+﻿"""Phase 4: time-based evidence rule was removed.
 
 `cleanup_stale_hypotheses` is now a deprecated no-op — age alone is no longer
 evidence that a hypothesis should be disproven. The cap + round-robin gates
@@ -10,9 +10,9 @@ time-based auto-disprove would have to be done deliberately.
 
 from datetime import datetime, timedelta, timezone
 from fastapi.testclient import TestClient
-from forven.api import app
-from forven.db import get_db
-from forven.hypotheses import create_hypothesis
+from axiom.api import app
+from axiom.db import get_db
+from axiom.hypotheses import create_hypothesis
 
 
 def _age_created_at(hypothesis_id: str, days_ago: int) -> None:
@@ -30,9 +30,9 @@ def _bare_hyp():
     )
 
 
-def test_aged_zero_child_hypothesis_is_NOT_auto_disproven(forven_db):
+def test_aged_zero_child_hypothesis_is_NOT_auto_disproven(AXIOM_db):
     """Old hypotheses with no children no longer get flipped to disproven."""
-    from forven.hypothesis_cleanup import cleanup_stale_hypotheses
+    from axiom.hypothesis_cleanup import cleanup_stale_hypotheses
     hyp = _bare_hyp()
     _age_created_at(hyp["id"], days_ago=20)
     result = cleanup_stale_hypotheses()
@@ -43,8 +43,8 @@ def test_aged_zero_child_hypothesis_is_NOT_auto_disproven(forven_db):
     assert row["status"] == "proposed"
 
 
-def test_recent_hypothesis_unchanged(forven_db):
-    from forven.hypothesis_cleanup import cleanup_stale_hypotheses
+def test_recent_hypothesis_unchanged(AXIOM_db):
+    from axiom.hypothesis_cleanup import cleanup_stale_hypotheses
     hyp = _bare_hyp()
     _age_created_at(hyp["id"], days_ago=5)
     result = cleanup_stale_hypotheses()
@@ -54,7 +54,7 @@ def test_recent_hypothesis_unchanged(forven_db):
     assert row["status"] == "proposed"
 
 
-def test_endpoint_returns_zero(forven_db):
+def test_endpoint_returns_zero(AXIOM_db):
     """The legacy cleanup endpoint still exists for back-compat but reports 0."""
     hyp = _bare_hyp()
     _age_created_at(hyp["id"], days_ago=30)
@@ -64,8 +64,8 @@ def test_endpoint_returns_zero(forven_db):
     assert r.json()["disproven_count"] == 0
 
 
-def test_dry_run_returns_zero_preview(forven_db):
-    from forven.hypothesis_cleanup import cleanup_stale_hypotheses
+def test_dry_run_returns_zero_preview(AXIOM_db):
+    from axiom.hypothesis_cleanup import cleanup_stale_hypotheses
     hyp = _bare_hyp()
     _age_created_at(hyp["id"], days_ago=30)
     result = cleanup_stale_hypotheses(dry_run=True)

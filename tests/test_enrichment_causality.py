@@ -1,4 +1,4 @@
-"""Generic enrichment-causality regression.
+﻿"""Generic enrichment-causality regression.
 
 No forward-window AGGREGATE stream (1h taker/ls/liq bucket-START-stamped) may
 expose an in-progress bucket to a finer-grained bar, on EITHER enrichment path:
@@ -29,7 +29,7 @@ def _bars_15m(start="2026-01-01 02:00", n=4):
 
 
 def test_legacy_aggregate_is_causal(tmp_path):
-    from forven.data_manager import _merge_asof_parquet
+    from axiom.data_manager import _merge_asof_parquet
 
     p = _write_hourly(tmp_path, "taker_volume_1h.parquet", "taker_buy_sell_ratio", [10.0 + i for i in range(8)])
     out = _merge_asof_parquet(
@@ -43,7 +43,7 @@ def test_legacy_aggregate_is_causal(tmp_path):
 
 def test_hub_aggregate_is_causal(tmp_path):
     pytest.importorskip("duckdb")
-    from forven.dataeng.hub import _enrich_with_duckdb, _EnrichmentSpec
+    from axiom.dataeng.hub import _enrich_with_duckdb, _EnrichmentSpec
 
     p = _write_hourly(tmp_path, "taker_volume_1h.parquet", "taker_buy_sell_ratio", [10.0 + i for i in range(8)])
     spec = _EnrichmentSpec(
@@ -57,7 +57,7 @@ def test_hub_aggregate_is_causal(tmp_path):
 def test_hub_aggregate_leaks_without_shift(tmp_path):
     # Sanity: without the shift the hub exposes the in-progress hour (the bug).
     pytest.importorskip("duckdb")
-    from forven.dataeng.hub import _enrich_with_duckdb, _EnrichmentSpec
+    from axiom.dataeng.hub import _enrich_with_duckdb, _EnrichmentSpec
 
     p = _write_hourly(tmp_path, "taker_volume_1h.parquet", "taker_buy_sell_ratio", [10.0 + i for i in range(8)])
     spec = _EnrichmentSpec(p, ("taker_buy_sell_ratio",), ("taker_buy_sell_ratio",), {"taker_buy_sell_ratio": 1.0})  # shift=0
@@ -69,7 +69,7 @@ def test_hub_point_in_time_stream_unshifted(tmp_path):
     # OI-style point-in-time snapshot (shift=0): a bar reads the value stamped at
     # or before it (known at that instant), the current value -- correct, no shift.
     pytest.importorskip("duckdb")
-    from forven.dataeng.hub import _enrich_with_duckdb, _EnrichmentSpec
+    from axiom.dataeng.hub import _enrich_with_duckdb, _EnrichmentSpec
 
     p = _write_hourly(tmp_path, "oi.parquet", "open_interest", [100.0 + i for i in range(8)])
     spec = _EnrichmentSpec(p, ("open_interest",), ("open_interest",), {"open_interest": 0.0})  # default shift 0
@@ -80,7 +80,7 @@ def test_hub_point_in_time_stream_unshifted(tmp_path):
 def test_hub_aggregate_specs_request_the_shift():
     # Guard: the three forward-window aggregate enrichers must carry the shift;
     # funding / OI must NOT (they are forward-announced / point-in-time).
-    from forven.dataeng import hub
+    from axiom.dataeng import hub
 
     specs = hub._available_enrichment_specs("BTC/USDT", "15m")
     by_col = {s.output_columns[0]: s for s in specs}

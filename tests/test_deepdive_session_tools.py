@@ -1,10 +1,10 @@
-import asyncio
+﻿import asyncio
 import json
 
 import pytest
 
-from forven.db import get_db, init_db
-from forven.deepdive_db import create_or_get_active_thread, list_messages
+from axiom.db import get_db, init_db
+from axiom.deepdive_db import create_or_get_active_thread, list_messages
 
 
 def _seed(sid="S44001"):
@@ -20,13 +20,13 @@ def _seed(sid="S44001"):
 
 
 @pytest.fixture
-def thread(forven_db):
+def thread(AXIOM_db):
     sid = _seed()
     return create_or_get_active_thread(sid)
 
 
 def test_tool_call_round_trip_persists_tool_message(thread, monkeypatch):
-    from forven import deepdive_session
+    from axiom import deepdive_session
 
     calls = {"n": 0}
 
@@ -67,7 +67,7 @@ def test_tool_call_round_trip_persists_tool_message(thread, monkeypatch):
 
 
 def test_max_rounds_emits_error(thread, monkeypatch):
-    from forven import deepdive_session
+    from axiom import deepdive_session
 
     async def always_calls_tool(messages, strategy_id):
         return {
@@ -92,9 +92,9 @@ def test_max_rounds_emits_error(thread, monkeypatch):
     assert any(e["type"] == "error" and e.get("code") == "max_rounds" for e in events)
 
 
-def test_dispatch_rejects_non_deepdive_tool(forven_db):
+def test_dispatch_rejects_non_deepdive_tool(AXIOM_db):
     """Security boundary: only tools with 'deepdive' in permissions can be dispatched."""
-    from forven.deepdive_session import _dispatch_tool
+    from axiom.deepdive_session import _dispatch_tool
 
     async def run():
         return await _dispatch_tool("read_file", {"path": "/etc/passwd"})
@@ -103,8 +103,8 @@ def test_dispatch_rejects_non_deepdive_tool(forven_db):
     assert "permission" in out.lower() or "denied" in out.lower() or "not allowed" in out.lower()
 
 
-def test_dispatch_unknown_tool(forven_db):
-    from forven.deepdive_session import _dispatch_tool
+def test_dispatch_unknown_tool(AXIOM_db):
+    from axiom.deepdive_session import _dispatch_tool
 
     async def run():
         return await _dispatch_tool("does_not_exist", {})
@@ -114,7 +114,7 @@ def test_dispatch_unknown_tool(forven_db):
 
 
 def test_tool_handler_exception_surfaced_to_loop(thread, monkeypatch):
-    from forven import deepdive_session
+    from axiom import deepdive_session
 
     calls = {"n": 0}
     async def fake_invoke(messages, strategy_id):

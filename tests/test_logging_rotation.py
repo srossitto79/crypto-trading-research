@@ -1,4 +1,4 @@
-"""H-Op1: rotating file log handler prevents unbounded log growth."""
+﻿"""H-Op1: rotating file log handler prevents unbounded log growth."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import logging.handlers
 
 import pytest
 
-from forven.logging_config import (
+from axiom.logging_config import (
     DEFAULT_BACKUP_COUNT,
     DEFAULT_MAX_BYTES,
     _env_int,
@@ -35,25 +35,25 @@ def test_defaults_are_50mib_and_3_backups():
 
 
 def test_env_int_parses_positive_ints(monkeypatch):
-    monkeypatch.setenv("FORVEN_LOG_MAX_BYTES", "1048576")
-    assert _env_int("FORVEN_LOG_MAX_BYTES", 999) == 1048576
+    monkeypatch.setenv("AXIOM_LOG_MAX_BYTES", "1048576")
+    assert _env_int("AXIOM_LOG_MAX_BYTES", 999) == 1048576
 
 
 def test_env_int_falls_back_on_empty(monkeypatch):
-    monkeypatch.delenv("FORVEN_LOG_MAX_BYTES", raising=False)
-    assert _env_int("FORVEN_LOG_MAX_BYTES", 123) == 123
+    monkeypatch.delenv("AXIOM_LOG_MAX_BYTES", raising=False)
+    assert _env_int("AXIOM_LOG_MAX_BYTES", 123) == 123
 
 
 def test_env_int_falls_back_on_invalid(monkeypatch):
-    monkeypatch.setenv("FORVEN_LOG_MAX_BYTES", "not-a-number")
-    assert _env_int("FORVEN_LOG_MAX_BYTES", 999) == 999
+    monkeypatch.setenv("AXIOM_LOG_MAX_BYTES", "not-a-number")
+    assert _env_int("AXIOM_LOG_MAX_BYTES", 999) == 999
 
 
 def test_env_int_rejects_zero_and_negative(monkeypatch):
-    monkeypatch.setenv("FORVEN_LOG_MAX_BYTES", "0")
-    assert _env_int("FORVEN_LOG_MAX_BYTES", 999) == 999
-    monkeypatch.setenv("FORVEN_LOG_MAX_BYTES", "-5")
-    assert _env_int("FORVEN_LOG_MAX_BYTES", 999) == 999
+    monkeypatch.setenv("AXIOM_LOG_MAX_BYTES", "0")
+    assert _env_int("AXIOM_LOG_MAX_BYTES", 999) == 999
+    monkeypatch.setenv("AXIOM_LOG_MAX_BYTES", "-5")
+    assert _env_int("AXIOM_LOG_MAX_BYTES", 999) == 999
 
 
 def test_setup_installs_rotating_handler(tmp_path, reset_root_logger):
@@ -76,7 +76,7 @@ def test_setup_rotates_when_threshold_exceeded(tmp_path, reset_root_logger):
     setup_rotating_file_logger(
         log_path, level=logging.INFO, max_bytes=500, backup_count=2,
     )
-    logger = logging.getLogger("forven.test_rotation")
+    logger = logging.getLogger("axiom.test_rotation")
     for i in range(50):
         logger.info("padding-message-number-%d-%s", i, "X" * 50)
 
@@ -97,7 +97,7 @@ def test_setup_creates_parent_directory(tmp_path, reset_root_logger):
 
 
 def test_setup_env_override_for_max_bytes(tmp_path, reset_root_logger, monkeypatch):
-    monkeypatch.setenv("FORVEN_LOG_MAX_BYTES", "12345")
+    monkeypatch.setenv("AXIOM_LOG_MAX_BYTES", "12345")
     log_path = tmp_path / "envy.log"
     setup_rotating_file_logger(log_path)
     rotating = [

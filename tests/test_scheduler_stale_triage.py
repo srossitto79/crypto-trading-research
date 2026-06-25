@@ -1,18 +1,18 @@
-"""Tests for the forven-stale-triage scheduler job registration."""
+﻿"""Tests for the Axiom-stale-triage scheduler job registration."""
 from __future__ import annotations
 
 
 def test_stale_triage_job_registered():
-    """forven-stale-triage must be registered with kind='stale_triage'."""
-    from forven.db import init_db
-    from forven.scheduler import seed_forven_jobs, get_jobs
+    """Axiom-stale-triage must be registered with kind='stale_triage'."""
+    from axiom.db import init_db
+    from axiom.scheduler import seed_AXIOM_jobs, get_jobs
 
     init_db()
-    seed_forven_jobs()
+    seed_AXIOM_jobs()
 
     jobs = {j["id"]: j for j in get_jobs()}
-    assert "forven-stale-triage" in jobs
-    payload = jobs["forven-stale-triage"].get("payload") or {}
+    assert "Axiom-stale-triage" in jobs
+    payload = jobs["Axiom-stale-triage"].get("payload") or {}
     if isinstance(payload, str):
         import json
         payload = json.loads(payload)

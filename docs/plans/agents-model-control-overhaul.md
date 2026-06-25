@@ -2,7 +2,7 @@
 
 ## Context (why this is needed)
 
-Choosing models in Forven is confusing and **unsafe**: the bot routinely calls
+Choosing models in Axiom is confusing and **unsafe**: the bot routinely calls
 providers/models the operator never selected — sometimes spending real API
 credits (you watched OpenRouter silently fall back to paid `gpt-4o-mini`, and
 Gemini route to models you didn't pick). Configuration is also scattered across
@@ -51,8 +51,8 @@ protects the user regardless of the UI work.
 connection flag per provider, distinct from raw token presence. Env‑var keys do
 NOT set it. `credential_status()`/`_provider_has_credentials` get a companion
 `provider_is_connected(provider)` that requires the in‑app record. Files:
-`forven/auth/store.py` (env keys at lines 38–46, `credential_status` ~496),
-`forven/api_core.py` (the auth-provider Test/Save path that becomes "Connect").
+`axiom/auth/store.py` (env keys at lines 38–46, `credential_status` ~496),
+`axiom/api_core.py` (the auth-provider Test/Save path that becomes "Connect").
 
 **1.2 First‑class per‑slot selection.** Persist the explicit `(provider, model)`
 the user chose for each slot. Stop treating `_DEFAULT_MODEL_ROUTING` /
@@ -60,13 +60,13 @@ the user chose for each slot. Stop treating `_DEFAULT_MODEL_ROUTING` /
 placeholder catalog only. `get_default_model_for_provider`,
 `get_primary_provider_model`, `get_fallback_chain`, `get_auxiliary_routing`
 return the user's selection or `None` — never a hardcoded model id. File:
-`forven/model_routing.py` (defaults at 55–157; selectors at 361–539).
+`axiom/model_routing.py` (defaults at 55–157; selectors at 361–539).
 
 **1.3 One central resolver.** `resolve_route(slot) -> list[(provider, model)]`
 returning ONLY pairs that are connected (1.1) AND selected (1.2), in order
 [primary, then user‑defined fallbacks]. Empty → raise typed
 `UnconfiguredRouteError(slot)`. Every inference entry point obtains its chain
-only from here. New code in `forven/ai.py` / `forven/model_routing.py`.
+only from here. New code in `axiom/ai.py` / `axiom/model_routing.py`.
 
 **1.4 Remove the fail‑open‑to‑OpenAI branches.**
 - `normalize_provider_and_model` (`ai.py:212-218, 441-499`) returns a
@@ -113,7 +113,7 @@ move the zai‑priority migration (`model_routing.py:344-352`) out of the getter
 into a one‑shot startup migration so reads never mutate the KV blob. Add an
 admin **"reset routing to defaults"** action. (Once defaults are fail‑closed
 sentinels with no hardcoded model ids, a persisted blob can no longer pin paid
-models.) Note for current systems: the persisted KV `forven:model-routing`
+models.) Note for current systems: the persisted KV `axiom:model-routing`
 overrides code defaults per‑key, which is why earlier code‑default edits didn't
 take effect live.
 
@@ -133,7 +133,7 @@ are dashboard‑only. Only `AgentProviderBanner` is global, and it sees only the
 static "no credentials at all" case.
 
 **2.1 Runtime provider‑health store.** A small KV store
-`forven:provider-health:{provider}` = `{state: ok|degraded|down, kind:
+`axiom:provider-health:{provider}` = `{state: ok|degraded|down, kind:
 rate_limit|quota|auth|transient|fallback, reason, last_error_at, last_ok_at,
 fallback_to}`. Written from the runner's classify branches
 (`agents/runner.py:1370-1456`) and from fallback/retarget sites
@@ -207,7 +207,7 @@ Health tab.
 
 Root cause (verified, not a code deletion): `init_workspace()` — the only seeder
 of the identity files — is never called on the default **API‑owned** runtime
-(`FORVEN_BOT_OWNS_RUNTIME` unset; the Discord bot's gateway‑only branch at
+(`AXIOM_BOT_OWNS_RUNTIME` unset; the Discord bot's gateway‑only branch at
 `bot.py:774-780` skips `_bootstrap()`). Today SOUL.md/AGENTS.md are GLOBAL
 (workspace root) and missing on disk; only per‑agent ROLE.md exists.
 
@@ -253,7 +253,7 @@ Per decision #3, move to **per‑agent** SOUL/AGENTS:
 3. Saving `/api/model-policy` does NOT reset `auxiliary` (regression for the
    clobber bug).
 4. Startup seeding creates global IDENTITY.md + per‑agent SOUL/AGENTS/ROLE.md for
-   all 7 built‑ins (temp `FORVEN_HOME`).
+   all 7 built‑ins (temp `AXIOM_HOME`).
 
 **Manual / live:** connect only one provider; confirm agents run only on it and
 nothing else is billed (watch the provider dashboards). Pull a key mid‑run →
@@ -264,18 +264,18 @@ selectable, SOUL/AGENTS/ROLE populated per agent.
 
 ## Key files (by workstream)
 
-- **Routing/safety:** `forven/model_routing.py`, `forven/ai.py`,
-  `forven/agents/runner.py`, `forven/agents/providers.py`, `forven/auth/store.py`,
-  `forven/api_core.py`; offenders in `jobs/daily_learning.py`,
+- **Routing/safety:** `axiom/model_routing.py`, `axiom/ai.py`,
+  `axiom/agents/runner.py`, `axiom/agents/providers.py`, `axiom/auth/store.py`,
+  `axiom/api_core.py`; offenders in `jobs/daily_learning.py`,
   `quant_skills_extractor.py`, `hypothesis_verdict.py`,
   `strategy_extrapolation.py`, `deepdive_session.py`, `assistant_session.py`,
   `bot.py`, `bot_factory/engine.py`, `recall.py`, `control_plane/smart_approval.py`.
-- **Surfacing:** `forven/health_monitor.py`, `forven/routers/health.py`,
-  `forven/agents/provider_health.py`, `frontend/.../+layout.svelte`,
+- **Surfacing:** `axiom/health_monitor.py`, `axiom/routers/health.py`,
+  `axiom/agents/provider_health.py`, `frontend/.../+layout.svelte`,
   `AgentProviderBanner.svelte`, `CriticalAlertsBanner.svelte`, `Toast.svelte`.
 - **UI:** `frontend/src/routes/agents/+page.svelte`,
   `SettingsAgents.svelte`, `SettingsModels.svelte`, `settings/manifest.ts`,
   `settings/+page.svelte`, `routers/agents.py`, `routers/brain.py`.
-- **Identity files:** `forven/workspace.py`, `forven/agents/manager.py`,
-  `forven/bot.py`, `forven/api.py`, `forven/context.py`, `forven/api_core.py`,
+- **Identity files:** `axiom/workspace.py`, `axiom/agents/manager.py`,
+  `axiom/bot.py`, `axiom/api.py`, `axiom/context.py`, `axiom/api_core.py`,
   `templates/workspace/*.md`.

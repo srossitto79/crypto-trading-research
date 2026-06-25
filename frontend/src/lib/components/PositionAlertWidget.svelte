@@ -21,7 +21,7 @@
 	let positionAlertPoller: RealtimeRefreshController | null = null;
 	let positionAlertInFlight = false;
 	const POSITION_ALERT_POLL_MS = 25_000;
-	const DISMISSED_STORAGE_KEY = 'forven.paper.dismissedPositionAlerts';
+	const DISMISSED_STORAGE_KEY = 'axiom.paper.dismissedPositionAlerts';
 
 	let showPositionSnoozeMenu = false;
 	let positionSnoozeMenuRef: HTMLDivElement | null = null;
@@ -106,7 +106,7 @@
 
 	function openSessionFromAlert(sessionId: string) {
 		if (typeof window === 'undefined') return;
-		window.localStorage.setItem('forven.paper.selectedSessionId', sessionId);
+		window.localStorage.setItem('axiom.paper.selectedSessionId', sessionId);
 	}
 
 	async function refreshPositionAlert() {

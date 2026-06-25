@@ -1,4 +1,4 @@
-"""Robustness suite audit — Phase 2: two-tier gate (achievable paper / strict live).
+﻿"""Robustness suite audit — Phase 2: two-tier gate (achievable paper / strict live).
 
 The gauntlet->paper gate is LEAN (OOS consistency, param-jitter, drawdown/tail
 safety, min-trades). The strict-live criteria (WFA IS->OOS degradation, absolute
@@ -10,8 +10,8 @@ _strict_robustness_reject. Win-rate is no longer a hard gate.
 import json
 from datetime import datetime, timezone
 
-from forven.db import get_db, kv_set
-from forven.policy import (
+from axiom.db import get_db, kv_set
+from axiom.policy import (
     _strict_robustness_reject,
     evaluate_promotion,
     load_pipeline_config,
@@ -61,28 +61,28 @@ def _wf(passing=True, degradation=0.10):
 
 # --- strict-live battery (the demoted criteria are enforced here) ----------
 
-def test_strict_reject_fires_on_cost_stress_survival(forven_db):
+def test_strict_reject_fires_on_cost_stress_survival(AXIOM_db):
     _insert_strategy("st-cost")
     _insert_result("st-cost", "cost_stress", {"verdict": "PASS", "degradation_pct": 20.0, "stressed": {"sharpe": 0.1}})
     reason = _strict_robustness_reject("st-cost", _row("st-cost"), {}, load_pipeline_config())
     assert reason is not None and "cost-stress" in reason.lower()
 
 
-def test_strict_reject_fires_on_regime_consistency(forven_db):
+def test_strict_reject_fires_on_regime_consistency(AXIOM_db):
     _insert_strategy("st-regime")
     _insert_result("st-regime", "regime_split", {"verdict": "PASS", "n_regimes": 3, "profitable_regime_share": 0.33})
     reason = _strict_robustness_reject("st-regime", _row("st-regime"), {}, load_pipeline_config())
     assert reason is not None and "regime" in reason.lower()
 
 
-def test_strict_reject_fires_on_wfa_degradation(forven_db):
+def test_strict_reject_fires_on_wfa_degradation(AXIOM_db):
     _insert_strategy("st-deg")
     _insert_result("st-deg", "walk_forward", _wf(passing=True, degradation=0.55))
     reason = _strict_robustness_reject("st-deg", _row("st-deg"), {}, load_pipeline_config())
     assert reason is not None and "degradation" in reason.lower()
 
 
-def test_strict_reject_passes_clean_strategy(forven_db):
+def test_strict_reject_passes_clean_strategy(AXIOM_db):
     _insert_strategy("st-clean")
     _insert_result("st-clean", "walk_forward", _wf(passing=True, degradation=0.10))
     _insert_result("st-clean", "cost_stress", {"verdict": "PASS", "degradation_pct": 20.0, "stressed": {"sharpe": 0.6}})
@@ -93,9 +93,9 @@ def test_strict_reject_passes_clean_strategy(forven_db):
 
 # --- lean paper gate: strict failures do NOT block ->paper -----------------
 
-def test_paper_gate_allows_strategy_that_fails_strict_live(forven_db):
+def test_paper_gate_allows_strategy_that_fails_strict_live(AXIOM_db):
     # Disable structural readiness gates so we isolate the robustness logic.
-    kv_set("forven:pipeline:settings", {
+    kv_set("axiom:pipeline:settings", {
         "gate_multi_tf_sweep_enabled": False,
         "gate_optimization_required_enabled": False,
         "gate_params_applied_enabled": False,

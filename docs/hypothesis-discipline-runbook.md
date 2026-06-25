@@ -59,7 +59,7 @@ deliberately tight; loosen only with a specific reason.
 The pool cap is no longer a refusal gate — it's a pressure valve. Creates
 always succeed under normal conditions. If no new hypothesis has appeared:
 
-1. **The agent isn't trying.** Check `forven-hypothesis-promotion-loop` is
+1. **The agent isn't trying.** Check `axiom-hypothesis-promotion-loop` is
    enabled and running in the scheduler.
 2. **Pool-at-cap churn.** If `active_pool_cap` is too small relative to the
    rate of new hypotheses, every create evicts an older one — check the
@@ -124,7 +124,7 @@ Three checks, in order:
    if `revisit_interval_days` is 30 and graduation is recent.
 2. Is the active pool full? The pass stops early on cap-full and logs
    `revisit_pass.pool_full`.
-3. Is the `forven-hypothesis-revisit-pass` job enabled? It's registered in a
+3. Is the `axiom-hypothesis-revisit-pass` job enabled? It's registered in a
    disabled state by `scripts/register_hypothesis_jobs.py`.
 
 ---
@@ -151,7 +151,7 @@ raising `active_pool_cap` (default 100, max 500) to keep eviction churn low
 while you catch up.
 
 Enable:
-- `forven-hypothesis-promotion-loop` (5-min interval)
-- `forven-hypothesis-verdict-loop` (5-min interval)
-- `forven-hypothesis-revisit-pass` (daily — batch sweep still short-circuits
+- `axiom-hypothesis-promotion-loop` (5-min interval)
+- `axiom-hypothesis-verdict-loop` (5-min interval)
+- `axiom-hypothesis-revisit-pass` (daily — batch sweep still short-circuits
   when pool is full; rely on per-request force_revisit for priority revivals)

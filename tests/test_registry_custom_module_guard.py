@@ -1,4 +1,4 @@
-"""C-1 regression: custom strategy modules are AST-scanned BEFORE the in-process
+﻿"""C-1 regression: custom strategy modules are AST-scanned BEFORE the in-process
 import in the runtime loader (registry.assert_custom_module_safe). A module with
 a forbidden top-level import / exec must raise (so discover() skips it) and must
 never be imported into the live process.
@@ -9,8 +9,8 @@ import sys
 
 import pytest
 
-from forven.strategies import custom as custom_pkg
-from forven.strategies import registry
+from axiom.strategies import custom as custom_pkg
+from axiom.strategies import registry
 
 
 def _point_custom_dir(monkeypatch, tmp_path):
@@ -45,7 +45,7 @@ def test_forbidden_import_raises_and_is_not_imported(monkeypatch, tmp_path):
     with pytest.raises(ImportError) as exc:
         registry.assert_custom_module_safe("evil_os_mod")
     assert "security guard" in str(exc.value).lower()
-    assert "forven.strategies.custom.evil_os_mod" not in sys.modules
+    assert "axiom.strategies.custom.evil_os_mod" not in sys.modules
 
 
 def test_dynamic_exec_raises(monkeypatch, tmp_path):

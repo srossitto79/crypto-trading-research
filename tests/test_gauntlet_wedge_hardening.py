@@ -1,4 +1,4 @@
-"""Gauntlet wedge-audit hardening (2026-06-14).
+﻿"""Gauntlet wedge-audit hardening (2026-06-14).
 
 Fixes for three ways the pipeline could silently stop:
 1. A background scheduler job (e.g. the gauntlet step-loop) whose in-memory flag
@@ -14,13 +14,13 @@ Fixes for three ways the pipeline could silently stop:
 import json
 from datetime import datetime, timedelta, timezone
 
-from forven.db import get_db
+from axiom.db import get_db
 
 
 # --- Fix 1: background-job lock absolute backstop --------------------------
 
-def test_stale_lock_recovery_backstops_leaked_background_job(forven_db, monkeypatch):
-    import forven.scheduler as sched
+def test_stale_lock_recovery_backstops_leaked_background_job(AXIOM_db, monkeypatch):
+    import axiom.scheduler as sched
 
     # Simulate the gauntlet step-loop's lock held since well past the absolute max,
     # with its job_id leaked in the in-memory background set but NO live task.
@@ -28,49 +28,49 @@ def test_stale_lock_recovery_backstops_leaked_background_job(forven_db, monkeypa
     with get_db() as conn:
         conn.execute(
             "INSERT INTO scheduler_jobs (id, name, schedule_type, schedule_expr, command, enabled, running_since) "
-            "VALUES ('forven-gauntlet-step-loop', 'gauntlet step loop', 'interval', '120', 'gauntlet_step_loop', 1, ?)",
+            "VALUES ('Axiom-gauntlet-step-loop', 'gauntlet step loop', 'interval', '120', 'gauntlet_step_loop', 1, ?)",
             (old,),
         )
         conn.commit()
-    sched._SCHEDULER_BACKGROUND_JOB_IDS.add("forven-gauntlet-step-loop")
+    sched._SCHEDULER_BACKGROUND_JOB_IDS.add("Axiom-gauntlet-step-loop")
     monkeypatch.setattr(sched, "_job_has_live_background_task", lambda _jid: False)
 
     recovered = sched.recover_stale_scheduler_job_locks()
 
     assert recovered >= 1
     with get_db() as conn:
-        rs = conn.execute("SELECT running_since FROM scheduler_jobs WHERE id='forven-gauntlet-step-loop'").fetchone()["running_since"]
+        rs = conn.execute("SELECT running_since FROM scheduler_jobs WHERE id='Axiom-gauntlet-step-loop'").fetchone()["running_since"]
     assert rs is None  # lock cleared -> job can run again
-    assert "forven-gauntlet-step-loop" not in sched._SCHEDULER_BACKGROUND_JOB_IDS
+    assert "Axiom-gauntlet-step-loop" not in sched._SCHEDULER_BACKGROUND_JOB_IDS
 
 
-def test_stale_lock_recovery_skips_live_background_job(forven_db, monkeypatch):
-    import forven.scheduler as sched
+def test_stale_lock_recovery_skips_live_background_job(AXIOM_db, monkeypatch):
+    import axiom.scheduler as sched
 
     old = (datetime.now(timezone.utc) - timedelta(seconds=sched._ABSOLUTE_MAX_RUNNING_SECONDS + 600)).isoformat()
     with get_db() as conn:
         conn.execute(
             "INSERT INTO scheduler_jobs (id, name, schedule_type, schedule_expr, command, enabled, running_since) "
-            "VALUES ('forven-gauntlet-step-loop', 'gauntlet step loop', 'interval', '120', 'gauntlet_step_loop', 1, ?)",
+            "VALUES ('Axiom-gauntlet-step-loop', 'gauntlet step loop', 'interval', '120', 'gauntlet_step_loop', 1, ?)",
             (old,),
         )
         conn.commit()
-    sched._SCHEDULER_BACKGROUND_JOB_IDS.add("forven-gauntlet-step-loop")
+    sched._SCHEDULER_BACKGROUND_JOB_IDS.add("Axiom-gauntlet-step-loop")
     # A live task IS running it -> must NOT be force-recovered (would double-run).
     monkeypatch.setattr(sched, "_job_has_live_background_task", lambda _jid: True)
     try:
         sched.recover_stale_scheduler_job_locks()
         with get_db() as conn:
-            rs = conn.execute("SELECT running_since FROM scheduler_jobs WHERE id='forven-gauntlet-step-loop'").fetchone()["running_since"]
+            rs = conn.execute("SELECT running_since FROM scheduler_jobs WHERE id='Axiom-gauntlet-step-loop'").fetchone()["running_since"]
         assert rs is not None  # left alone — a live task owns it
     finally:
-        sched._SCHEDULER_BACKGROUND_JOB_IDS.discard("forven-gauntlet-step-loop")
+        sched._SCHEDULER_BACKGROUND_JOB_IDS.discard("Axiom-gauntlet-step-loop")
 
 
 # --- Fix 3: tick wall-clock budget ----------------------------------------
 
-def test_tick_respects_wall_clock_deadline(forven_db, monkeypatch):
-    import forven.gauntlet.engine as engine
+def test_tick_respects_wall_clock_deadline(AXIOM_db, monkeypatch):
+    import axiom.gauntlet.engine as engine
 
     # Pretend there are 5 active workflows; each "step" sleeps a touch.
     monkeypatch.setattr(engine, "backfill_missing_quick_screen_workflows", lambda **k: 0)
@@ -99,8 +99,8 @@ def test_tick_respects_wall_clock_deadline(forven_db, monkeypatch):
 
 # --- Fix 2: abandon zombie async optimization result ----------------------
 
-def test_validation_optimization_resubmits_stale_running_result(forven_db, monkeypatch):
-    from forven.gauntlet.tasks import run_validation_optimization
+def test_validation_optimization_resubmits_stale_running_result(AXIOM_db, monkeypatch):
+    from axiom.gauntlet.tasks import run_validation_optimization
 
     sid = "zombie-opt"
     now = datetime.now(timezone.utc).isoformat()
@@ -125,7 +125,7 @@ def test_validation_optimization_resubmits_stale_running_result(forven_db, monke
         resubmits["n"] += 1
         return {"result_id": "OPT-FRESH", "status": "succeeded", "best_params": {"rsi_period": 21}}
 
-    monkeypatch.setattr("forven.gauntlet.tasks._submit_optimization", _fake_submit)
+    monkeypatch.setattr("axiom.gauntlet.tasks._submit_optimization", _fake_submit)
 
     step = {"output_json": json.dumps({"result_id": "OPT-ZOMBIE"})}
     outcome = run_validation_optimization({"id": "wf-z", "strategy_id": sid}, step)
@@ -134,8 +134,8 @@ def test_validation_optimization_resubmits_stale_running_result(forven_db, monke
     assert outcome["result_id"] == "OPT-FRESH"
 
 
-def test_validation_optimization_keeps_polling_fresh_running_result(forven_db, monkeypatch):
-    from forven.gauntlet.tasks import run_validation_optimization
+def test_validation_optimization_keeps_polling_fresh_running_result(AXIOM_db, monkeypatch):
+    from axiom.gauntlet.tasks import run_validation_optimization
 
     sid = "fresh-opt"
     now = datetime.now(timezone.utc).isoformat()
@@ -153,7 +153,7 @@ def test_validation_optimization_keeps_polling_fresh_running_result(forven_db, m
         conn.commit()
 
     called = {"n": 0}
-    monkeypatch.setattr("forven.gauntlet.tasks._submit_optimization", lambda body: called.__setitem__("n", called["n"] + 1))
+    monkeypatch.setattr("axiom.gauntlet.tasks._submit_optimization", lambda body: called.__setitem__("n", called["n"] + 1))
 
     step = {"output_json": json.dumps({"result_id": "OPT-FRESH-RUN"})}
     outcome = run_validation_optimization({"id": "wf-f", "strategy_id": sid}, step)

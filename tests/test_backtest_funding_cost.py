@@ -1,4 +1,4 @@
-"""Tier 0: perp-funding cost in backtest PnL + promotion gate.
+﻿"""Tier 0: perp-funding cost in backtest PnL + promotion gate.
 
 Covers the pure helpers (`_apply_funding_to_trades`, `_compute_basic_metrics`
 aggregation) and the policy-level funding-completeness gate. These are fast,
@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from forven.strategies import backtest as bt
+from axiom.strategies import backtest as bt
 
 
 def _funding_df(rates, freq="1h"):
@@ -100,7 +100,7 @@ def test_basic_metrics_funding_complete_when_all_complete():
 
 
 def _patch_promotion_env(monkeypatch, metrics: dict, *, settings):
-    import forven.policy as policy
+    import axiom.policy as policy
 
     monkeypatch.setattr(policy, "load_pipeline_config", lambda: {})
     monkeypatch.setattr(policy, "kv_get", lambda *a, **k: settings)
@@ -116,7 +116,7 @@ def test_promotion_blocked_when_funding_incomplete(monkeypatch):
     # live, achievable paper"), so a winner is no longer deleted over a data gap.
     # The paper-allowed path needs a real DB (symbol gate); it's covered in
     # tests/test_funding_gate_stage_aware.py::test_funding_incomplete_allowed_into_paper.
-    import forven.policy as policy
+    import axiom.policy as policy
 
     _patch_promotion_env(
         monkeypatch,
@@ -128,8 +128,8 @@ def test_promotion_blocked_when_funding_incomplete(monkeypatch):
     assert "Funding data incomplete" in reason
 
 
-def test_promotion_not_blocked_when_funding_complete(forven_db, monkeypatch):
-    import forven.policy as policy
+def test_promotion_not_blocked_when_funding_complete(AXIOM_db, monkeypatch):
+    import axiom.policy as policy
 
     _patch_promotion_env(
         monkeypatch,
@@ -140,8 +140,8 @@ def test_promotion_not_blocked_when_funding_complete(forven_db, monkeypatch):
     assert "Funding data incomplete" not in reason
 
 
-def test_promotion_not_blocked_when_setting_off(forven_db, monkeypatch):
-    import forven.policy as policy
+def test_promotion_not_blocked_when_setting_off(AXIOM_db, monkeypatch):
+    import axiom.policy as policy
 
     _patch_promotion_env(
         monkeypatch,
@@ -152,9 +152,9 @@ def test_promotion_not_blocked_when_setting_off(forven_db, monkeypatch):
     assert "Funding data incomplete" not in reason
 
 
-def test_promotion_not_blocked_for_pre_feature_metrics(forven_db, monkeypatch):
+def test_promotion_not_blocked_for_pre_feature_metrics(AXIOM_db, monkeypatch):
     """Strategies tested before this feature have no funding_applied key."""
-    import forven.policy as policy
+    import axiom.policy as policy
 
     _patch_promotion_env(
         monkeypatch,

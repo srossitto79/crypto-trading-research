@@ -11,13 +11,13 @@
 	 * provider was disconnected or the model disabled), it is still SHOWN but
 	 * clearly flagged "(unavailable)" so the operator notices and can reselect.
 	 */
-	import type { ForvenAgentModelOption } from '$lib/api';
+	import type { AxiomAgentModelOption } from '$lib/api';
 	import { createEventDispatcher } from 'svelte';
 
 	/** Current choice as a "provider:model_id" key, or '' for unset. */
 	export let value: string;
 	/** Connected + enabled options only. */
-	export let selectable: ForvenAgentModelOption[] = [];
+	export let selectable: AxiomAgentModelOption[] = [];
 	export let allowUnset = false;
 	export let unsetLabel = '— select —';
 	export let disabled = false;

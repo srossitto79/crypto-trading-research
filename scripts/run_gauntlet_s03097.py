@@ -1,4 +1,4 @@
-"""Run complete gauntlet for S03097 (engulfing BTC/4h) and S03098 (engulfing SOL/4h)."""
+﻿"""Run complete gauntlet for S03097 (engulfing BTC/4h) and S03098 (engulfing SOL/4h)."""
 import sys, json, time
 sys.path.insert(0, '.')
 
@@ -7,7 +7,7 @@ STRATEGY_ID2 = 'S03098'
 
 
 def run_wfa(sid, asset, stype, params, tf):
-    from forven.strategies.backtest import walk_forward
+    from axiom.strategies.backtest import walk_forward
     print(f"  Running WFA for {sid}...")
     result = walk_forward(
         strategy_id=sid,
@@ -20,7 +20,7 @@ def run_wfa(sid, asset, stype, params, tf):
 
 
 def run_full_backtest(sid, asset, stype, params, tf):
-    from forven.strategies.backtest import backtest_strategy
+    from axiom.strategies.backtest import backtest_strategy
     print(f"  Running full backtest for {sid}...")
     result = backtest_strategy(
         strategy_id=sid,
@@ -37,9 +37,9 @@ def run_full_backtest(sid, asset, stype, params, tf):
 
 if __name__ == '__main__':
     import sqlite3
-    from forven.config import FORVEN_DB
+    from axiom.config import AXIOM_DB
 
-    db = FORVEN_DB
+    db = AXIOM_DB
     conn = sqlite3.connect(db)
     conn.row_factory = sqlite3.Row
 

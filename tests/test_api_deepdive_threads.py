@@ -1,7 +1,7 @@
-import pytest
+﻿import pytest
 from fastapi.testclient import TestClient
 
-from forven.db import get_db, init_db
+from axiom.db import get_db, init_db
 
 
 def _seed_strategy(sid="S33001"):
@@ -16,9 +16,9 @@ def _seed_strategy(sid="S33001"):
 
 
 @pytest.fixture
-def client(forven_db):
+def client(AXIOM_db):
     _seed_strategy()
-    from forven.api import app
+    from axiom.api import app
     return TestClient(app)
 
 
@@ -66,7 +66,7 @@ def test_list_messages_unknown_thread_returns_404(client):
 
 
 def test_list_messages_returns_persisted_rows(client):
-    from forven.deepdive_db import append_message
+    from axiom.deepdive_db import append_message
     r = client.post("/api/deepdive/threads", json={"strategy_id": "S33001"})
     tid = r.json()["id"]
     append_message(tid, role="user", content="hi")

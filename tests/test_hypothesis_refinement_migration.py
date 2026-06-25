@@ -1,4 +1,4 @@
-"""Migration test for the hypothesis refinement loop schema changes.
+﻿"""Migration test for the hypothesis refinement loop schema changes.
 
 Phase 0 of docs/plans/2026-04-17-hypothesis-refinement-loop-plan.md.
 
@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import sqlite3
 
-from forven.db import get_db
+from axiom.db import get_db
 
 
 def _columns(conn: sqlite3.Connection, table: str) -> set[str]:
@@ -26,7 +26,7 @@ def _indexes(conn: sqlite3.Connection, table: str) -> set[str]:
     return {row[1] for row in conn.execute(f"PRAGMA index_list({table})").fetchall()}
 
 
-def test_migration_adds_hypothesis_columns(forven_db) -> None:
+def test_migration_adds_hypothesis_columns(AXIOM_db) -> None:
     with get_db() as conn:
         cols = _columns(conn, "hypotheses")
     assert "graduated_at" in cols
@@ -35,14 +35,14 @@ def test_migration_adds_hypothesis_columns(forven_db) -> None:
     assert "revisit_count" in cols
 
 
-def test_migration_adds_strategy_columns(forven_db) -> None:
+def test_migration_adds_strategy_columns(AXIOM_db) -> None:
     with get_db() as conn:
         cols = _columns(conn, "strategies")
     assert "parent_strategy_id" in cols
     assert "canonical" in cols
 
 
-def test_migration_creates_indexes(forven_db) -> None:
+def test_migration_creates_indexes(AXIOM_db) -> None:
     with get_db() as conn:
         strat_idx = _indexes(conn, "strategies")
         hyp_idx = _indexes(conn, "hypotheses")
@@ -52,7 +52,7 @@ def test_migration_creates_indexes(forven_db) -> None:
     assert "idx_hypotheses_next_revisit_at" in hyp_idx
 
 
-def test_hyp_legacy_seeded_archived(forven_db) -> None:
+def test_hyp_legacy_seeded_archived(AXIOM_db) -> None:
     with get_db() as conn:
         row = conn.execute(
             "SELECT id, display_id, manager_state, status, source_type "
@@ -65,14 +65,14 @@ def test_hyp_legacy_seeded_archived(forven_db) -> None:
     assert row["source_type"] == "system_backfill"
 
 
-def test_orphan_strategies_backfilled_to_legacy(forven_db) -> None:
+def test_orphan_strategies_backfilled_to_legacy(AXIOM_db) -> None:
     """Strategies created with hypothesis_id NULL get re-pointed to HYP-LEGACY."""
     with get_db() as conn:
         # Insert two orphan strategies (post-init, simulating pre-migration data
         # — the NULL backfill in the migration already ran on init, so we
         # insert orphans now and re-run the named migration to verify
         # idempotent behaviour.
-        from forven.db import _now
+        from axiom.db import _now
         now = _now()
         conn.execute(
             "INSERT INTO strategies (id, name, type, symbol, timeframe, params, status, stage, owner, hypothesis_id, base_id, display_id, last_prefix, audit_summary, created_at, updated_at) "
@@ -88,7 +88,7 @@ def test_orphan_strategies_backfilled_to_legacy(forven_db) -> None:
 
     # Re-run the migration explicitly (simulating an operator forcing a re-apply
     # via a raw call). Should be safe because UPDATE ... WHERE NULL is idempotent.
-    from forven.migrations import _m_2026_04_hypothesis_refinement_loop
+    from axiom.migrations import _m_2026_04_hypothesis_refinement_loop
     with get_db() as conn:
         _m_2026_04_hypothesis_refinement_loop(conn)
         conn.commit()
@@ -102,9 +102,9 @@ def test_orphan_strategies_backfilled_to_legacy(forven_db) -> None:
         assert row["hypothesis_id"] == "HYP-LEGACY"
 
 
-def test_migration_is_idempotent_when_re_applied(forven_db) -> None:
+def test_migration_is_idempotent_when_re_applied(AXIOM_db) -> None:
     """Calling the migration function a second time must not raise or duplicate rows."""
-    from forven.migrations import _m_2026_04_hypothesis_refinement_loop
+    from axiom.migrations import _m_2026_04_hypothesis_refinement_loop
     with get_db() as conn:
         _m_2026_04_hypothesis_refinement_loop(conn)
         _m_2026_04_hypothesis_refinement_loop(conn)
@@ -116,7 +116,7 @@ def test_migration_is_idempotent_when_re_applied(forven_db) -> None:
     assert count == 1
 
 
-def test_migration_recorded_in_schema_migrations(forven_db) -> None:
+def test_migration_recorded_in_schema_migrations(AXIOM_db) -> None:
     with get_db() as conn:
         row = conn.execute(
             "SELECT name FROM schema_migrations WHERE name = '2026_04_hypothesis_refinement_loop'"
@@ -124,7 +124,7 @@ def test_migration_recorded_in_schema_migrations(forven_db) -> None:
     assert row is not None
 
 
-def test_revisit_count_defaults_to_zero(forven_db) -> None:
+def test_revisit_count_defaults_to_zero(AXIOM_db) -> None:
     with get_db() as conn:
         row = conn.execute(
             "SELECT revisit_count FROM hypotheses WHERE id = 'HYP-LEGACY'"
@@ -132,9 +132,9 @@ def test_revisit_count_defaults_to_zero(forven_db) -> None:
     assert row["revisit_count"] == 0
 
 
-def test_canonical_defaults_to_zero_for_new_strategies(forven_db) -> None:
+def test_canonical_defaults_to_zero_for_new_strategies(AXIOM_db) -> None:
     """New strategies get canonical=0 by default."""
-    from forven.db import _now
+    from axiom.db import _now
     now = _now()
     with get_db() as conn:
         conn.execute(

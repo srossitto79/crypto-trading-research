@@ -1,12 +1,12 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import pandas as pd
 
 
 def test_build_source_registry_honors_enabled_exchanges():
-    from forven.dataeng.registry import build_source_registry, resolve_source_for_stream
-    from forven.dataeng.settings import DataEngineSettings
-    from forven.dataeng.source import Stream
+    from axiom.dataeng.registry import build_source_registry, resolve_source_for_stream
+    from axiom.dataeng.settings import DataEngineSettings
+    from axiom.dataeng.source import Stream
 
     settings = DataEngineSettings(
         enabled_exchanges=["binance", "okx"],
@@ -26,7 +26,7 @@ def test_build_source_registry_honors_enabled_exchanges():
 
 
 def test_cross_source_validator_flags_and_priority_resolves_divergent_bars():
-    from forven.dataeng.validation import validate_bars
+    from axiom.dataeng.validation import validate_bars
 
     timestamps = pd.date_range("2026-06-01", periods=2, freq="1h", tz="UTC")
     binance = pd.DataFrame(
@@ -54,7 +54,7 @@ def test_cross_source_validator_flags_and_priority_resolves_divergent_bars():
 
 
 def test_derivatives_basis_and_aggregated_oi():
-    from forven.dataeng.derivatives import aggregate_open_interest, perp_spot_basis
+    from axiom.dataeng.derivatives import aggregate_open_interest, perp_spot_basis
 
     ts = pd.date_range("2026-06-01", periods=2, freq="1h", tz="UTC")
     spot = pd.DataFrame({"timestamp": ts, "close": [100.0, 105.0]})
@@ -74,7 +74,7 @@ def test_derivatives_basis_and_aggregated_oi():
 
 
 def test_microstructure_writer_reader_and_rollup(tmp_path):
-    from forven.dataeng.microstructure import read_micro_rows, rollup_trades_per_minute, write_micro_rows
+    from axiom.dataeng.microstructure import read_micro_rows, rollup_trades_per_minute, write_micro_rows
 
     trades = pd.DataFrame(
         {
@@ -111,8 +111,8 @@ def test_microstructure_writer_reader_and_rollup(tmp_path):
 
 
 def test_onchain_source_disabled_without_key_and_parses_fixture():
-    from forven.dataeng.onchain import OnChainSource
-    from forven.dataeng.source import Stream
+    from axiom.dataeng.onchain import OnChainSource
+    from axiom.dataeng.source import Stream
 
     disabled = OnChainSource("coingecko-pro", "")
     assert disabled.health().status == "disabled"

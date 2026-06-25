@@ -1,4 +1,4 @@
-"""Phase 4: verdict criteria rewrite.
+﻿"""Phase 4: verdict criteria rewrite.
 
 Tests the hit-rate / diversity / recency math (compute_verdict_signals) and
 the LLM-floor combination logic (_resolve_verdict_with_floor).
@@ -8,9 +8,9 @@ import json
 from unittest.mock import patch
 
 
-from forven.db import get_db, kv_set
-from forven.hypotheses import create_hypothesis
-from forven.hypothesis_verdict import (
+from axiom.db import get_db, kv_set
+from axiom.hypotheses import create_hypothesis
+from axiom.hypothesis_verdict import (
     _resolve_verdict_with_floor,
     compute_verdict_signals,
     write_verdict_memo,
@@ -25,7 +25,7 @@ def _set_discipline(**overrides) -> None:
     }
     payload.update(overrides)
     kv_set(
-        "forven:settings",
+        "axiom:settings",
         {"research_settings": {"hypothesis_discipline": payload}},
     )
 
@@ -57,7 +57,7 @@ def _seed_strategy(hypothesis_id: str, sid: str, *, stage: str = "quick_screen",
 # ---- compute_verdict_signals ----
 
 
-def test_signals_empty_window_is_researching(forven_db):
+def test_signals_empty_window_is_researching(AXIOM_db):
     _set_discipline()
     h = _hyp()
     sig = compute_verdict_signals(h["id"])
@@ -65,7 +65,7 @@ def test_signals_empty_window_is_researching(forven_db):
     assert sig["mathematical_verdict"] == "researching"
 
 
-def test_signals_high_hit_high_diversity_proven(forven_db):
+def test_signals_high_hit_high_diversity_proven(AXIOM_db):
     _set_discipline(
         verdict_hit_rate_threshold=0.5,
         verdict_min_diversity_cells=2,
@@ -84,7 +84,7 @@ def test_signals_high_hit_high_diversity_proven(forven_db):
     assert sig["mathematical_verdict"] == "proven"
 
 
-def test_signals_high_hit_low_diversity_researching(forven_db):
+def test_signals_high_hit_low_diversity_researching(AXIOM_db):
     _set_discipline(
         verdict_hit_rate_threshold=0.5,
         verdict_min_diversity_cells=3,
@@ -102,7 +102,7 @@ def test_signals_high_hit_low_diversity_researching(forven_db):
     assert sig["mathematical_verdict"] == "researching"
 
 
-def test_signals_low_hit_full_window_disproven(forven_db):
+def test_signals_low_hit_full_window_disproven(AXIOM_db):
     _set_discipline(
         verdict_hit_rate_threshold=0.5,  # floor for disprove = 0.125
         verdict_min_diversity_cells=2,
@@ -117,7 +117,7 @@ def test_signals_low_hit_full_window_disproven(forven_db):
     assert sig["mathematical_verdict"] == "disproven"
 
 
-def test_signals_low_hit_partial_window_researching(forven_db):
+def test_signals_low_hit_partial_window_researching(AXIOM_db):
     """Don't disprove on insufficient evidence — need full rolling window."""
     _set_discipline(
         verdict_hit_rate_threshold=0.5,
@@ -134,7 +134,7 @@ def test_signals_low_hit_partial_window_researching(forven_db):
     assert sig["mathematical_verdict"] == "researching"
 
 
-def test_signals_all_children_archived_disproven_short_window(forven_db):
+def test_signals_all_children_archived_disproven_short_window(AXIOM_db):
     """All children dead (archived/rejected) → disproven even before window full.
 
     This is the rotation-unsticker: a hypothesis whose every attempt was killed
@@ -155,7 +155,7 @@ def test_signals_all_children_archived_disproven_short_window(forven_db):
     assert sig["mathematical_verdict"] == "disproven"
 
 
-def test_signals_one_dead_one_alive_not_disproven_yet(forven_db):
+def test_signals_one_dead_one_alive_not_disproven_yet(AXIOM_db):
     """Mixed dead+alive children → still researching (the alive one might pass)."""
     _set_discipline(
         verdict_hit_rate_threshold=0.5,
@@ -170,7 +170,7 @@ def test_signals_one_dead_one_alive_not_disproven_yet(forven_db):
     assert sig["mathematical_verdict"] == "researching"
 
 
-def test_signals_single_dead_child_below_floor_is_researching(forven_db):
+def test_signals_single_dead_child_below_floor_is_researching(AXIOM_db):
     """One dead child alone shouldn't be enough to declare disproven."""
     _set_discipline(
         verdict_hit_rate_threshold=0.5,
@@ -184,7 +184,7 @@ def test_signals_single_dead_child_below_floor_is_researching(forven_db):
     assert sig["mathematical_verdict"] == "researching"
 
 
-def test_signals_legacy_lifecycle_paper_eligible_counts_as_pass(forven_db):
+def test_signals_legacy_lifecycle_paper_eligible_counts_as_pass(AXIOM_db):
     """Strategies with verdict={lifecycle: paper_eligible} count as passing
     even if stage is still quick_screen (legacy path before stage transition)."""
     _set_discipline(
@@ -205,7 +205,7 @@ def test_signals_legacy_lifecycle_paper_eligible_counts_as_pass(forven_db):
     assert sig["mathematical_verdict"] == "proven"
 
 
-def test_single_cell_thesis_proven_by_one_robust_child(forven_db):
+def test_single_cell_thesis_proven_by_one_robust_child(AXIOM_db):
     """Operator policy: a thesis that names ONE asset can be proven by one robust
     (paper+) child even when the configured min_diversity_cells is broad."""
     _set_discipline(
@@ -223,7 +223,7 @@ def test_single_cell_thesis_proven_by_one_robust_child(forven_db):
     assert sig["mathematical_verdict"] == "proven"
 
 
-def test_gauntlet_stage_children_are_not_counted_as_passing(forven_db):
+def test_gauntlet_stage_children_are_not_counted_as_passing(AXIOM_db):
     """In-progress gauntlet children (pre-robustness) must not count as a pass and
     must not trigger a premature 'disproven' while they're still in flight."""
     _set_discipline(
@@ -270,7 +270,7 @@ def test_floor_proven_passes_through():
 # ---- write_verdict_memo end-to-end ----
 
 
-def test_write_verdict_memo_uses_signals_floor(forven_db):
+def test_write_verdict_memo_uses_signals_floor(AXIOM_db):
     """LLM says 'proven' but math floor is 'researching' — final = 'researching'."""
     _set_discipline(
         verdict_hit_rate_threshold=0.5,
@@ -288,7 +288,7 @@ def test_write_verdict_memo_uses_signals_floor(forven_db):
         "next_step_suggestions": [],
         "garbage_signal": False,
     })
-    with patch("forven.hypothesis_verdict._call_llm", return_value=fake_llm):
+    with patch("axiom.hypothesis_verdict._call_llm", return_value=fake_llm):
         result = write_verdict_memo(h["id"])
     assert result["ok"]
     assert result["hypothesis"]["status"] == "researching"
@@ -298,7 +298,7 @@ def test_write_verdict_memo_uses_signals_floor(forven_db):
     assert memo["signals"]["mathematical_verdict"] == "researching"
 
 
-def test_write_verdict_memo_disproven_floor_overrides_llm(forven_db):
+def test_write_verdict_memo_disproven_floor_overrides_llm(AXIOM_db):
     _set_discipline(
         verdict_hit_rate_threshold=0.5,
         verdict_min_diversity_cells=2,
@@ -314,7 +314,7 @@ def test_write_verdict_memo_disproven_floor_overrides_llm(forven_db):
         "next_step_suggestions": ["try ETH"],
         "garbage_signal": False,
     })
-    with patch("forven.hypothesis_verdict._call_llm", return_value=fake_llm):
+    with patch("axiom.hypothesis_verdict._call_llm", return_value=fake_llm):
         result = write_verdict_memo(h["id"])
     assert result["ok"]
     assert result["hypothesis"]["status"] == "disproven"
@@ -322,7 +322,7 @@ def test_write_verdict_memo_disproven_floor_overrides_llm(forven_db):
     assert memo["verdict"] == "disproven"
 
 
-def test_write_verdict_memo_proven_can_downgrade(forven_db):
+def test_write_verdict_memo_proven_can_downgrade(AXIOM_db):
     """LLM downgrades a 'proven' floor to 'researching' with justification."""
     _set_discipline(
         verdict_hit_rate_threshold=0.5,
@@ -341,7 +341,7 @@ def test_write_verdict_memo_proven_can_downgrade(forven_db):
         "next_step_suggestions": ["test uncorrelated cells"],
         "garbage_signal": False,
     })
-    with patch("forven.hypothesis_verdict._call_llm", return_value=fake_llm):
+    with patch("axiom.hypothesis_verdict._call_llm", return_value=fake_llm):
         result = write_verdict_memo(h["id"])
     assert result["ok"]
     assert result["hypothesis"]["status"] == "researching"
@@ -354,7 +354,7 @@ def test_write_verdict_memo_proven_can_downgrade(forven_db):
 
 
 def test_claim_verdict_from_verdict_mapping():
-    from forven.hypothesis_verdict import _claim_verdict_from_verdict
+    from axiom.hypothesis_verdict import _claim_verdict_from_verdict
 
     assert _claim_verdict_from_verdict("proven", has_claims=False) == "no_claim"
     assert _claim_verdict_from_verdict("proven", has_claims=True) == "confirmed"
@@ -362,7 +362,7 @@ def test_claim_verdict_from_verdict_mapping():
     assert _claim_verdict_from_verdict("researching", has_claims=True) == "unverified"
 
 
-def test_write_verdict_memo_captures_claim_ruling(forven_db):
+def test_write_verdict_memo_captures_claim_ruling(AXIOM_db):
     """The LLM's ruling on the source's claim is persisted on the memo."""
     _set_discipline(
         verdict_hit_rate_threshold=0.4, verdict_min_diversity_cells=1, verdict_rolling_window=4
@@ -379,7 +379,7 @@ def test_write_verdict_memo_captures_claim_ruling(forven_db):
         "claim_verdict": "confirmed",
         "claim_assessment": "the source was right that funding fades revert",
     })
-    with patch("forven.hypothesis_verdict._call_llm", return_value=fake):
+    with patch("axiom.hypothesis_verdict._call_llm", return_value=fake):
         result = write_verdict_memo(h["id"])
     assert result["ok"]
     memo = result["hypothesis"]["verdict_memo"]
@@ -387,7 +387,7 @@ def test_write_verdict_memo_captures_claim_ruling(forven_db):
     assert "right" in memo["claim_assessment"]
 
 
-def test_write_verdict_memo_defaults_claim_verdict_when_omitted(forven_db):
+def test_write_verdict_memo_defaults_claim_verdict_when_omitted(AXIOM_db):
     """No source claim + LLM omits claim_verdict -> defaults to no_claim."""
     _set_discipline(
         verdict_hit_rate_threshold=0.4, verdict_min_diversity_cells=1, verdict_rolling_window=4
@@ -396,7 +396,7 @@ def test_write_verdict_memo_defaults_claim_verdict_when_omitted(forven_db):
     _seed_strategy(h["id"], "S1", stage="paper", symbol="BTC", timeframe="1h")
     _seed_strategy(h["id"], "S2", stage="paper", symbol="BTC", timeframe="1h")
     fake = json.dumps({"verdict": "proven", "rationale": "r"})
-    with patch("forven.hypothesis_verdict._call_llm", return_value=fake):
+    with patch("axiom.hypothesis_verdict._call_llm", return_value=fake):
         result = write_verdict_memo(h["id"])
     memo = result["hypothesis"]["verdict_memo"]
     assert memo["claim_verdict"] == "no_claim"
@@ -405,12 +405,12 @@ def test_write_verdict_memo_defaults_claim_verdict_when_omitted(forven_db):
 # ---- re-verdict freshness (child changed after the memo) ----
 
 
-def test_eligible_when_child_changed_after_memo(forven_db):
+def test_eligible_when_child_changed_after_memo(AXIOM_db):
     """A forge outcome (child updated) after the last memo re-triggers a verdict
     on the next tick, instead of waiting out the 7-day staleness window."""
     from datetime import datetime, timedelta, timezone
 
-    from forven.hypothesis_verdict import _eligible_hypothesis_ids
+    from axiom.hypothesis_verdict import _eligible_hypothesis_ids
 
     _set_discipline()
     h = _hyp()
@@ -425,11 +425,11 @@ def test_eligible_when_child_changed_after_memo(forven_db):
     assert h["id"] in _eligible_hypothesis_ids(limit=10)
 
 
-def test_not_eligible_when_memo_newer_than_children(forven_db):
+def test_not_eligible_when_memo_newer_than_children(AXIOM_db):
     """No staleness, no child change after the memo -> not re-verdicted."""
     from datetime import datetime, timedelta, timezone
 
-    from forven.hypothesis_verdict import _eligible_hypothesis_ids
+    from axiom.hypothesis_verdict import _eligible_hypothesis_ids
 
     _set_discipline()
     h = _hyp()

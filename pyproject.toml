@@ -3,11 +3,11 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "forven"
+name = "axiom"
 version = "0.1.34"
 description = "Algorithmic trading operations framework"
 authors = [
-    { name = "Judder", email = "judder@forven.app" },
+    { name = "Salvatore Rossitto", email = "srossitto79@gmail.com" },
 ]
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
@@ -56,12 +56,12 @@ dependencies = [
 discord = ["discord.py>=2.3"]
 
 [project.scripts]
-forven = "forven.cli:cli"
-forven-agent = "forven.agent.cli:main"
+axiom = "axiom.cli:cli"
+axiom-agent = "axiom.agent.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["forven*"]
+include = ["axiom*"]
 exclude = [
     "packaging*",
     "frontend*",
@@ -76,11 +76,11 @@ exclude = [
 "*" = ["../templates/workspace/*.md"]
 
 [tool.ruff]
-# Ruff configuration for forven. Scoped minimally for now — the intent is to
+# Ruff configuration for axiom. Scoped minimally for now — the intent is to
 # enforce project-wide bans on specific libraries, not general style rules.
 extend-exclude = [
     # User-local AI-generated scratch that may not parse; gitignored anyway.
-    "forven/strategies/custom/_broken",
+    "axiom/strategies/custom/_broken",
 ]
 
 [tool.ruff.lint]
@@ -97,7 +97,7 @@ select = ["TID251", "F", "E9"]
 ignore = ["F841"]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
-"ta".msg = "The `ta` library is banned. It's unmaintained, was never a real dependency (see tests/test_no_ta_imports.py), and caused ~150 files of silent dead code. Use native pandas/numpy or the future forven/strategies/indicators.py helper instead."
+"ta".msg = "The `ta` library is banned. It's unmaintained, was never a real dependency (see tests/test_no_ta_imports.py), and caused ~150 files of silent dead code. Use native pandas/numpy or the future axiom/strategies/indicators.py helper instead."
 "ta.trend".msg = "The `ta` library is banned. Use native pandas/numpy for indicator computations."
 "ta.momentum".msg = "The `ta` library is banned. Use native pandas/numpy for indicator computations."
 "ta.volatility".msg = "The `ta` library is banned. Use native pandas/numpy for indicator computations."

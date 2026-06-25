@@ -1,4 +1,4 @@
-"""Guardrail: the `ta` library must never be imported anywhere in the codebase.
+﻿"""Guardrail: the `ta` library must never be imported anywhere in the codebase.
 
 History: the `ta` package (https://github.com/bukosabino/ta) was used by ~104
 custom strategy files that were silently dead code because `ta` was never an
@@ -12,7 +12,7 @@ stops anyone — human or LLM — from reintroducing the dependency.
 
 If this test fails, the fix is NOT to install `ta`. The fix is to rewrite the
 offending file using native pandas / numpy, or using a helper from a future
-`forven/strategies/indicators.py` module if one exists.
+`Axiom/strategies/indicators.py` module if one exists.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 # Directories to scan for forbidden imports.
 SCAN_DIRS = (
-    REPO_ROOT / "forven",
+    REPO_ROOT / "Axiom",
     REPO_ROOT / "scripts",
     REPO_ROOT / "tests",
 )
@@ -38,7 +38,7 @@ SCAN_DIRS = (
 #     discovery and kept only for archaeology; see its README)
 EXCLUDED = {
     Path(__file__).resolve(),
-    REPO_ROOT / "forven" / "strategies" / "custom" / "_broken",
+    REPO_ROOT / "Axiom" / "strategies" / "custom" / "_broken",
 }
 
 
@@ -88,7 +88,7 @@ def _file_imports_ta(path: Path) -> bool:
 def _git_tracked_files() -> set[Path] | None:
     """Return the set of git-tracked *.py paths, or None if git is unavailable.
 
-    The ban targets the committed codebase. `forven/strategies/custom/` is
+    The ban targets the committed codebase. `Axiom/strategies/custom/` is
     gitignored (only __init__.py is tracked) and the app generates throwaway
     strategies there at runtime — some import unavailable libs and are simply
     skipped by the registry. Scanning those untracked artifacts turned this

@@ -1,4 +1,4 @@
-"""Regression tests locking the robustness verdict math against policy thresholds.
+﻿"""Regression tests locking the robustness verdict math against policy thresholds.
 
 These don't execute the full router paths — they call the pure verdict logic
 (or verify the policy defaults) so a silent threshold drift in policy.py
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from forven.policy import DEFAULT_PIPELINE_CONFIG, load_pipeline_config
+from axiom.policy import DEFAULT_PIPELINE_CONFIG, load_pipeline_config
 
 
 # --- Threshold defaults ------------------------------------------------------
@@ -45,7 +45,7 @@ def test_default_wfa_gate_thresholds_are_stable():
     assert "cost_stress" not in required  # Default no longer requires it pre-paper
 
 
-def test_load_pipeline_config_preserves_robustness_thresholds(forven_db):
+def test_load_pipeline_config_preserves_robustness_thresholds(AXIOM_db):
     """Merging with kv overrides must not drop the defaults when no override set."""
     config = load_pipeline_config()
     rt = config.get("robustness_thresholds", {})
@@ -180,7 +180,7 @@ def test_regime_split_profitable_share_requires_two_regimes():
 
 
 def test_coerce_trade_return_pct_is_normalized_from_percent_points():
-    from forven.routers.robustness import _coerce_trade_return_ratio
+    from axiom.routers.robustness import _coerce_trade_return_ratio
 
     # Modern canonical format: backtester stores -6.619 to mean -6.619%.
     assert _coerce_trade_return_ratio({"return_pct": -6.619}) == pytest.approx(-0.06619)
@@ -188,7 +188,7 @@ def test_coerce_trade_return_pct_is_normalized_from_percent_points():
 
 
 def test_coerce_trade_return_clamp_survives_for_catastrophic_loss():
-    from forven.routers.robustness import _coerce_trade_return_ratio
+    from axiom.routers.robustness import _coerce_trade_return_ratio
 
     # A -120% return_pct (shouldn't happen, but guard against bad data) must
     # still clamp to -0.999 so (1 + r) stays positive under cumprod.
@@ -196,7 +196,7 @@ def test_coerce_trade_return_clamp_survives_for_catastrophic_loss():
 
 
 def test_coerce_trade_return_plain_ratio_field_is_not_rescaled():
-    from forven.routers.robustness import _coerce_trade_return_ratio
+    from axiom.routers.robustness import _coerce_trade_return_ratio
 
     # `return` has always meant a raw ratio — don't divide again.
     assert _coerce_trade_return_ratio({"return": 0.02}) == pytest.approx(0.02)
@@ -204,7 +204,7 @@ def test_coerce_trade_return_plain_ratio_field_is_not_rescaled():
 
 
 def test_coerce_trade_return_pnl_pct_legacy_fraction_preserved():
-    from forven.routers.robustness import _coerce_trade_return_ratio
+    from axiom.routers.robustness import _coerce_trade_return_ratio
 
     # Legacy backtest JSONs stored `pnl_pct` as a fraction (0.01968 = ~2%).
     # The modern backtester writes `return_pct` instead, so `pnl_pct` is only
@@ -217,7 +217,7 @@ def _run_mc_with_trades(trades: list[dict], *, n_simulations: int = 400) -> dict
     """Smoke-test helper: run the MC analysis against crafted trade rows by
     monkeypatching the detail loader. Avoids needing a real SQLite fixture.
     """
-    from forven.routers import robustness as rb
+    from axiom.routers import robustness as rb
 
     fake_detail = {
         "strategy_id": "S_TEST",
@@ -229,7 +229,7 @@ def _run_mc_with_trades(trades: list[dict], *, n_simulations: int = 400) -> dict
         "start": "2025-01-01T00:00:00+00:00",
         "end": "2025-12-31T00:00:00+00:00",
     }
-    import forven.api_core as api_core
+    import axiom.api_core as api_core
 
     original = api_core.get_backtest_result
     api_core.get_backtest_result = lambda result_id, remote_skip=False: fake_detail  # type: ignore
@@ -240,7 +240,7 @@ def _run_mc_with_trades(trades: list[dict], *, n_simulations: int = 400) -> dict
         api_core.get_backtest_result = original
 
 
-def test_monte_carlo_on_percent_point_trades_produces_bounded_equity(forven_db):
+def test_monte_carlo_on_percent_point_trades_produces_bounded_equity(AXIOM_db):
     """With 33 realistic trades in percent points (±5%), the bootstrap should
     NOT produce simulated returns in the millions-of-percent or wipe out the
     vast majority of paths. P50 should land within a sane envelope.
@@ -267,7 +267,7 @@ def test_monte_carlo_on_percent_point_trades_produces_bounded_equity(forven_db):
     assert 10.0 < result["prob_profitable"] < 99.0
 
 
-def test_monte_carlo_verdict_uses_profitable_paths_and_drawdown_cap(forven_db):
+def test_monte_carlo_verdict_uses_profitable_paths_and_drawdown_cap(AXIOM_db):
     """The original-return percentile is diagnostic, not the hard pass/fail gate.
 
     A bootstrap built from a strategy's own trades is usually centered near the

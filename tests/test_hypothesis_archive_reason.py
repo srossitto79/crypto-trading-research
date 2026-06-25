@@ -1,10 +1,10 @@
-"""archive_reason: every archival path records WHY (audit item 23)."""
+﻿"""archive_reason: every archival path records WHY (audit item 23)."""
 import json
 from unittest.mock import patch
 
-from forven.crucibles import get_crucible
-from forven.db import get_db, kv_set
-from forven.hypotheses import archive_hypothesis, create_hypothesis, restore_hypothesis, trash_hypothesis
+from axiom.crucibles import get_crucible
+from axiom.db import get_db, kv_set
+from axiom.hypotheses import archive_hypothesis, create_hypothesis, restore_hypothesis, trash_hypothesis
 
 
 def _hyp() -> dict:
@@ -15,7 +15,7 @@ def _hyp() -> dict:
     )
 
 
-def test_archive_records_reason_and_restore_clears_it(forven_db):
+def test_archive_records_reason_and_restore_clears_it(AXIOM_db):
     h = _hyp()
     archive_hypothesis(h["id"], reason="operator_archive")
     c = get_crucible(h["id"])
@@ -26,17 +26,17 @@ def test_archive_records_reason_and_restore_clears_it(forven_db):
     assert get_crucible(h["id"])["archive_reason"] is None
 
 
-def test_trash_records_reason(forven_db):
+def test_trash_records_reason(AXIOM_db):
     h = _hyp()
     trash_hypothesis(h["id"], reason="operator_trash")
     assert get_crucible(h["id"])["archive_reason"] == "operator_trash"
 
 
-def test_disproven_verdict_attributes_archive_reason(forven_db):
-    kv_set("forven:settings", {"research_settings": {"hypothesis_discipline": {
+def test_disproven_verdict_attributes_archive_reason(AXIOM_db):
+    kv_set("axiom:settings", {"research_settings": {"hypothesis_discipline": {
         "verdict_hit_rate_threshold": 0.5, "verdict_min_diversity_cells": 2, "verdict_rolling_window": 4,
     }}})
-    from forven.hypothesis_verdict import write_verdict_memo
+    from axiom.hypothesis_verdict import write_verdict_memo
 
     h = _hyp()
     with get_db() as conn:
@@ -48,7 +48,7 @@ def test_disproven_verdict_attributes_archive_reason(forven_db):
                            '{}', '{}', '{}', datetime('now'), datetime('now'))""",
                 (f"SD{i}", f"SD{i}", h["id"]),
             )
-    with patch("forven.hypothesis_verdict._call_llm", return_value=json.dumps({"verdict": "researching", "rationale": "r"})):
+    with patch("axiom.hypothesis_verdict._call_llm", return_value=json.dumps({"verdict": "researching", "rationale": "r"})):
         result = write_verdict_memo(h["id"])
     assert result["hypothesis"]["status"] == "disproven"
     assert get_crucible(h["id"])["archive_reason"] == "disproven_verdict"

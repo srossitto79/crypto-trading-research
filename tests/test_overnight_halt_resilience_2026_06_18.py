@@ -1,4 +1,4 @@
-"""Regression guards for the 2026-06-18 overnight halt.
+﻿"""Regression guards for the 2026-06-18 overnight halt.
 
 Hyperliquid testnet 504 bursts tripped the shared hl_account circuit breaker;
 the daemon then escalated a pure READ/connectivity failure into an
@@ -14,10 +14,10 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from forven import daemon
-from forven.circuit_breaker import CircuitBreaker, State
-from forven.exchange import hyperliquid
-from forven.exchange.risk import reconcile_exchange_positions
+from axiom import daemon
+from axiom.circuit_breaker import CircuitBreaker, State
+from axiom.exchange import hyperliquid
+from axiom.exchange.risk import reconcile_exchange_positions
 
 
 # ---------------------------------------------------------------------------
@@ -175,7 +175,7 @@ def test_startup_preflight_connectivity_error_is_soft(monkeypatch):
 
 def test_reconcile_tags_fetch_failures(monkeypatch):
     monkeypatch.setattr(
-        "forven.exchange.risk._snapshot_exchange_state",
+        "axiom.exchange.risk._snapshot_exchange_state",
         lambda *a, **k: (_ for _ in ()).throw(RuntimeError("circuit breaker 'account' is open")),
     )
     recon = reconcile_exchange_positions(testnet=True)
@@ -240,8 +240,8 @@ def test_with_breaker_still_trips_on_real_error(monkeypatch):
 # FIX 3: get_open_trades returns the `strategy` label the open-positions UI renders
 # ---------------------------------------------------------------------------
 
-def test_get_open_trades_includes_strategy_column(forven_db):
-    from forven.db import get_db, get_open_trades
+def test_get_open_trades_includes_strategy_column(AXIOM_db):
+    from axiom.db import get_db, get_open_trades
 
     with get_db() as conn:
         conn.execute(

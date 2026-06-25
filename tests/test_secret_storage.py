@@ -1,17 +1,17 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 
 from cryptography.fernet import Fernet
 import pytest
 
-from forven import api_core
-from forven.auth import store as auth_store
+from axiom import api_core
+from axiom.auth import store as auth_store
 
 
 @pytest.mark.parametrize("provider", ["openai", "minimax"])
 def test_auth_store_encrypts_tokens_at_rest(tmp_path, monkeypatch, provider: str):
-    monkeypatch.setenv("FORVEN_ENCRYPTION_KEY", Fernet.generate_key().decode("utf-8"))
+    monkeypatch.setenv("AXIOM_ENCRYPTION_KEY", Fernet.generate_key().decode("utf-8"))
     auth_file = tmp_path / "auth.json"
     monkeypatch.setattr(auth_store, "AUTH_FILE", auth_file)
     monkeypatch.setattr(auth_store, "LOCK_PATH", auth_file.with_suffix(".lock"))
@@ -36,7 +36,7 @@ def test_auth_store_encrypts_tokens_at_rest(tmp_path, monkeypatch, provider: str
 
 
 def test_api_key_payloads_are_encrypted_before_kv_write(monkeypatch):
-    monkeypatch.setenv("FORVEN_ENCRYPTION_KEY", Fernet.generate_key().decode("utf-8"))
+    monkeypatch.setenv("AXIOM_ENCRYPTION_KEY", Fernet.generate_key().decode("utf-8"))
     stored: dict[str, object] = {}
 
     def _fake_kv_set(key: str, value: object) -> None:
@@ -64,7 +64,7 @@ def test_api_key_payloads_are_encrypted_before_kv_write(monkeypatch):
 
 
 def test_settings_secrets_round_trip_encrypted(monkeypatch):
-    monkeypatch.setenv("FORVEN_ENCRYPTION_KEY", Fernet.generate_key().decode("utf-8"))
+    monkeypatch.setenv("AXIOM_ENCRYPTION_KEY", Fernet.generate_key().decode("utf-8"))
     stored: dict[str, object] = {}
 
     def _fake_kv_set(key: str, value: object) -> None:
@@ -99,10 +99,10 @@ def test_load_auth_preserves_undecryptable_profiles(tmp_path, monkeypatch):
     monkeypatch.setattr(auth_store, "AUTH_FILE", auth_file)
     monkeypatch.setattr(auth_store, "LOCK_PATH", auth_file.with_suffix(".lock"))
 
-    monkeypatch.setenv("FORVEN_ENCRYPTION_KEY", valid_key)
+    monkeypatch.setenv("AXIOM_ENCRYPTION_KEY", valid_key)
     valid_access = auth_store.encrypt_secret("valid-token")
 
-    monkeypatch.setenv("FORVEN_ENCRYPTION_KEY", invalid_key)
+    monkeypatch.setenv("AXIOM_ENCRYPTION_KEY", invalid_key)
     invalid_access = auth_store.encrypt_secret("invalid-token")
     original_invalid_ciphertext = invalid_access  # capture for round-trip check
 
@@ -125,7 +125,7 @@ def test_load_auth_preserves_undecryptable_profiles(tmp_path, monkeypatch):
         encoding="utf-8",
     )
 
-    monkeypatch.setenv("FORVEN_ENCRYPTION_KEY", valid_key)
+    monkeypatch.setenv("AXIOM_ENCRYPTION_KEY", valid_key)
 
     store = auth_store.load_auth()
 
@@ -157,7 +157,7 @@ def test_get_auth_providers_marks_opaque_profiles_needs_reauth(tmp_path, monkeyp
     monkeypatch.setattr(auth_store, "LOCK_PATH", auth_file.with_suffix(".lock"))
     monkeypatch.setattr(api_core, "AUTH_FILE", auth_file)
 
-    monkeypatch.setenv("FORVEN_ENCRYPTION_KEY", invalid_key)
+    monkeypatch.setenv("AXIOM_ENCRYPTION_KEY", invalid_key)
     bad_access = auth_store.encrypt_secret("bad-token")
     auth_file.write_text(
         json.dumps(
@@ -174,7 +174,7 @@ def test_get_auth_providers_marks_opaque_profiles_needs_reauth(tmp_path, monkeyp
         encoding="utf-8",
     )
 
-    monkeypatch.setenv("FORVEN_ENCRYPTION_KEY", valid_key)
+    monkeypatch.setenv("AXIOM_ENCRYPTION_KEY", valid_key)
 
     payload = api_core.get_auth_providers()
 
@@ -186,7 +186,7 @@ def test_get_auth_providers_marks_opaque_profiles_needs_reauth(tmp_path, monkeyp
 
 
 def test_save_auth_rotates_backups(tmp_path, monkeypatch):
-    monkeypatch.setenv("FORVEN_ENCRYPTION_KEY", Fernet.generate_key().decode("utf-8"))
+    monkeypatch.setenv("AXIOM_ENCRYPTION_KEY", Fernet.generate_key().decode("utf-8"))
     auth_file = tmp_path / "auth.json"
     monkeypatch.setattr(auth_store, "AUTH_FILE", auth_file)
     monkeypatch.setattr(auth_store, "LOCK_PATH", auth_file.with_suffix(".lock"))
@@ -219,13 +219,13 @@ def test_save_auth_rotates_backups(tmp_path, monkeypatch):
 def test_fernet_cache_prevents_regen_when_key_file_disappears(tmp_path, monkeypatch):
     """If the key file transiently disappears, we must NOT generate a fresh
     key that would orphan previously-encrypted data."""
-    from forven import config as cfg
-    from forven import secret_storage
+    from axiom import config as cfg
+    from axiom import secret_storage
 
-    monkeypatch.delenv("FORVEN_ENCRYPTION_KEY", raising=False)
+    monkeypatch.delenv("AXIOM_ENCRYPTION_KEY", raising=False)
     key_dir = tmp_path / "appdata"
     key_dir.mkdir()
-    key_file = key_dir / ".forven_key"
+    key_file = key_dir / ".axiom_key"
 
     # Isolate cfg.AUTH_FILE so the existing-ciphertext guard in
     # _load_fernet_key looks at an empty tmp path, not the real auth store.
@@ -250,12 +250,12 @@ def test_fernet_cache_prevents_regen_when_key_file_disappears(tmp_path, monkeypa
 
 
 def test_key_migration_copies_legacy_to_preferred(tmp_path, monkeypatch):
-    from forven import config as cfg
-    from forven import secret_storage
+    from axiom import config as cfg
+    from axiom import secret_storage
 
-    monkeypatch.delenv("FORVEN_ENCRYPTION_KEY", raising=False)
-    legacy_file = tmp_path / "legacy" / ".forven_key"
-    preferred_file = tmp_path / "preferred" / ".forven_key"
+    monkeypatch.delenv("AXIOM_ENCRYPTION_KEY", raising=False)
+    legacy_file = tmp_path / "legacy" / ".axiom_key"
+    preferred_file = tmp_path / "preferred" / ".axiom_key"
     legacy_file.parent.mkdir()
     legacy_file.write_text(Fernet.generate_key().decode("utf-8") + "\n", encoding="utf-8")
 
@@ -277,10 +277,10 @@ def test_key_generation_refused_when_ciphertext_exists(tmp_path, monkeypatch):
     """Regression: on Apr 17 a fresh key was generated at %LOCALAPPDATA% while
     an auth.json full of legacy-encrypted profiles still lived on disk. That
     orphaned every provider. Refuse to generate in that state."""
-    from forven import config as cfg
-    from forven import secret_storage
+    from axiom import config as cfg
+    from axiom import secret_storage
 
-    monkeypatch.delenv("FORVEN_ENCRYPTION_KEY", raising=False)
+    monkeypatch.delenv("AXIOM_ENCRYPTION_KEY", raising=False)
     auth_file = tmp_path / "auth.json"
     auth_file.write_text(
         json.dumps(
@@ -288,7 +288,7 @@ def test_key_generation_refused_when_ciphertext_exists(tmp_path, monkeypatch):
         ),
         encoding="utf-8",
     )
-    key_file = tmp_path / ".forven_key"
+    key_file = tmp_path / ".axiom_key"
 
     monkeypatch.setattr(cfg, "AUTH_FILE", auth_file)
     monkeypatch.setattr(secret_storage, "_preferred_key_path", lambda: key_file)

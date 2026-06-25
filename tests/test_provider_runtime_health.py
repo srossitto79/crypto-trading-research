@@ -1,11 +1,11 @@
-"""Runtime provider-health store: classification, recovery, ordering."""
+﻿"""Runtime provider-health store: classification, recovery, ordering."""
 
 from __future__ import annotations
 
-from forven import provider_runtime_health as prh
+from axiom import provider_runtime_health as prh
 
 
-def test_quota_is_down_and_recovers_on_ok(forven_db):
+def test_quota_is_down_and_recovers_on_ok(AXIOM_db):
     prh.clear_provider_health()
     prh.record_provider_event("gemini", "quota", "spend cap exceeded")
     entry = {e["provider"]: e for e in prh.get_provider_health_runtime()}["gemini"]
@@ -16,7 +16,7 @@ def test_quota_is_down_and_recovers_on_ok(forven_db):
     assert entry["state"] == "ok"
 
 
-def test_kind_to_state_classification(forven_db):
+def test_kind_to_state_classification(AXIOM_db):
     prh.clear_provider_health()
     prh.record_provider_event("groq", "rate_limit")
     prh.record_provider_event("openrouter", "auth")
@@ -27,14 +27,14 @@ def test_kind_to_state_classification(forven_db):
     assert by["minimax"]["state"] == "degraded"
 
 
-def test_down_sorts_first(forven_db):
+def test_down_sorts_first(AXIOM_db):
     prh.clear_provider_health()
     prh.record_provider_event("a", "ok")
     prh.record_provider_event("b", "quota")
     assert prh.get_provider_health_runtime()[0]["provider"] == "b"
 
 
-def test_fallback_event_records_target(forven_db):
+def test_fallback_event_records_target(AXIOM_db):
     prh.clear_provider_health()
     prh.record_provider_event("openrouter", "fallback", "rate-limited", fallback_to="gemini")
     entry = {e["provider"]: e for e in prh.get_provider_health_runtime()}["openrouter"]

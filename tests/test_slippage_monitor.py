@@ -1,10 +1,10 @@
-from datetime import datetime, timedelta, timezone
+﻿from datetime import datetime, timedelta, timezone
 
-from forven.db import get_db
-from forven.monitoring import run_slippage_monitor
+from axiom.db import get_db
+from axiom.monitoring import run_slippage_monitor
 
 
-def test_run_slippage_monitor_inserts_audit_rows_and_updates_trade(forven_db):
+def test_run_slippage_monitor_inserts_audit_rows_and_updates_trade(AXIOM_db):
     now = datetime.now(timezone.utc)
     opened_at = (now - timedelta(hours=2)).isoformat()
     closed_at = (now - timedelta(hours=1)).isoformat()

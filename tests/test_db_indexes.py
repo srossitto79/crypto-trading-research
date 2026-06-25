@@ -1,13 +1,13 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import sqlite3
 
-import forven.config as cfg
-import forven.db as db_mod
-from forven.db import get_db, init_db
+import axiom.config as cfg
+import axiom.db as db_mod
+from axiom.db import get_db, init_db
 
 
-def test_status_indexes_exist_after_init(forven_db):
+def test_status_indexes_exist_after_init(AXIOM_db):
     with get_db() as conn:
         trade_indexes = {row["name"] for row in conn.execute("PRAGMA index_list('trades')").fetchall()}
         task_indexes = {row["name"] for row in conn.execute("PRAGMA index_list('tasks')").fetchall()}
@@ -23,7 +23,7 @@ def test_status_indexes_exist_after_init(forven_db):
 
 
 def test_init_db_bootstraps_hypothesis_indexes_for_legacy_strategies_table(tmp_path):
-    db_path = cfg.FORVEN_DB
+    db_path = cfg.AXIOM_DB
     conn = sqlite3.connect(str(db_path))
     try:
         conn.executescript(
@@ -58,7 +58,7 @@ def test_init_db_bootstraps_hypothesis_indexes_for_legacy_strategies_table(tmp_p
     finally:
         conn.close()
 
-    db_mod.FORVEN_DB = db_path
+    db_mod.AXIOM_DB = db_path
 
     init_db()
 

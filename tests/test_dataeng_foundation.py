@@ -1,10 +1,10 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import pandas as pd
 
 
 def test_symbol_ref_normalizes_common_crypto_forms():
-    from forven.dataeng.identity import to_ref
+    from axiom.dataeng.identity import to_ref
 
     slash = to_ref("btc/usdt", timeframe="1h")
     dash = to_ref("BTC-USDT", source="bybit", market="perp", timeframe="5m")
@@ -28,7 +28,7 @@ def test_symbol_ref_normalizes_common_crypto_forms():
 
 
 def test_legacy_symbol_helpers_delegate_without_behavior_change():
-    from forven.data import symbol_to_ccxt, symbol_to_fs
+    from axiom.data import symbol_to_ccxt, symbol_to_fs
 
     assert symbol_to_ccxt("btc/usdt") == "BTC/USDT"
     assert symbol_to_ccxt("btc-usdt") == "BTC/USDT"
@@ -40,7 +40,7 @@ def test_legacy_symbol_helpers_delegate_without_behavior_change():
 
 
 def test_catalog_scan_aliases_legacy_ohlcv_paths_to_binance(tmp_path):
-    from forven.dataeng.catalog import Catalog
+    from axiom.dataeng.catalog import Catalog
 
     data_root = tmp_path / "data"
     parquet_path = data_root / "ohlcv" / "BTC-USDT" / "1h.parquet"
@@ -78,7 +78,7 @@ def test_catalog_scan_aliases_legacy_ohlcv_paths_to_binance(tmp_path):
 
 
 def test_catalog_scan_reads_partitioned_source_paths(tmp_path):
-    from forven.dataeng.catalog import Catalog
+    from axiom.dataeng.catalog import Catalog
 
     data_root = tmp_path / "data"
     parquet_path = data_root / "ohlcv" / "source=okx" / "market=perp" / "ETH-USDT" / "15m.parquet"
@@ -106,9 +106,9 @@ def test_catalog_scan_reads_partitioned_source_paths(tmp_path):
     assert row["end_ts"] == "2026-02-01T00:15:00Z"
 
 
-def test_data_engine_settings_defaults_and_roundtrip(forven_db):
-    from forven import api_core
-    from forven.dataeng.settings import load_data_engine_settings
+def test_data_engine_settings_defaults_and_roundtrip(AXIOM_db):
+    from axiom import api_core
+    from axiom.dataeng.settings import load_data_engine_settings
 
     defaults = load_data_engine_settings()
     assert defaults.enabled is False
@@ -133,9 +133,9 @@ def test_data_engine_settings_defaults_and_roundtrip(forven_db):
     assert loaded.source_priority["funding"] == ["binance"]
 
 
-def test_datahub_candles_matches_legacy_load_parquet_with_flag(forven_db, monkeypatch, tmp_path):
-    from forven import api_core
-    from forven import data as data_mod
+def test_datahub_candles_matches_legacy_load_parquet_with_flag(AXIOM_db, monkeypatch, tmp_path):
+    from axiom import api_core
+    from axiom import data as data_mod
 
     monkeypatch.setattr(data_mod, "DATA_DIR", tmp_path)
     frame = pd.DataFrame(
@@ -158,8 +158,8 @@ def test_datahub_candles_matches_legacy_load_parquet_with_flag(forven_db, monkey
 
 
 def test_datahub_candles_supports_range_and_projection(monkeypatch, tmp_path):
-    from forven import data as data_mod
-    from forven.dataeng.hub import DataHub
+    from axiom import data as data_mod
+    from axiom.dataeng.hub import DataHub
 
     monkeypatch.setattr(data_mod, "DATA_DIR", tmp_path)
     frame = pd.DataFrame(
@@ -187,14 +187,14 @@ def test_datahub_candles_supports_range_and_projection(monkeypatch, tmp_path):
     assert projected["close"].tolist() == [2.5, 3.5, 4.5]
 
 
-def test_datahub_enrich_matches_legacy_data_manager(forven_db, tmp_path, monkeypatch):
-    from forven import api_core
-    from forven.data_manager import DataManager, _save_stream_parquet
+def test_datahub_enrich_matches_legacy_data_manager(AXIOM_db, tmp_path, monkeypatch):
+    from axiom import api_core
+    from axiom.data_manager import DataManager, _save_stream_parquet
 
-    monkeypatch.setattr("forven.data_manager.FUNDING_DIR", tmp_path / "funding")
-    monkeypatch.setattr("forven.data_manager.OI_DIR", tmp_path / "oi")
-    monkeypatch.setattr("forven.data_manager.DERIVATIVES_DIR", tmp_path / "derivatives")
-    monkeypatch.setattr("forven.data_manager.MACRO_DIR", tmp_path / "macro")
+    monkeypatch.setattr("axiom.data_manager.FUNDING_DIR", tmp_path / "funding")
+    monkeypatch.setattr("axiom.data_manager.OI_DIR", tmp_path / "oi")
+    monkeypatch.setattr("axiom.data_manager.DERIVATIVES_DIR", tmp_path / "derivatives")
+    monkeypatch.setattr("axiom.data_manager.MACRO_DIR", tmp_path / "macro")
 
     base = pd.DataFrame(
         {
@@ -273,9 +273,9 @@ def test_datahub_enrich_matches_legacy_data_manager(forven_db, tmp_path, monkeyp
     pd.testing.assert_frame_equal(via_hub, legacy)
 
 
-def test_datahub_quality_matches_legacy_compute_data_quality(forven_db, monkeypatch, tmp_path):
-    from forven import api_core
-    from forven import data as data_mod
+def test_datahub_quality_matches_legacy_compute_data_quality(AXIOM_db, monkeypatch, tmp_path):
+    from axiom import api_core
+    from axiom import data as data_mod
 
     monkeypatch.setattr(data_mod, "DATA_DIR", tmp_path)
     frame = pd.DataFrame(

@@ -11,13 +11,13 @@ COPY . ./
 # API keys must be available at build time so Vite can inline them
 # into the static bundle. Provide defaults so the image is buildable
 # even without explicit --build-arg.
-ARG VITE_FORVEN_API_KEY=
-ARG VITE_FORVEN_OPERATOR_KEY=
-ENV VITE_FORVEN_API_KEY=${VITE_FORVEN_API_KEY}
-ENV VITE_FORVEN_OPERATOR_KEY=${VITE_FORVEN_OPERATOR_KEY}
+ARG VITE_AXIOM_API_KEY=
+ARG VITE_AXIOM_OPERATOR_KEY=
+ENV VITE_AXIOM_API_KEY=${VITE_AXIOM_API_KEY}
+ENV VITE_AXIOM_OPERATOR_KEY=${VITE_AXIOM_OPERATOR_KEY}
 
 # Build for production (triggers adapter-static → build/ output)
-ENV FORVEN_PACKAGE_BUILD=1
+ENV AXIOM_PACKAGE_BUILD=1
 RUN npm run build
 
 EXPOSE 5173

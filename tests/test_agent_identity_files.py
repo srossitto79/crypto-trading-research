@@ -1,13 +1,13 @@
-"""Per-agent identity files (SOUL.md / AGENTS.md / ROLE.md).
+﻿"""Per-agent identity files (SOUL.md / AGENTS.md / ROLE.md).
 
 Each sub-agent gets its OWN copy of SOUL.md and AGENTS.md (seeded from the
 shipped templates, lightly personalized) plus a bespoke ROLE.md. A single
 GLOBAL IDENTITY.md is shared by all agents.
 
 These tests do real workspace file I/O, so they pin the module-level
-WORKSPACE_DIR bindings (captured at import time) to the per-test FORVEN_HOME.
-The conftest `_isolate_forven_home` fixture only patches `cfg.WORKSPACE_DIR`,
-which does not reach the `from forven.config import WORKSPACE_DIR` aliases that
+WORKSPACE_DIR bindings (captured at import time) to the per-test AXIOM_HOME.
+The conftest `_isolate_AXIOM_home` fixture only patches `cfg.WORKSPACE_DIR`,
+which does not reach the `from axiom.config import WORKSPACE_DIR` aliases that
 `workspace.py` / `manager.py` bound at import time.
 """
 
@@ -17,7 +17,7 @@ from contextlib import contextmanager
 @contextmanager
 def _pin_workspace_dir(home):
     """Point every module-level WORKSPACE_DIR / LEGACY_WORKSPACE_DIR alias at
-    the per-test home so read/write_workspace touch the temp dir, not ~/.forven.
+    the per-test home so read/write_workspace touch the temp dir, not ~/.Axiom.
     """
     from unittest.mock import patch
 
@@ -26,9 +26,9 @@ def _pin_workspace_dir(home):
     (ws_dir / "agents").mkdir(exist_ok=True)
     (ws_dir / "memory").mkdir(exist_ok=True)
 
-    import forven.config as cfg
-    import forven.workspace as ws_mod
-    import forven.agents.manager as mgr_mod
+    import axiom.config as cfg
+    import axiom.workspace as ws_mod
+    import axiom.agents.manager as mgr_mod
 
     legacy = ws_dir  # collapse legacy mirror onto the same temp dir for tests
 
@@ -49,10 +49,10 @@ def _pin_workspace_dir(home):
             p.stop()
 
 
-def test_create_agent_seeds_three_per_agent_identity_files(forven_db, _isolate_forven_home):
-    home = _isolate_forven_home
+def test_create_agent_seeds_three_per_agent_identity_files(AXIOM_db, _isolate_AXIOM_home):
+    home = _isolate_AXIOM_home
     with _pin_workspace_dir(home) as ws_dir:
-        from forven.agents.manager import create_agent
+        from axiom.agents.manager import create_agent
 
         create_agent(
             agent_id="quant-researcher",
@@ -73,13 +73,13 @@ def test_create_agent_seeds_three_per_agent_identity_files(forven_db, _isolate_f
         assert "Quant Researcher" in (agent_dir / "AGENTS.md").read_text(encoding="utf-8")
         assert "Quant Researcher" in (agent_dir / "ROLE.md").read_text(encoding="utf-8")
         # SOUL/AGENTS carry the shared template body too.
-        assert "Forven" in (agent_dir / "SOUL.md").read_text(encoding="utf-8")
+        assert "Axiom" in (agent_dir / "SOUL.md").read_text(encoding="utf-8")
 
 
-def test_build_agent_documents_returns_per_agent_content(forven_db, _isolate_forven_home):
-    home = _isolate_forven_home
+def test_build_agent_documents_returns_per_agent_content(AXIOM_db, _isolate_AXIOM_home):
+    home = _isolate_AXIOM_home
     with _pin_workspace_dir(home):
-        from forven.agents.manager import create_agent
+        from axiom.agents.manager import create_agent
 
         create_agent(
             agent_id="risk-manager",
@@ -90,7 +90,7 @@ def test_build_agent_documents_returns_per_agent_content(forven_db, _isolate_for
 
         # _build_agent_documents reads read_workspace, which honors the pinned
         # workspace dir.
-        from forven.api_core import _build_agent_documents
+        from axiom.api_core import _build_agent_documents
 
         docs = _build_agent_documents("risk-manager")
         assert docs["soul"].strip()
@@ -103,11 +103,11 @@ def test_build_agent_documents_returns_per_agent_content(forven_db, _isolate_for
         assert "Enforce capital preservation rules." in docs["role"]
 
 
-def test_ensure_identity_files_is_idempotent_and_self_heals(forven_db, _isolate_forven_home):
+def test_ensure_identity_files_is_idempotent_and_self_heals(AXIOM_db, _isolate_AXIOM_home):
     """Self-heal recreates only MISSING files and never clobbers real content."""
-    home = _isolate_forven_home
+    home = _isolate_AXIOM_home
     with _pin_workspace_dir(home) as ws_dir:
-        from forven.agents.manager import create_agent, ensure_agent_identity_files
+        from axiom.agents.manager import create_agent, ensure_agent_identity_files
 
         create_agent(
             agent_id="execution-trader",
@@ -142,11 +142,11 @@ def test_ensure_identity_files_is_idempotent_and_self_heals(forven_db, _isolate_
         ) == []
 
 
-def test_put_agent_document_writes_per_agent_not_global(forven_db, _isolate_forven_home):
-    home = _isolate_forven_home
+def test_put_agent_document_writes_per_agent_not_global(AXIOM_db, _isolate_AXIOM_home):
+    home = _isolate_AXIOM_home
     with _pin_workspace_dir(home) as ws_dir:
-        from forven.agents.manager import create_agent
-        from forven.api_core import (
+        from axiom.agents.manager import create_agent
+        from axiom.api_core import (
             LegacyAgentDocumentBody,
             put_agent_document,
             _build_agent_documents,

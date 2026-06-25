@@ -1,4 +1,4 @@
-"""Regression tests for the /api/strategies/batch-transition endpoint.
+﻿"""Regression tests for the /api/strategies/batch-transition endpoint.
 
 `transition_stage` does NOT raise when a move is *blocked* (WIP cap full,
 operator approval required, gate failure, …). It returns a dict whose
@@ -10,8 +10,8 @@ A success or a no-op (already in the target stage / already archived) has no
 
 from __future__ import annotations
 
-import forven.brain as brain
-from forven.routers.strategies import (
+import axiom.brain as brain
+from axiom.routers.strategies import (
     BatchTransitionBody,
     batch_transition_strategies,
 )

@@ -1,9 +1,9 @@
-from forven.selfheal import validate_strategy_code
+﻿from axiom.selfheal import validate_strategy_code
 
 
 def test_validate_strategy_code_handles_utf8_harness_on_windows():
     code = """
-from forven.strategies.base import BaseStrategy
+from axiom.strategies.base import BaseStrategy
 
 
 class ExampleStrategy(BaseStrategy):
@@ -36,4 +36,4 @@ TYPE_NAME = "example_strategy"
     assert isinstance(result, dict)
     stderr = str(result.get("execution_result", {}).get("stderr") or "").lower()
     assert "charmap" not in stderr
-    assert "no module named 'forven'" not in stderr
+    assert "no module named 'Axiom'" not in stderr

@@ -1,11 +1,11 @@
-"""Tests for reconciliation close paths writing exit price + PnL."""
+﻿"""Tests for reconciliation close paths writing exit price + PnL."""
 
 import json
 from datetime import datetime, timedelta, timezone
 
-from forven.api_domains.trading import _close_stale_open_trades
-from forven.db import get_db
-from forven.trade_state import close_trade_record, mark_trade_pending_close_reconcile
+from axiom.api_domains.trading import _close_stale_open_trades
+from axiom.db import get_db
+from axiom.trade_state import close_trade_record, mark_trade_pending_close_reconcile
 
 
 def _insert_open_trade(
@@ -41,7 +41,7 @@ def _insert_open_trade(
         )
 
 
-def test_stale_close_uses_price_map_and_writes_pnl(forven_db):
+def test_stale_close_uses_price_map_and_writes_pnl(AXIOM_db):
     _insert_open_trade(
         "t-reconcile-1",
         asset="BTC",
@@ -70,7 +70,7 @@ def test_stale_close_uses_price_map_and_writes_pnl(forven_db):
     assert row["pnl_usd"] == 30.0
 
 
-def test_stale_close_falls_back_to_fill_exit_price(forven_db):
+def test_stale_close_falls_back_to_fill_exit_price(AXIOM_db):
     _insert_open_trade(
         "t-reconcile-2",
         asset="ETH",
@@ -100,7 +100,7 @@ def test_stale_close_falls_back_to_fill_exit_price(forven_db):
     assert row["pnl_usd"] == 6.0
 
 
-def test_stale_close_marks_trade_incomplete_when_no_price_is_available(forven_db):
+def test_stale_close_marks_trade_incomplete_when_no_price_is_available(AXIOM_db):
     _insert_open_trade(
         "t-reconcile-3",
         asset="SOL",
@@ -130,7 +130,7 @@ def test_stale_close_marks_trade_incomplete_when_no_price_is_available(forven_db
     assert "stale_missing_on_exchange" in str(row["signal_data"])
 
 
-def test_close_trade_record_preserves_fill_exit_price_over_signal_price(forven_db):
+def test_close_trade_record_preserves_fill_exit_price_over_signal_price(AXIOM_db):
     _insert_open_trade(
         "t-reconcile-4",
         asset="BTC",
@@ -163,7 +163,7 @@ def test_close_trade_record_preserves_fill_exit_price_over_signal_price(forven_d
     assert row["pnl_usd"] == 3.0
 
 
-def test_mark_trade_pending_close_reconcile_keeps_trade_open_until_confirmed(forven_db):
+def test_mark_trade_pending_close_reconcile_keeps_trade_open_until_confirmed(AXIOM_db):
     _insert_open_trade(
         "t-reconcile-5",
         asset="BTC",

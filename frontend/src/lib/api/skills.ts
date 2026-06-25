@@ -3,7 +3,7 @@
  * the Skill detail drawer (P3-T12), and the dashboard declining-skills
  * widget (P3-T15).
  *
- * Contract is fixed by ``forven/routers/skills.py``. Read-only — operator
+ * Contract is fixed by ``axiom/routers/skills.py``. Read-only — operator
  * edits flow through the `skill_update_proposal` approval queue, not via
  * direct PUT. The legacy `/quant-skills/*` client in ``memory.ts`` remains
  * in place for the Hypotheses promotion flow; this module covers the new

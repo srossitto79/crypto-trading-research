@@ -1,6 +1,6 @@
-"""Phase 5 / P5-T05 — per-context toolset filtering.
+﻿"""Phase 5 / P5-T05 — per-context toolset filtering.
 
-Covers ``forven.agents.tool_registry`` extensions:
+Covers ``axiom.agents.tool_registry`` extensions:
 
 * ``get_tools_for_agent(agent_id, context)`` honors ``agent_toolset_overrides``
   and the per-context default-deny rules.
@@ -20,9 +20,9 @@ import asyncio
 
 import pytest
 
-from forven.agents import tool_registry as tr
-from forven.agents.context import reset_tool_context, set_tool_context
-from forven.agents.tool_registry import (
+from axiom.agents import tool_registry as tr
+from axiom.agents.context import reset_tool_context, set_tool_context
+from axiom.agents.tool_registry import (
     ToolDef,
     VALID_CONTEXTS,
     apply_default_categorization,
@@ -31,11 +31,11 @@ from forven.agents.tool_registry import (
     filter_tools_for_context,
     get_tools_for_agent,
 )
-from forven.db import get_db, init_db
+from axiom.db import get_db, init_db
 
 
 @pytest.fixture
-def synthetic_registry(forven_db, monkeypatch):
+def synthetic_registry(AXIOM_db, monkeypatch):
     """Replace the global registry with a minimal, deterministic one.
 
     Returns the dict so tests can mutate categories/permissions if needed.

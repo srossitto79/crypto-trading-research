@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
@@ -6,8 +6,8 @@ from datetime import datetime, timezone
 import pytest
 from fastapi import HTTPException
 
-from forven.api_domains import tasks as tasks_domain
-from forven.db import get_db
+from axiom.api_domains import tasks as tasks_domain
+from axiom.db import get_db
 
 
 def _ensure_agent(agent_id: str = "full-stack-engineer") -> None:
@@ -21,7 +21,7 @@ def _ensure_agent(agent_id: str = "full-stack-engineer") -> None:
         )
 
 
-def test_get_agent_tasks_merges_agent_and_global_rows(forven_db):
+def test_get_agent_tasks_merges_agent_and_global_rows(AXIOM_db):
     now = datetime.now(timezone.utc).isoformat()
     _ensure_agent()
     with get_db() as conn:
@@ -49,7 +49,7 @@ def test_get_agent_tasks_merges_agent_and_global_rows(forven_db):
     assert payload[1]["source"] == "tasks"
 
 
-def test_get_agent_tasks_filters_stale_brain_callback_history(forven_db):
+def test_get_agent_tasks_filters_stale_brain_callback_history(AXIOM_db):
     now = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
         hidden_cancelled_id = conn.execute(
@@ -66,7 +66,7 @@ def test_get_agent_tasks_filters_stale_brain_callback_history(forven_db):
             INSERT INTO tasks
                 (type, payload, status, priority, created_at, completed_at, error)
             VALUES
-                ('brain_invoke', '{"source":"bootstrap","message":"Forven just started."}', 'done', 1, ?, ?, NULL)
+                ('brain_invoke', '{"source":"bootstrap","message":"axiom just started."}', 'done', 1, ?, ?, NULL)
             """,
             (now, now),
         ).lastrowid
@@ -98,7 +98,7 @@ def test_get_agent_tasks_filters_stale_brain_callback_history(forven_db):
     assert int(visible_noncallback_id) in ids
 
 
-def test_dismiss_agent_task_hides_failed_row_and_keeps_audit(forven_db):
+def test_dismiss_agent_task_hides_failed_row_and_keeps_audit(AXIOM_db):
     now = datetime.now(timezone.utc).isoformat()
     _ensure_agent()
     with get_db() as conn:
@@ -135,7 +135,7 @@ def test_dismiss_agent_task_hides_failed_row_and_keeps_audit(forven_db):
     assert audit_log[-1]["note"] == "handled"
 
 
-def test_dismiss_global_task_hides_failed_row(forven_db):
+def test_dismiss_global_task_hides_failed_row(AXIOM_db):
     now = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
         task_id = conn.execute(
@@ -167,7 +167,7 @@ def test_dismiss_global_task_hides_failed_row(forven_db):
     assert row["dismissed_by"] == "operator"
 
 
-def test_dismiss_running_task_is_rejected(forven_db):
+def test_dismiss_running_task_is_rejected(AXIOM_db):
     now = datetime.now(timezone.utc).isoformat()
     _ensure_agent()
     with get_db() as conn:
@@ -186,7 +186,7 @@ def test_dismiss_running_task_is_rejected(forven_db):
     assert exc.value.status_code == 409
 
 
-def test_get_task_containers_filters_and_audit_lookup(forven_db):
+def test_get_task_containers_filters_and_audit_lookup(AXIOM_db):
     now = datetime.now(timezone.utc).isoformat()
     _ensure_agent()
     with get_db() as conn:
@@ -215,7 +215,7 @@ def test_get_task_containers_filters_and_audit_lookup(forven_db):
     assert audit["tool_calls"] == []
 
 
-def test_get_task_containers_sanitizes_nonfinite_payload_values(forven_db):
+def test_get_task_containers_sanitizes_nonfinite_payload_values(AXIOM_db):
     now = datetime.now(timezone.utc).isoformat()
     _ensure_agent()
     with get_db() as conn:
@@ -248,7 +248,7 @@ def test_get_task_containers_sanitizes_nonfinite_payload_values(forven_db):
     assert task["audit_log"][0]["score"] is None
 
 
-def test_get_pipeline_errors_and_activity_stub(forven_db):
+def test_get_pipeline_errors_and_activity_stub(AXIOM_db):
     now = datetime.now(timezone.utc).isoformat()
     _ensure_agent()
     with get_db() as conn:
@@ -288,16 +288,16 @@ def test_assign_pipeline_error_requires_agent_id():
         tasks_domain.assign_pipeline_error_stub(task_id=1, agent_id="")
 
 
-def test_seed_pipeline_creates_missing_strategies(monkeypatch, forven_db):
+def test_seed_pipeline_creates_missing_strategies(monkeypatch, AXIOM_db):
     created: list[str] = []
     promoted: list[str] = []
 
     monkeypatch.setattr(
-        "forven.brain.create_strategy",
+        "axiom.brain.create_strategy",
         lambda strategy_id, **kwargs: created.append(strategy_id),
     )
     monkeypatch.setattr(
-        "forven.brain.transition_stage",
+        "axiom.brain.transition_stage",
         lambda strategy_id, *args, **kwargs: promoted.append(strategy_id),
     )
 

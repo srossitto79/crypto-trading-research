@@ -1,4 +1,4 @@
-"""Symbol typeahead search: source/exchange routing for the Data Manager fetch form.
+﻿"""Symbol typeahead search: source/exchange routing for the Data Manager fetch form.
 
 The fetch form's Symbol field is a live typeahead backed by
 search_source_symbols -> search_ccxt_symbols(exchange). These tests pin the
@@ -10,7 +10,7 @@ from __future__ import annotations
 
 
 def test_ccxt_search_honours_selected_exchange(monkeypatch):
-    from forven import data as d
+    from axiom import data as d
 
     captured: dict[str, object] = {}
     monkeypatch.setattr(
@@ -24,7 +24,7 @@ def test_ccxt_search_honours_selected_exchange(monkeypatch):
 
 
 def test_binance_source_always_searches_binance(monkeypatch):
-    from forven import data as d
+    from axiom import data as d
 
     captured: dict[str, object] = {}
     monkeypatch.setattr(
@@ -38,7 +38,7 @@ def test_binance_source_always_searches_binance(monkeypatch):
 
 
 def test_unknown_exchange_falls_back_to_binance(monkeypatch):
-    from forven import data as d
+    from axiom import data as d
 
     captured: dict[str, object] = {}
     monkeypatch.setattr(
@@ -52,7 +52,7 @@ def test_unknown_exchange_falls_back_to_binance(monkeypatch):
 
 
 def test_empty_query_short_circuits_without_loading_markets(monkeypatch):
-    from forven import data as d
+    from axiom import data as d
 
     called = {"n": 0}
     monkeypatch.setattr(
@@ -66,7 +66,7 @@ def test_empty_query_short_circuits_without_loading_markets(monkeypatch):
 
 
 def test_unsupported_source_returns_empty(monkeypatch):
-    from forven import data as d
+    from axiom import data as d
 
     called = {"n": 0}
     monkeypatch.setattr(
@@ -83,7 +83,7 @@ def test_search_ccxt_symbols_excludes_non_spot_markets(monkeypatch):
     """Perps/futures must not be offered: the fetch pipeline is spot-only, so a
     perp pick (e.g. BTC/USDT:USDT) would silently collapse to and fetch the SPOT
     series. Only type == 'spot' markets may surface in the typeahead."""
-    from forven import data as d
+    from axiom import data as d
 
     fake_markets = {
         "BTC/USDT": {"symbol": "BTC/USDT", "base": "BTC", "quote": "USDT", "type": "spot", "active": True},
@@ -99,7 +99,7 @@ def test_search_ccxt_symbols_excludes_non_spot_markets(monkeypatch):
 
 
 def test_exchange_casing_and_whitespace_normalized(monkeypatch):
-    from forven import data as d
+    from axiom import data as d
 
     captured: dict[str, object] = {}
     monkeypatch.setattr(
@@ -113,8 +113,8 @@ def test_exchange_casing_and_whitespace_normalized(monkeypatch):
 
 def test_search_source_symbols_stub_threads_exchange(monkeypatch):
     """The no-source-prefix entry point must also carry exchange through."""
-    from forven import data as d
-    from forven.api_domains import data as dd
+    from axiom import data as d
+    from axiom.api_domains import data as dd
 
     captured: dict[str, object] = {}
     monkeypatch.setattr(
@@ -130,8 +130,8 @@ def test_search_source_symbols_stub_threads_exchange(monkeypatch):
 
 def test_domain_layer_threads_exchange(monkeypatch):
     """The router -> domain -> data hop must carry the exchange param through."""
-    from forven import data as d
-    from forven.api_domains import data as dd
+    from axiom import data as d
+    from axiom.api_domains import data as dd
 
     captured: dict[str, object] = {}
     monkeypatch.setattr(

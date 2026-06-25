@@ -1,6 +1,6 @@
-import sys
-sys.path.append('C:/Forven')
-from forven.db import get_db, kv_get
+﻿import sys
+sys.path.append('C:/Axiom')
+from axiom.db import get_db, kv_get
 
 def check_status():
     with get_db() as conn:
@@ -24,7 +24,7 @@ def check_status():
             print(dict(r))
 
         print("\n--- Settings ---")
-        settings = kv_get('forven:settings', {})
+        settings = kv_get('Axiom:settings', {})
         print(f"Execution Mode: {settings.get('execution_mode')}")
         print(f"Autopilot: {settings.get('autopilot_enabled')}")
 

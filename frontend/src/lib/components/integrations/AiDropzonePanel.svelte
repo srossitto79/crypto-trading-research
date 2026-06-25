@@ -19,7 +19,7 @@
 	import { fetchApi } from '$lib/api/core';
 	import { scanStrategy, type AstReport } from '$lib/api/strategyGuard';
 
-	const SESSION_STORAGE_KEY = 'forven:ai-dropzone:active-session-id';
+	const SESSION_STORAGE_KEY = 'axiom:ai-dropzone:active-session-id';
 	const REFRESH_MS = 5000;
 
 	// ── State ────────────────────────────────────────────────────────────
@@ -133,7 +133,7 @@
 				'Global: ~/.claude.json (mcpServers section)',
 				'Per-project: .mcp.json at the repo root',
 			],
-			note: 'Or run: claude mcp add forven -- python -m forven.mcp_server',
+			note: 'Or run: claude mcp add axiom -- python -m axiom.mcp_server',
 		},
 		{
 			id: 'cursor',
@@ -392,7 +392,7 @@
 		if (!path) return;
 		// AST gate: refuse to register a path that hasn't been scanned clean
 		// in this session. Forces operator awareness of forbidden imports
-		// before code lands in forven/strategies/custom/.
+		// before code lands in axiom/strategies/custom/.
 		if (!scanReport || scannedPath !== path) {
 			error = 'Run "Scan" first — AST scan is required before registering.';
 			return;
@@ -455,11 +455,11 @@
 	function serverSpec() {
 		return {
 			command: 'python',
-			args: ['-m', 'forven.mcp_server'],
+			args: ['-m', 'axiom.mcp_server'],
 			env: {
-				FORVEN_API_URL: backendUrl(),
-				FORVEN_API_KEY: 'your-api-key',
-				FORVEN_OPERATOR_KEY: 'your-operator-key',
+				AXIOM_API_URL: backendUrl(),
+				AXIOM_API_KEY: 'your-api-key',
+				AXIOM_OPERATOR_KEY: 'your-operator-key',
 			},
 		};
 	}
@@ -471,7 +471,7 @@
 				// VS Code native MCP: { "servers": { name: { type: "stdio", command, args, env } } }
 				const cfg = {
 					servers: {
-						forven: {
+						axiom: {
 							type: 'stdio',
 							command: spec.command,
 							args: spec.args,
@@ -485,7 +485,7 @@
 				// Zed: context_servers: { name: { command: { path, args, env } } }
 				const cfg = {
 					context_servers: {
-						forven: {
+						axiom: {
 							command: {
 								path: spec.command,
 								args: spec.args,
@@ -520,7 +520,7 @@
 					.map(([k, v]) => `${k} = "${v}"`)
 					.join(', ');
 				return [
-					'[mcp_servers.forven]',
+					'[mcp_servers.axiom]',
 					`command = "${spec.command}"`,
 					`args = [${spec.args.map((a) => `"${a}"`).join(', ')}]`,
 					`env = { ${envLines} }`,
@@ -528,7 +528,7 @@
 			}
 			case 'mcp-servers-json':
 			default: {
-				const cfg = { mcpServers: { forven: serverSpec() } };
+				const cfg = { mcpServers: { axiom: serverSpec() } };
 				return JSON.stringify(cfg, null, 2);
 			}
 		}
@@ -539,11 +539,11 @@
 	function buildCliCommand(): string {
 		// For clients that accept CLI registration (e.g. `claude mcp add`).
 		return (
-			`claude mcp add forven ` +
-			`-e FORVEN_API_URL=${backendUrl()} ` +
-			`-e FORVEN_API_KEY=your-api-key ` +
-			`-e FORVEN_OPERATOR_KEY=your-operator-key ` +
-			`-- python -m forven.mcp_server`
+			`claude mcp add axiom ` +
+			`-e AXIOM_API_URL=${backendUrl()} ` +
+			`-e AXIOM_API_KEY=your-api-key ` +
+			`-e AXIOM_OPERATOR_KEY=your-operator-key ` +
+			`-- python -m axiom.mcp_server`
 		);
 	}
 
@@ -568,25 +568,25 @@
 	// ── HTTP harness (no-MCP) snippets ───────────────────────────────────
 	// For harnesses where MCP isn't available (the Tauri app, Codex, sidecars,
 	// CI) — the same toolset over the REST API via the zero-dependency
-	// `forven.agent` client/CLI, or any HTTP client.
+	// `axiom.agent` client/CLI, or any HTTP client.
 	function httpCliSnippet(): string {
 		const base = backendUrl();
 		return [
 			'# Any shell — Claude Code, Codex, CI. JSON in / JSON out.',
-			'# (set FORVEN_API_URL if the backend is not on this machine)',
-			`export FORVEN_API_URL=${base}`,
-			'python -m forven.agent health            # or: forven-agent health',
-			'python -m forven.agent list --status paper',
-			'python -m forven.agent backtest --strategy S00719 --dataset BTC/USDT-1h --compact',
-			'# write a strategy .py to forven/strategies/custom/, then run the full loop:',
-			'python -m forven.agent enqueue --file /abs/path/strategy.py --dataset BTC/USDT-1h',
-			'python -m forven.agent wait-paper --strategies S00719 --timeout 1800',
+			'# (set AXIOM_API_URL if the backend is not on this machine)',
+			`export AXIOM_API_URL=${base}`,
+			'python -m axiom.agent health            # or: axiom-agent health',
+			'python -m axiom.agent list --status paper',
+			'python -m axiom.agent backtest --strategy S00719 --dataset BTC/USDT-1h --compact',
+			'# write a strategy .py to axiom/strategies/custom/, then run the full loop:',
+			'python -m axiom.agent enqueue --file /abs/path/strategy.py --dataset BTC/USDT-1h',
+			'python -m axiom.agent wait-paper --strategies S00719 --timeout 1800',
 		].join('\n');
 	}
 	function httpPySnippet(): string {
 		return [
-			'from forven.agent import ForvenAgentClient',
-			'fc = ForvenAgentClient()   # FORVEN_API_URL / base_url override',
+			'from axiom.agent import AxiomAgentClient',
+			'fc = AxiomAgentClient()   # AXIOM_API_URL / base_url override',
 			'fc.health()',
 			'# register -> 365d backtest -> quick-screen -> enqueue to gauntlet (force=false)',
 			'verdict = fc.enqueue_candidate("/abs/path/strategy.py", "BTC/USDT-1h")',
@@ -595,8 +595,8 @@
 	function httpTsSnippet(): string {
 		return [
 			"// In-app / Tauri / browser — reuses the app's fetchApi (auth + base discovery)",
-			"import ForvenAgent from '$lib/api/agent';",
-			'const v = await ForvenAgent.enqueueCandidate("/abs/path/strategy.py", "BTC/USDT-1h");',
+			"import AxiomAgent from '$lib/api/agent';",
+			'const v = await AxiomAgent.enqueueCandidate("/abs/path/strategy.py", "BTC/USDT-1h");',
 		].join('\n');
 	}
 	const HTTP_ENDPOINTS: { method: string; path: string; purpose: string }[] = [
@@ -655,7 +655,7 @@
 					<div class="flex items-center gap-1.5">
 						<div class="w-1.5 h-1.5 rounded-full {backendOk ? 'bg-emerald-400' : 'bg-red-400'}"></div>
 						<span class="text-[10px] text-gray-500">Backend</span>
-						<span class="help-tip">?<span class="help-text">Forven HTTP API at /api. If this is red, MCP tool calls will also fail — MCP proxies through this API.</span></span>
+						<span class="help-tip">?<span class="help-text">Axiom HTTP API at /api. If this is red, MCP tool calls will also fail — MCP proxies through this API.</span></span>
 					</div>
 					<div class="text-[10px] text-gray-500">
 						<span class="text-gray-400">{openSessions.length}</span> open /
@@ -849,7 +849,7 @@
 					<p class="text-[11px] text-gray-400">
 						The MCP server is just a thin wrapper over this REST API — use HTTP directly when MCP
 						isn't available (the in-app/Tauri assistant, Codex, sidecars, CI). The
-						<code class="bg-[#111] px-1 rounded">forven.agent</code> client is stdlib-only (zero deps).
+						<code class="bg-[#111] px-1 rounded">axiom.agent</code> client is stdlib-only (zero deps).
 						Base URL:
 						<code class="bg-[#111] px-1.5 py-0.5 rounded text-gray-300">{backendUrl()}</code>
 						<button
@@ -906,9 +906,9 @@
 						Auth is only needed if the backend is exposed beyond localhost: send
 						<code class="bg-[#111] px-1 rounded">x-api-key</code> /
 						<code class="bg-[#111] px-1 rounded">x-operator-key</code> headers, or set
-						<code class="bg-[#111] px-1 rounded">FORVEN_API_KEY</code> /
-						<code class="bg-[#111] px-1 rounded">FORVEN_OPERATOR_KEY</code>. Full reference:
-						<code class="bg-[#111] px-1 rounded">forven/agent/README.md</code>.
+						<code class="bg-[#111] px-1 rounded">AXIOM_API_KEY</code> /
+						<code class="bg-[#111] px-1 rounded">AXIOM_OPERATOR_KEY</code>. Full reference:
+						<code class="bg-[#111] px-1 rounded">axiom/agent/README.md</code>.
 					</p>
 				</div>
 			{/if}
@@ -940,7 +940,7 @@
 
 				{#if !activeDetail}
 					<div class="p-6 text-center text-xs text-gray-600">
-						No session selected. Tell your assistant: <em class="text-gray-400">"Open a Forven session for X"</em>
+						No session selected. Tell your assistant: <em class="text-gray-400">"Open an Axiom session for X"</em>
 					</div>
 				{:else}
 					<!-- Strategies -->

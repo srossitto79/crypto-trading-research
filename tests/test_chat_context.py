@@ -1,10 +1,10 @@
-"""Chat-context grounding + conversation persistence tests."""
+﻿"""Chat-context grounding + conversation persistence tests."""
 from __future__ import annotations
 
 import asyncio
 import json
 
-import forven.context as ctx
+import axiom.context as ctx
 
 
 # ---------------------------------------------------------------------------
@@ -91,7 +91,7 @@ def _patch_store_narrative(monkeypatch):
         captured.summary = summary
         captured.metadata = metadata
 
-    import forven.vectordb as vdb
+    import axiom.vectordb as vdb
 
     monkeypatch.setattr(vdb, "store_narrative", _fake_store_narrative, raising=True)
     return captured
@@ -102,7 +102,7 @@ def test_store_conversation_default_source_is_ui_chat(monkeypatch):
     asyncio.run(
         ctx.store_conversation(
             user_msg="How is S00719 doing in the gauntlet?",
-            ai_response="It is mid-gauntlet with a Sharpe near 1.4 on the OOS window. — Forven",
+            ai_response="It is mid-gauntlet with a Sharpe near 1.4 on the OOS window. — Axiom",
         )
     )
     assert captured.metadata is not None
@@ -117,7 +117,7 @@ def test_store_conversation_explicit_ui_chat_source(monkeypatch):
         ctx.store_conversation(
             None,
             "What is in the pipeline right now exactly?",
-            "Two candidates in gauntlet and one paper strategy. — Forven",
+            "Two candidates in gauntlet and one paper strategy. — Axiom",
             source="ui_chat",
         )
     )
@@ -133,7 +133,7 @@ def test_store_conversation_discord_backward_compat(monkeypatch):
         ctx.store_conversation(
             "general",
             "How are we doing today on the books?",
-            "Equity is flat, no open positions, regime is range-bound. — Forven",
+            "Equity is flat, no open positions, regime is range-bound. — Axiom",
         )
     )
     assert captured.metadata["source"] == "discord"
@@ -147,7 +147,7 @@ def test_store_conversation_explicit_discord_source(monkeypatch):
         ctx.store_conversation(
             "alerts",
             "Did the kill switch trip overnight on the account?",
-            "No, drawdown stayed under 2% the whole session. — Forven",
+            "No, drawdown stayed under 2% the whole session. — Axiom",
             source="discord",
         )
     )
@@ -167,16 +167,16 @@ def test_store_conversation_skips_trivial_exchanges(monkeypatch):
 # runtime_worker is_chat branch — CHAT_ACT toolset wiring + persistence
 # ---------------------------------------------------------------------------
 
-def test_run_brain_task_chat_uses_act_toolset_and_persists(forven_db, monkeypatch):
-    from forven import runtime_worker
-    from forven.agents.tool_definitions import CHAT_ACT_TOOL_NAMES
+def test_run_brain_task_chat_uses_act_toolset_and_persists(AXIOM_db, monkeypatch):
+    from axiom import runtime_worker
+    from axiom.agents.tool_definitions import CHAT_ACT_TOOL_NAMES
 
     captured: dict = {}
 
     async def _fake_call_with_tools(provider, model, messages, context, tools=None):
         captured["tools"] = tools
         captured["last_message"] = messages[-1]["content"]
-        return ("Looks healthy. — Forven", {})
+        return ("Looks healthy. — Axiom", {})
 
     stored: dict = {}
 
@@ -186,12 +186,12 @@ def test_run_brain_task_chat_uses_act_toolset_and_persists(forven_db, monkeypatc
         stored["ai_response"] = ai_response
         stored["source"] = source
 
-    monkeypatch.setattr("forven.context.build_chat_context", lambda: "ctx")
-    monkeypatch.setattr("forven.context.store_conversation", _fake_store_conversation)
-    monkeypatch.setattr("forven.brain.resolve_brain_provider_model", lambda p, m: ("openai", "gpt-5.2"))
-    monkeypatch.setattr("forven.agents.runner._call_with_tools", _fake_call_with_tools)
-    monkeypatch.setattr("forven.agents.runner.set_tool_context", lambda *a, **k: ())
-    monkeypatch.setattr("forven.agents.runner.reset_tool_context", lambda *_: None)
+    monkeypatch.setattr("axiom.context.build_chat_context", lambda: "ctx")
+    monkeypatch.setattr("axiom.context.store_conversation", _fake_store_conversation)
+    monkeypatch.setattr("axiom.brain.resolve_brain_provider_model", lambda p, m: ("openai", "gpt-5.2"))
+    monkeypatch.setattr("axiom.agents.runner._call_with_tools", _fake_call_with_tools)
+    monkeypatch.setattr("axiom.agents.runner.set_tool_context", lambda *a, **k: ())
+    monkeypatch.setattr("axiom.agents.runner.reset_tool_context", lambda *_: None)
 
     task = {
         "id": 7,
@@ -215,4 +215,4 @@ def test_run_brain_task_chat_uses_act_toolset_and_persists(forven_db, monkeypatc
     # The exchange is persisted for recall with the ui_chat source.
     assert stored["source"] == "ui_chat"
     assert stored["user_msg"] == "How is S00719 doing in the gauntlet right now?"
-    assert "Forven" in stored["ai_response"]
+    assert "Axiom" in stored["ai_response"]

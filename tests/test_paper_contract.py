@@ -1,10 +1,10 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
 
-from forven.api_domains import paper as paper_domain
-from forven.db import get_db, kv_set
+from axiom.api_domains import paper as paper_domain
+from axiom.db import get_db, kv_set
 
 
 def _insert_strategy(strategy_id: str, *, stage: str = "paper", params: dict | None = None) -> None:
@@ -103,7 +103,7 @@ def _insert_closed_trade(
         )
 
 
-def test_paper_stage_strategy_projects_as_compat_session(forven_db):
+def test_paper_stage_strategy_projects_as_compat_session(AXIOM_db):
     _insert_strategy("paper-contract-1")
 
     sessions = paper_domain.get_paper_sessions()
@@ -119,7 +119,7 @@ def test_paper_stage_strategy_projects_as_compat_session(forven_db):
     assert session["compat_kind"] == "paper"
 
 
-def test_open_paper_trade_projects_position(forven_db):
+def test_open_paper_trade_projects_position(AXIOM_db):
     _insert_strategy("paper-contract-2")
     _insert_trade("paper-contract-2")
 
@@ -133,7 +133,7 @@ def test_open_paper_trade_projects_position(forven_db):
     assert session["position"]["take_profit_price"] == 110.0
 
 
-def test_closed_paper_trade_projection_uses_exit_fallbacks(forven_db):
+def test_closed_paper_trade_projection_uses_exit_fallbacks(AXIOM_db):
     _insert_strategy("paper-contract-3")
     _insert_closed_trade("paper-contract-3")
 
@@ -148,7 +148,7 @@ def test_closed_paper_trade_projection_uses_exit_fallbacks(forven_db):
     assert trade["close_reason"] == "signal_exit"
 
 
-def test_paper_session_reports_closed_trade_performance_metrics(forven_db):
+def test_paper_session_reports_closed_trade_performance_metrics(AXIOM_db):
     _insert_strategy("paper-contract-performance")
     _insert_closed_trade("paper-contract-performance", suffix="win", entry_price=100.0, exit_price=110.0, size=1.0)
     _insert_closed_trade("paper-contract-performance", suffix="loss", entry_price=100.0, exit_price=94.0, size=1.0)
@@ -173,7 +173,7 @@ def test_paper_session_reports_closed_trade_performance_metrics(forven_db):
     assert session["profit_factor"] == 1.6667
 
 
-def test_flat_paper_session_reports_trade_mode_from_default_params(forven_db):
+def test_flat_paper_session_reports_trade_mode_from_default_params(AXIOM_db):
     _insert_strategy(
         "paper-contract-short-only",
         params={"fast": 12, "slow": 26, "trade_mode": "short_only", "leverage": 2.0},
@@ -187,7 +187,7 @@ def test_flat_paper_session_reports_trade_mode_from_default_params(forven_db):
     assert session["decision_params"]["trade_mode"] == "short_only"
 
 
-def test_paper_session_prefers_scanner_canonical_decision_params(forven_db):
+def test_paper_session_prefers_scanner_canonical_decision_params(AXIOM_db):
     _insert_strategy(
         "paper-contract-canonical",
         params={"fast_ema": 9, "slow_ema": 21, "leverage": 1.0},
@@ -214,7 +214,7 @@ def test_paper_session_prefers_scanner_canonical_decision_params(forven_db):
     assert session["leverage"] == 3.0
 
 
-def test_paper_session_surfaces_scanner_blocked_reason(forven_db):
+def test_paper_session_surfaces_scanner_blocked_reason(AXIOM_db):
     _insert_strategy("paper-contract-regime-gated")
     kv_set(
         "scanner_state",
@@ -240,7 +240,7 @@ def test_paper_session_surfaces_scanner_blocked_reason(forven_db):
     assert session["status"] == "gated"
 
 
-def test_paper_session_does_not_mark_static_regime_mismatch_as_gated(forven_db):
+def test_paper_session_does_not_mark_static_regime_mismatch_as_gated(AXIOM_db):
     _insert_strategy("paper-contract-static-regime")
     with get_db() as conn:
         conn.execute(
@@ -278,7 +278,7 @@ def test_paper_session_does_not_mark_static_regime_mismatch_as_gated(forven_db):
     assert session["status"] != "gated"
 
 
-def test_paper_session_marks_non_regime_blocked_status(forven_db):
+def test_paper_session_marks_non_regime_blocked_status(AXIOM_db):
     _insert_strategy("paper-contract-runtime-blocked")
     kv_set(
         "scanner_state",

@@ -1,10 +1,10 @@
-import json
+﻿import json
 import pytest
-from forven.db import get_db
+from axiom.db import get_db
 
 
 @pytest.fixture
-def tmp_strategy(forven_db):
+def tmp_strategy(AXIOM_db):
     with get_db() as conn:
         conn.execute(
             "INSERT OR REPLACE INTO strategies (id, name, params) VALUES (?, ?, ?)",
@@ -15,7 +15,7 @@ def tmp_strategy(forven_db):
 
 
 def test_update_existing_params(tmp_strategy):
-    from forven.agents.tools_deepdive import _update_default_params, set_deepdive_strategy
+    from axiom.agents.tools_deepdive import _update_default_params, set_deepdive_strategy
     set_deepdive_strategy(tmp_strategy)
     _update_default_params(params={"rsi_period": 21}, rationale="longer lookback", thread_id="dd_t")
     with get_db() as conn:
@@ -28,14 +28,14 @@ def test_update_existing_params(tmp_strategy):
 
 
 def test_update_unknown_key_rejected(tmp_strategy):
-    from forven.agents.tools_deepdive import _update_default_params, set_deepdive_strategy
+    from axiom.agents.tools_deepdive import _update_default_params, set_deepdive_strategy
     set_deepdive_strategy(tmp_strategy)
     with pytest.raises(ValueError, match="unknown param"):
         _update_default_params(params={"made_up_key": 1}, rationale="x", thread_id="dd_t")
 
 
 def test_update_logs_to_activity(tmp_strategy):
-    from forven.agents.tools_deepdive import _update_default_params, set_deepdive_strategy
+    from axiom.agents.tools_deepdive import _update_default_params, set_deepdive_strategy
     set_deepdive_strategy(tmp_strategy)
     _update_default_params(params={"rsi_period": 21}, rationale="r", thread_id="dd_p")
     with get_db() as conn:

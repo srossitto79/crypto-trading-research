@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """
 Example: Use CCXT for live price feeds with MockExchange for paper trading.
 
@@ -9,8 +9,8 @@ This combines the best of both worlds:
 """
 
 import asyncio
-from forven.exchange import CCXTExchange, MockExchange
-from forven.exchange.hyperliquid import set_exchange, get_exchange
+from axiom.exchange import CCXTExchange, MockExchange
+from axiom.exchange.hyperliquid import set_exchange, get_exchange
 
 
 async def main():
@@ -178,7 +178,7 @@ async def example_get_candles():
 
 if __name__ == "__main__":
     print("\n" + "=" * 60)
-    print("Forven CCXT Integration Examples")
+    print("Axiom CCXT Integration Examples")
     print("=" * 60 + "\n")
 
     # Run paper trading example (safe, no auth needed)

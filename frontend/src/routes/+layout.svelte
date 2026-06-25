@@ -7,11 +7,11 @@
 	import { backendConnected } from '$lib/stores';
 	import { bootstrapActiveProcesses } from '$lib/stores/processTracker';
 	import { startHeartbeat, stopHeartbeat } from '$lib/stores/heartbeat';
-	import { connectForvenWs, disconnectForvenWs, forvenWsConnected } from '$lib/stores/forvenWebSocket';
+	import { connectAxiomWs, disconnectAxiomWs, axiomWsConnected } from '$lib/stores/axiomWebSocket';
 	import { shouldMarkBackendDisconnected } from '$lib/utils/connectionHealth';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import Toast from '$lib/components/Toast.svelte';
-	import GlobalControlStrip from '$lib/components/forven/GlobalControlStrip.svelte';
+	import GlobalControlStrip from '$lib/components/axiom/GlobalControlStrip.svelte';
 	import LaunchBanner from '$lib/components/LaunchBanner.svelte';
 	import RiskDisclaimerBanner from '$lib/components/RiskDisclaimerBanner.svelte';
 	import AgentProviderBanner from '$lib/components/AgentProviderBanner.svelte';
@@ -87,10 +87,10 @@
 		'/memory': 'Explore, curate, and audit cross-source AI memory across narrative, Chroma, and workspace logs.',
 		'/tasks': 'Inspect task containers, ownership, status transitions, and execution audit trails.',
 		'/approval': 'Review Brain proposals and approve, deny, or revise execution tasks.',
-		'/diagnostics': 'Health checks, cost rollups, and resumable tasks for the Forven runtime.',
-		'/integrations': 'Connect AI clients to Forven and manage external MCP tool servers for agents.',
-		'/integrations/mcp': 'Connect AI clients to Forven and manage external MCP tool servers for agents.',
-		'/settings': 'Configure execution, API keys, alerts, and platform preferences for Forven.',
+		'/diagnostics': 'Health checks, cost rollups, and resumable tasks for the Axiom runtime.',
+		'/integrations': 'Connect AI clients to Axiom and manage external MCP tool servers for agents.',
+		'/integrations/mcp': 'Connect AI clients to Axiom and manage external MCP tool servers for agents.',
+		'/settings': 'Configure execution, API keys, alerts, and platform preferences for Axiom.',
 	};
 
 	function titleCase(value: string): string {
@@ -117,11 +117,11 @@
 	function resolvePageDescription(pathname: string): string {
 		if (pathname.startsWith('/lab/strategy/')) return 'View a single strategy container dossier with lifecycle history and execution records.';
 		if (pathname.startsWith('/tasks/') && pathname !== '/tasks/') return 'Inspect a single task container with audit trail, tool calls, and execution data.';
-		if (pathname.startsWith('/integrations')) return 'Connect AI clients to Forven and manage external MCP tool servers for agents.';
-		return DESCRIPTION_OVERRIDES[pathname] ?? 'Forven trading workspace.';
+		if (pathname.startsWith('/integrations')) return 'Connect AI clients to Axiom and manage external MCP tool servers for agents.';
+		return DESCRIPTION_OVERRIDES[pathname] ?? 'Axiom trading workspace.';
 	}
 
-	$: pageTitle = `${resolvePageTitle($page.url.pathname)} | Forven`;
+	$: pageTitle = `${resolvePageTitle($page.url.pathname)} | Axiom`;
 	$: pageDescription = resolvePageDescription($page.url.pathname);
 	$: unreadChatCountLabel = $chatUnreadCount > 9 ? '9+' : String($chatUnreadCount);
 	// Publish the current route (+ inferred page kind) to the assistant on every
@@ -156,13 +156,13 @@
 
 	function startWsChannel(): void {
 		if (wsChannelActive) return;
-		connectForvenWs();
+		connectAxiomWs();
 		wsChannelActive = true;
 	}
 
 	function stopWsChannel(): void {
 		if (!wsChannelActive) return;
-		disconnectForvenWs();
+		disconnectAxiomWs();
 		wsChannelActive = false;
 	}
 
@@ -192,7 +192,7 @@
 			healthFailureCount = 0;
 			lastHealthyAt = Date.now();
 		} catch {
-			const wsStillConnected = get(forvenWsConnected);
+			const wsStillConnected = get(axiomWsConnected);
 			healthFailureCount += 1;
 			if (shouldMarkBackendDisconnected({
 				wsStillConnected,
@@ -231,7 +231,7 @@
 			}
 		});
 		if (typeof window !== 'undefined') {
-			window.addEventListener('forven:reconnected', handleReconnect);
+			window.addEventListener('axiom:reconnected', handleReconnect);
 		}
 	});
 
@@ -243,7 +243,7 @@
 			healthRetryTimer = null;
 		}
 		if (typeof window !== 'undefined') {
-			window.removeEventListener('forven:reconnected', handleReconnect);
+			window.removeEventListener('axiom:reconnected', handleReconnect);
 		}
 	});
 

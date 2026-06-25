@@ -1,8 +1,8 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import pandas as pd
 
-import forven.strategies.backtest as backtest_mod
+import axiom.strategies.backtest as backtest_mod
 
 
 def test_vectorized_williams_r_applies_adx_max_to_entries():

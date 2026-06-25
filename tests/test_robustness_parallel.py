@@ -1,4 +1,4 @@
-"""Parallel fan-out for robustness reruns (parameter jitter et al.).
+﻿"""Parallel fan-out for robustness reruns (parameter jitter et al.).
 
 The reruns are independent, DB-free backtests, so they are executed in chunks of
 ``workers`` instead of strictly serially. These tests pin the contract the jitter
@@ -11,7 +11,7 @@ from __future__ import annotations
 import threading
 import time
 
-from forven.routers.robustness import (
+from axiom.routers.robustness import (
     _ROBUSTNESS_RERUN_MAX_WORKERS,
     _resolve_robustness_workers,
     _run_backtests_chunked_parallel,

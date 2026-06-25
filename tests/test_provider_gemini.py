@@ -1,4 +1,4 @@
-"""GeminiProvider unit tests.
+﻿"""GeminiProvider unit tests.
 
 Confirms the Google Gemini round-trip via its OpenAI-compatible endpoint:
 - inherits OpenAI function-calling format,
@@ -16,7 +16,7 @@ import asyncio
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from forven.agents.providers import (
+from axiom.agents.providers import (
     GeminiProvider,
     OpenAIProvider,
     ProviderResponse,
@@ -48,7 +48,7 @@ def test_factory_resolves_gemini() -> None:
 
 
 def test_gemini_default_endpoint() -> None:
-    with patch("forven.agents.providers.get_profile", return_value=None):
+    with patch("axiom.agents.providers.get_profile", return_value=None):
         provider = GeminiProvider()
         assert provider.ENDPOINT == (
             "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
@@ -57,7 +57,7 @@ def test_gemini_default_endpoint() -> None:
 
 def test_gemini_endpoint_override() -> None:
     with patch(
-        "forven.agents.providers.get_profile",
+        "axiom.agents.providers.get_profile",
         return_value={"base_url": "https://proxy.example.com/"},
     ):
         provider = GeminiProvider()
@@ -81,8 +81,8 @@ def test_gemini_call_returns_tool_calls() -> None:
     mock_client.__aexit__ = AsyncMock(return_value=False)
     mock_client.post = AsyncMock(return_value=fake_resp)
 
-    with patch("forven.agents.providers.httpx.AsyncClient", return_value=mock_client), \
-         patch("forven.agents.providers.get_profile", return_value=None):
+    with patch("axiom.agents.providers.httpx.AsyncClient", return_value=mock_client), \
+         patch("axiom.agents.providers.get_profile", return_value=None):
         result = asyncio.run(provider.call(
             model_id="gemini-2.5-flash",
             messages=[{"role": "user", "content": "list strategies"}],
@@ -127,9 +127,9 @@ def test_gemini_endpoint_override_routes_request() -> None:
     mock_client.__aexit__ = AsyncMock(return_value=False)
     mock_client.post = AsyncMock(return_value=fake_resp)
 
-    with patch("forven.agents.providers.httpx.AsyncClient", return_value=mock_client), \
+    with patch("axiom.agents.providers.httpx.AsyncClient", return_value=mock_client), \
          patch(
-             "forven.agents.providers.get_profile",
+             "axiom.agents.providers.get_profile",
              return_value={"base_url": "https://proxy.example.com"},
          ):
         asyncio.run(provider.call(

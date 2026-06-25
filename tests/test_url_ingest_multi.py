@@ -1,4 +1,4 @@
-"""Combine several source URLs into ONE crucible (POST /api/hypotheses/from_urls).
+﻿"""Combine several source URLs into ONE crucible (POST /api/hypotheses/from_urls).
 
 The single-URL path creates one crucible per URL; the combine path attaches
 every successfully-extracted source to a single crucible and enqueues one
@@ -11,10 +11,10 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from forven.api import app
-from forven.control_plane import ops as control_plane_ops
-from forven.db import get_db
-from forven.hypotheses import list_hypothesis_artifacts
+from axiom.api import app
+from axiom.control_plane import ops as control_plane_ops
+from axiom.db import get_db
+from axiom.hypotheses import list_hypothesis_artifacts
 
 _PREVIEWS = {
     "https://youtube.com/watch?v=aaa": {
@@ -46,9 +46,9 @@ def _fake_fetch_preview(url: str):
     return _PREVIEWS[url]
 
 
-def test_from_urls_combines_into_one_crucible(forven_db):
+def test_from_urls_combines_into_one_crucible(AXIOM_db):
     control_plane_ops.update_system_mode("auto")
-    with patch("forven.api_domains.hypotheses.fetch_preview", side_effect=_fake_fetch_preview):
+    with patch("axiom.api_domains.hypotheses.fetch_preview", side_effect=_fake_fetch_preview):
         client = TestClient(app)
         r = client.post(
             "/api/hypotheses/from_urls",
@@ -100,9 +100,9 @@ def test_from_urls_combines_into_one_crucible(forven_db):
     assert input_data["source_url"] == "https://youtube.com/watch?v=aaa"
 
 
-def test_from_urls_dedupes_identical_urls(forven_db):
+def test_from_urls_dedupes_identical_urls(AXIOM_db):
     control_plane_ops.update_system_mode("auto")
-    with patch("forven.api_domains.hypotheses.fetch_preview", side_effect=_fake_fetch_preview):
+    with patch("axiom.api_domains.hypotheses.fetch_preview", side_effect=_fake_fetch_preview):
         client = TestClient(app)
         r = client.post(
             "/api/hypotheses/from_urls",
@@ -120,7 +120,7 @@ def test_from_urls_dedupes_identical_urls(forven_db):
     assert len(artifacts) == 1
 
 
-def test_from_urls_all_fail_creates_nothing(forven_db):
+def test_from_urls_all_fail_creates_nothing(AXIOM_db):
     def _all_fail(url: str):
         return {
             "ok": False,
@@ -132,7 +132,7 @@ def test_from_urls_all_fail_creates_nothing(forven_db):
     with get_db() as conn:
         before = conn.execute("SELECT COUNT(*) AS n FROM hypotheses").fetchone()["n"]
 
-    with patch("forven.api_domains.hypotheses.fetch_preview", side_effect=_all_fail):
+    with patch("axiom.api_domains.hypotheses.fetch_preview", side_effect=_all_fail):
         client = TestClient(app)
         r = client.post(
             "/api/hypotheses/from_urls",
@@ -150,7 +150,7 @@ def test_from_urls_all_fail_creates_nothing(forven_db):
     assert after == before
 
 
-def test_from_urls_empty_list_rejected(forven_db):
+def test_from_urls_empty_list_rejected(AXIOM_db):
     client = TestClient(app)
     r = client.post("/api/hypotheses/from_urls", json={"urls": []})
     assert r.status_code == 400

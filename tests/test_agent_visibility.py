@@ -1,17 +1,17 @@
-from datetime import datetime, timezone
+﻿from datetime import datetime, timezone
 
-from forven.agents.manager import create_agent, update_agent
-from forven.db import get_agents, get_db, init_db
+from axiom.agents.manager import create_agent, update_agent
+from axiom.db import get_agents, get_db, init_db
 
 
-def test_create_agent_defaults_to_visible(forven_db):
+def test_create_agent_defaults_to_visible(AXIOM_db):
     create_agent(agent_id="alpha", name="Alpha", role="Visible by default")
 
     agents = {item["id"]: item for item in get_agents()}
     assert agents["alpha"]["visibility"] == "visible"
 
 
-def test_update_agent_normalizes_visibility(forven_db):
+def test_update_agent_normalizes_visibility(AXIOM_db):
     create_agent(agent_id="beta", name="Beta", role="Can be hidden")
 
     update_agent("beta", visibility="INTERNAL")
@@ -20,7 +20,7 @@ def test_update_agent_normalizes_visibility(forven_db):
     assert agents["beta"]["visibility"] == "internal"
 
 
-def test_migration_defaults_null_visibility_to_visible(forven_db):
+def test_migration_defaults_null_visibility_to_visible(AXIOM_db):
     now = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
         conn.execute(
@@ -34,7 +34,7 @@ def test_migration_defaults_null_visibility_to_visible(forven_db):
     assert agents["legacy-worker"]["visibility"] == "visible"
 
 
-def test_migration_keeps_full_stack_engineer_visible(forven_db):
+def test_migration_keeps_full_stack_engineer_visible(AXIOM_db):
     now = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
         conn.execute(

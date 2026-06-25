@@ -1,11 +1,11 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import pandas as pd
 
 
 def test_stream_manager_flushes_closed_candles_only(monkeypatch, tmp_path):
-    from forven import data as data_mod
-    from forven.dataeng.stream import StreamManager
+    from axiom import data as data_mod
+    from axiom.dataeng.stream import StreamManager
 
     monkeypatch.setattr(data_mod, "DATA_DIR", tmp_path)
     manager = StreamManager(buffer_limit=10)
@@ -33,7 +33,7 @@ def test_stream_manager_flushes_closed_candles_only(monkeypatch, tmp_path):
 
 
 def test_stream_manager_buffer_is_bounded():
-    from forven.dataeng.stream import StreamManager
+    from axiom.dataeng.stream import StreamManager
 
     manager = StreamManager(buffer_limit=2)
     manager.ingest(
@@ -55,8 +55,8 @@ def test_stream_manager_buffer_is_bounded():
 
 
 def test_catchup_planner_enqueues_missing_closed_window(tmp_path):
-    from forven.dataeng.catalog import Catalog, CoverageRow
-    from forven.dataeng.catchup import CatchUpPlanner
+    from axiom.dataeng.catalog import Catalog, CoverageRow
+    from axiom.dataeng.catchup import CatchUpPlanner
 
     catalog = Catalog(tmp_path / "catalog.duckdb")
     catalog.upsert_series_coverage(
@@ -83,8 +83,8 @@ def test_catchup_planner_enqueues_missing_closed_window(tmp_path):
 
 
 def test_catchup_planner_snaps_end_to_closed_candle_boundary(tmp_path):
-    from forven.dataeng.catalog import Catalog, CoverageRow
-    from forven.dataeng.catchup import CatchUpPlanner
+    from axiom.dataeng.catalog import Catalog, CoverageRow
+    from axiom.dataeng.catchup import CatchUpPlanner
 
     catalog = Catalog(tmp_path / "catalog.duckdb")
     catalog.upsert_series_coverage(
@@ -108,12 +108,12 @@ def test_catchup_planner_snaps_end_to_closed_candle_boundary(tmp_path):
 
 
 def test_datahub_status_includes_stream_state(monkeypatch):
-    from forven.dataeng.hub import DataHub
-    from forven.dataeng.stream import StreamManager
+    from axiom.dataeng.hub import DataHub
+    from axiom.dataeng.stream import StreamManager
 
     manager = StreamManager(buffer_limit=10)
     manager.ingest("BTC-USDT", "candles", [{"timestamp": "2026-06-01T00:00:00Z"}])
-    monkeypatch.setattr("forven.dataeng.stream.get_stream_manager", lambda: manager)
+    monkeypatch.setattr("axiom.dataeng.stream.get_stream_manager", lambda: manager)
 
     status = DataHub().status()
 
@@ -123,8 +123,8 @@ def test_datahub_status_includes_stream_state(monkeypatch):
 
 
 def test_data_engine_status_and_backfill_plan_api_domain(tmp_path):
-    from forven.api_domains import data as data_domain
-    from forven.dataeng.catalog import Catalog, CoverageRow
+    from axiom.api_domains import data as data_domain
+    from axiom.dataeng.catalog import Catalog, CoverageRow
 
     catalog = Catalog(tmp_path / "catalog.duckdb")
     catalog.upsert_series_coverage(

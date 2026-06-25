@@ -1,10 +1,10 @@
-"""Tests for forven.quant_skills module."""
+﻿"""Tests for Axiom.quant_skills module."""
 
 import json
 
 import pytest
 
-from forven.quant_skills import (
+from axiom.quant_skills import (
     QuantSkill,
     _calculate_confidence,
     _sanitize_name,
@@ -36,9 +36,9 @@ def tmp_skills_dir(tmp_path, monkeypatch):
     hypotheses_dir.mkdir()
     archived_dir.mkdir()
 
-    monkeypatch.setattr("forven.quant_skills.SKILLS_DIR", skills_dir)
-    monkeypatch.setattr("forven.quant_skills.HYPOTHESES_DIR", hypotheses_dir)
-    monkeypatch.setattr("forven.quant_skills.ARCHIVED_DIR", archived_dir)
+    monkeypatch.setattr("axiom.quant_skills.SKILLS_DIR", skills_dir)
+    monkeypatch.setattr("axiom.quant_skills.HYPOTHESES_DIR", hypotheses_dir)
+    monkeypatch.setattr("axiom.quant_skills.ARCHIVED_DIR", archived_dir)
 
     return skills_dir
 

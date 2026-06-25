@@ -1,4 +1,4 @@
-"""Tests for forven.data_manager — DataManager, collectors, and enrich()."""
+﻿"""Tests for Axiom.data_manager — DataManager, collectors, and enrich()."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
-from forven.data_manager import (
+from axiom.data_manager import (
     DataManager,
     FundingCollector,
     OICollector,
@@ -74,7 +74,7 @@ def test_load_stream_parquet_missing(tmp_path):
 
 
 def test_loaded_df_is_safe_to_mutate(tmp_path):
-    from forven.data_manager import _save_stream_parquet, _load_stream_parquet
+    from axiom.data_manager import _save_stream_parquet, _load_stream_parquet
     import pandas as pd
     df = pd.DataFrame({
         "timestamp": pd.to_datetime(["2026-01-01"], utc=True),
@@ -104,19 +104,19 @@ def test_import_fails_loudly_when_pyarrow_missing(monkeypatch):
     import importlib
     import sys
     # Snapshot the real module so we can restore it after the test — otherwise
-    # subsequent tests that do `patch("forven.data_manager.X", ...)` would
+    # subsequent tests that do `patch("axiom.data_manager.X", ...)` would
     # re-import the module with the real (on-disk) FUNDING_DIR/OI_DIR globals,
     # leaking real filesystem state into their tmp_path fixtures.
-    original = sys.modules.get("forven.data_manager")
+    original = sys.modules.get("axiom.data_manager")
     try:
         # Make pyarrow fail on fresh import
-        sys.modules.pop("forven.data_manager", None)
+        sys.modules.pop("axiom.data_manager", None)
         monkeypatch.setitem(sys.modules, "pyarrow", None)
         with pytest.raises((ImportError, ModuleNotFoundError)):
-            importlib.import_module("forven.data_manager")
+            importlib.import_module("axiom.data_manager")
     finally:
         if original is not None:
-            sys.modules["forven.data_manager"] = original
+            sys.modules["axiom.data_manager"] = original
 
 
 # ---------------------------------------------------------------------------
@@ -125,9 +125,9 @@ def test_import_fails_loudly_when_pyarrow_missing(monkeypatch):
 
 def test_ohlcv_collector_returns_zero_on_empty_fetch():
     collector = OHLCVCollector()
-    with patch("forven.data.fetch_ohlcv_chunked", return_value=pd.DataFrame()):
-        with patch("forven.data.load_parquet", return_value=None):
-            with patch("forven.data._get_dataset_lock", return_value=threading.Lock()):
+    with patch("axiom.data.fetch_ohlcv_chunked", return_value=pd.DataFrame()):
+        with patch("axiom.data.load_parquet", return_value=None):
+            with patch("axiom.data._get_dataset_lock", return_value=threading.Lock()):
                 result = collector.collect("BTC-USDT", "1h")
     assert result == 0
 
@@ -150,9 +150,9 @@ def test_ohlcv_collector_does_not_hold_dataset_lock_during_fetch():
                 dataset_lock.release()
 
     existing = _make_ohlcv(2)
-    with patch("forven.data.fetch_ohlcv_chunked", side_effect=_fake_fetch):
-        with patch("forven.data.load_parquet", return_value=existing):
-            with patch("forven.data._get_dataset_lock", return_value=dataset_lock):
+    with patch("axiom.data.fetch_ohlcv_chunked", side_effect=_fake_fetch):
+        with patch("axiom.data.load_parquet", return_value=existing):
+            with patch("axiom.data._get_dataset_lock", return_value=dataset_lock):
                 result = collector.collect("BTC-USDT", "1h")
 
     assert result == 3
@@ -165,7 +165,7 @@ def test_ohlcv_collector_raises_on_failure():
     """Collectors must re-raise (B-19): swallowing made an all-fail run look
     like a quiet green bar. Orchestrators catch per symbol and tally."""
     collector = OHLCVCollector()
-    with patch("forven.data.load_parquet", side_effect=RuntimeError("db error")):
+    with patch("axiom.data.load_parquet", side_effect=RuntimeError("db error")):
         with pytest.raises(RuntimeError, match="db error"):
             collector.collect("BTC-USDT", "1h")
 
@@ -184,8 +184,8 @@ def _mock_funding_rows(n: int = 3):
 
 def test_funding_collector_creates_file(tmp_path):
     collector = FundingCollector()
-    with patch("forven.data_manager.FUNDING_DIR", tmp_path / "funding"):
-        with patch("forven.data_manager._get_futures_exchange") as mock_ex:
+    with patch("axiom.data_manager.FUNDING_DIR", tmp_path / "funding"):
+        with patch("axiom.data_manager._get_futures_exchange") as mock_ex:
             mock_ex.return_value.fetch_funding_rate_history.return_value = _mock_funding_rows(3)
             result = collector.collect("BTC-USDT")
 
@@ -199,13 +199,13 @@ def test_funding_collector_incremental(tmp_path):
     collector = FundingCollector()
     funding_dir = tmp_path / "funding"
 
-    with patch("forven.data_manager.FUNDING_DIR", funding_dir):
-        with patch("forven.data_manager._get_futures_exchange") as mock_ex:
+    with patch("axiom.data_manager.FUNDING_DIR", funding_dir):
+        with patch("axiom.data_manager._get_futures_exchange") as mock_ex:
             mock_ex.return_value.fetch_funding_rate_history.return_value = _mock_funding_rows(3)
             collector.collect("BTC-USDT")
 
         # Second call returns 2 new rows
-        with patch("forven.data_manager._get_futures_exchange") as mock_ex:
+        with patch("axiom.data_manager._get_futures_exchange") as mock_ex:
             base_ms = 1_704_067_200_000 + 3 * 8 * 3600 * 1000
             new_rows = [
                 {"timestamp": base_ms + i * 8 * 3600 * 1000, "fundingRate": 0.0005}
@@ -224,8 +224,8 @@ def test_funding_collector_idempotent(tmp_path):
     collector = FundingCollector()
     rows = _mock_funding_rows(3)
 
-    with patch("forven.data_manager.FUNDING_DIR", tmp_path / "funding"):
-        with patch("forven.data_manager._get_futures_exchange") as mock_ex:
+    with patch("axiom.data_manager.FUNDING_DIR", tmp_path / "funding"):
+        with patch("axiom.data_manager._get_futures_exchange") as mock_ex:
             mock_ex.return_value.fetch_funding_rate_history.return_value = rows
             collector.collect("BTC-USDT")
             mock_ex.return_value.fetch_funding_rate_history.return_value = rows
@@ -237,7 +237,7 @@ def test_funding_collector_idempotent(tmp_path):
 
 def test_funding_collector_raises_on_failure():
     collector = FundingCollector()
-    with patch("forven.data_manager._get_futures_exchange", side_effect=RuntimeError("no exchange")):
+    with patch("axiom.data_manager._get_futures_exchange", side_effect=RuntimeError("no exchange")):
         with pytest.raises(RuntimeError, match="no exchange"):
             collector.collect("BTC-USDT")
 
@@ -262,8 +262,8 @@ def _mock_oi_rows(n: int = 3):
 
 def test_oi_collector_creates_file(tmp_path):
     collector = OICollector()
-    with patch("forven.data_manager.OI_DIR", tmp_path / "oi"):
-        with patch("forven.data_manager._get_futures_exchange") as mock_ex:
+    with patch("axiom.data_manager.OI_DIR", tmp_path / "oi"):
+        with patch("axiom.data_manager._get_futures_exchange") as mock_ex:
             mock_ex.return_value.fetch_open_interest_history.return_value = _mock_oi_rows(4)
             result = collector.collect("BTC-USDT", "1h")
 
@@ -274,7 +274,7 @@ def test_oi_collector_creates_file(tmp_path):
 
 def test_oi_collector_raises_on_failure():
     collector = OICollector()
-    with patch("forven.data_manager._get_futures_exchange", side_effect=RuntimeError("no exchange")):
+    with patch("axiom.data_manager._get_futures_exchange", side_effect=RuntimeError("no exchange")):
         with pytest.raises(RuntimeError, match="no exchange"):
             collector.collect("BTC-USDT", "1h")
 
@@ -284,7 +284,7 @@ def test_oi_collector_raises_on_failure():
 # ---------------------------------------------------------------------------
 
 def test_lsr_collector_uses_shared_session(monkeypatch, tmp_path):
-    from forven.data_manager import LongShortRatioCollector
+    from axiom.data_manager import LongShortRatioCollector
     calls = {"n": 0}
 
     def fake_get(self, url, params=None, timeout=None):
@@ -296,28 +296,28 @@ def test_lsr_collector_uses_shared_session(monkeypatch, tmp_path):
 
     import requests
     monkeypatch.setattr(requests.Session, "get", fake_get)
-    monkeypatch.setattr("forven.data_manager.DERIVATIVES_DIR", tmp_path)
+    monkeypatch.setattr("axiom.data_manager.DERIVATIVES_DIR", tmp_path)
     c = LongShortRatioCollector()
     assert c.collect("BTC-USDT") == 0
     assert calls["n"] == 1  # went through Session.get not requests.get
 
 
 def test_rest_collector_shares_http_and_combine_logic():
-    from forven.data_manager import LongShortRatioCollector, TakerVolumeCollector
-    import forven.data_manager as dm
+    from axiom.data_manager import LongShortRatioCollector, TakerVolumeCollector
+    import axiom.data_manager as dm
     assert issubclass(LongShortRatioCollector, dm._RestCollector)
     assert issubclass(TakerVolumeCollector, dm._RestCollector)
 
 
 def test_btc_dominance_uses_floor_hour_aligned_timestamp(monkeypatch, tmp_path):
-    from forven.data_manager import BtcDominanceCollector
-    monkeypatch.setattr("forven.data_manager.MACRO_DIR", tmp_path)
+    from axiom.data_manager import BtcDominanceCollector
+    monkeypatch.setattr("axiom.data_manager.MACRO_DIR", tmp_path)
 
     class FakeResp:
         def raise_for_status(self): pass
         def json(self): return {"data": {"market_cap_percentage": {"btc": 55.5}}}
 
-    monkeypatch.setattr("forven.data_manager._http_session", lambda: type("S", (), {
+    monkeypatch.setattr("axiom.data_manager._http_session", lambda: type("S", (), {
         "get": lambda self, *a, **kw: FakeResp()
     })())
     import time as _t
@@ -331,7 +331,7 @@ def test_btc_dominance_uses_floor_hour_aligned_timestamp(monkeypatch, tmp_path):
     def _fake_now(tz=None):
         return fixed_now if tz is not None else _real_now()
 
-    monkeypatch.setattr("forven.data_manager.pd.Timestamp.now", staticmethod(_fake_now))
+    monkeypatch.setattr("axiom.data_manager.pd.Timestamp.now", staticmethod(_fake_now))
 
     c = BtcDominanceCollector()
     added = c.collect()
@@ -353,10 +353,10 @@ def test_enrich_no_files_returns_original(tmp_path):
     # Patch ALL data dirs to empty tmp paths — otherwise real on-disk parquet
     # files in the worktree's data/ dir (e.g. derivatives/BTC-USDT/*.parquet)
     # would leak enrichment columns into the result.
-    with patch("forven.data_manager.FUNDING_DIR", tmp_path / "funding"), \
-         patch("forven.data_manager.OI_DIR", tmp_path / "oi"), \
-         patch("forven.data_manager.DERIVATIVES_DIR", tmp_path / "derivatives"), \
-         patch("forven.data_manager.MACRO_DIR", tmp_path / "macro"):
+    with patch("axiom.data_manager.FUNDING_DIR", tmp_path / "funding"), \
+         patch("axiom.data_manager.OI_DIR", tmp_path / "oi"), \
+         patch("axiom.data_manager.DERIVATIVES_DIR", tmp_path / "derivatives"), \
+         patch("axiom.data_manager.MACRO_DIR", tmp_path / "macro"):
         result = dm.enrich(df, "BTC-USDT", "1h")
 
     assert list(result.columns) == list(df.columns)
@@ -370,8 +370,8 @@ def test_enrich_adds_funding_column(tmp_path):
     funding_path = tmp_path / "funding" / "BTC-USDT" / "history.parquet"
     _save_stream_parquet(funding_df, funding_path, "funding", "BTC-USDT")
 
-    with patch("forven.data_manager.FUNDING_DIR", tmp_path / "funding"):
-        with patch("forven.data_manager.OI_DIR", tmp_path / "oi"):
+    with patch("axiom.data_manager.FUNDING_DIR", tmp_path / "funding"):
+        with patch("axiom.data_manager.OI_DIR", tmp_path / "oi"):
             result = dm.enrich(df, "BTC-USDT", "1h")
 
     assert "funding_rate" in result.columns
@@ -386,8 +386,8 @@ def test_enrich_adds_oi_column(tmp_path):
     oi_path = tmp_path / "oi" / "BTC-USDT" / "1h.parquet"
     _save_stream_parquet(oi_df, oi_path, "oi", "BTC-USDT")
 
-    with patch("forven.data_manager.FUNDING_DIR", tmp_path / "funding"):
-        with patch("forven.data_manager.OI_DIR", tmp_path / "oi"):
+    with patch("axiom.data_manager.FUNDING_DIR", tmp_path / "funding"):
+        with patch("axiom.data_manager.OI_DIR", tmp_path / "oi"):
             result = dm.enrich(df, "BTC-USDT", "1h")
 
     assert "open_interest" in result.columns
@@ -406,8 +406,8 @@ def test_enrich_adds_both_columns(tmp_path):
     oi_path = tmp_path / "oi" / "BTC-USDT" / "1h.parquet"
     _save_stream_parquet(oi_df, oi_path, "oi", "BTC-USDT")
 
-    with patch("forven.data_manager.FUNDING_DIR", tmp_path / "funding"):
-        with patch("forven.data_manager.OI_DIR", tmp_path / "oi"):
+    with patch("axiom.data_manager.FUNDING_DIR", tmp_path / "funding"):
+        with patch("axiom.data_manager.OI_DIR", tmp_path / "oi"):
             result = dm.enrich(df, "BTC-USDT", "1h")
 
     assert "funding_rate" in result.columns
@@ -435,9 +435,9 @@ def test_enrich_exception_returns_original(tmp_path):
 
 
 def test_enrich_reads_parquet_once_for_repeated_calls(tmp_path, monkeypatch):
-    from forven.data_manager import _save_stream_parquet
+    from axiom.data_manager import _save_stream_parquet
     import pandas as pd
-    monkeypatch.setattr("forven.data_manager.FUNDING_DIR", tmp_path)
+    monkeypatch.setattr("axiom.data_manager.FUNDING_DIR", tmp_path)
     path = tmp_path / "BTC-USDT" / "history.parquet"
     fdf = pd.DataFrame({
         "timestamp": pd.to_datetime(["2026-01-01"], utc=True),
@@ -445,11 +445,11 @@ def test_enrich_reads_parquet_once_for_repeated_calls(tmp_path, monkeypatch):
     })
     _save_stream_parquet(fdf, path, "funding", "BTC-USDT")
     calls = {"n": 0}
-    orig = __import__("forven.data_manager", fromlist=["_load_stream_parquet"])._load_stream_parquet
+    orig = __import__("axiom.data_manager", fromlist=["_load_stream_parquet"])._load_stream_parquet
     def counting(p):
         calls["n"] += 1
         return orig(p)
-    monkeypatch.setattr("forven.data_manager._load_stream_parquet", counting)
+    monkeypatch.setattr("axiom.data_manager._load_stream_parquet", counting)
     base = pd.DataFrame({
         "timestamp": pd.to_datetime(["2026-01-01 12:00"], utc=True),
         "close": [100.0],
@@ -466,7 +466,7 @@ def test_enrich_reads_parquet_once_for_repeated_calls(tmp_path, monkeypatch):
 def test_get_active_symbols_empty_db():
     """Should return empty set when no active strategies."""
     dm = DataManager()
-    with patch("forven.db.get_db") as mock_db:
+    with patch("axiom.db.get_db") as mock_db:
         mock_conn = MagicMock()
         mock_conn.__enter__ = MagicMock(return_value=mock_conn)
         mock_conn.__exit__ = MagicMock(return_value=False)
@@ -479,7 +479,7 @@ def test_get_active_symbols_empty_db():
 def test_get_active_symbols_db_error_returns_empty():
     """DB error should return empty set, not raise."""
     dm = DataManager()
-    with patch("forven.db.get_db", side_effect=RuntimeError("db unavailable")):
+    with patch("axiom.db.get_db", side_effect=RuntimeError("db unavailable")):
         symbols = dm.get_active_symbols()
     assert symbols == set()
 
@@ -497,14 +497,14 @@ def test_get_active_symbols_filters_to_supported_keepalive_pairs(tmp_path):
 
     (tmp_path / "ohlcv" / "BTC-USDT").mkdir(parents=True)
 
-    with patch("forven.db.get_db", return_value=mock_conn):
-        with patch("forven.data.DATA_DIR", tmp_path / "ohlcv"):
+    with patch("axiom.db.get_db", return_value=mock_conn):
+        with patch("axiom.data.DATA_DIR", tmp_path / "ohlcv"):
             symbols = dm.get_active_symbols()
 
     assert symbols == {"BTC-USDT", "ETH-USDT", "SOL-USDT"}
 
 
-def test_fetch_active_timeframes_matches_slash_dash_and_bare(forven_db):
+def test_fetch_active_timeframes_matches_slash_dash_and_bare(AXIOM_db):
     """Regression: ``strategies.symbol`` is stored in slash form
     (``BTC/USDT``) but ``DataManager`` keeps its keepalive symbol set in
     filesystem-canonical dash form (``BTC-USDT``). Pre-fix, the lookup query
@@ -512,7 +512,7 @@ def test_fetch_active_timeframes_matches_slash_dash_and_bare(forven_db):
     rows didn't match and the keepalive silently fell back to ``{1h, 4h}``,
     which meant 5m/15m/30m timeframes for paper-stage strategies (e.g.
     S01734 BTC 5m) never got their OHLCV warmed."""
-    from forven.db import create_strategy_container, get_db
+    from axiom.db import create_strategy_container, get_db
 
     with get_db() as conn:
         create_strategy_container(
@@ -551,7 +551,7 @@ def test_fetch_active_timeframes_matches_slash_dash_and_bare(forven_db):
     assert tfs == {"5m", "15m"}, tfs
 
 
-def test_collect_ohlcv_processes_staleness_selected_pairs(forven_db, monkeypatch):
+def test_collect_ohlcv_processes_staleness_selected_pairs(AXIOM_db, monkeypatch):
     # collect_ohlcv now delegates selection to _select_keepalive_pairs
     # (staleness-ranked; ranking itself is unit-tested in test_keepalive_staleness).
     # This asserts the integration: exactly the selected pairs are collected.
@@ -684,7 +684,7 @@ def test_singleton_is_data_manager_instance():
     # After T17 the module-level `data_manager` is a lazy proxy; the underlying
     # singleton is exposed via get_data_manager(). Attribute access on the proxy
     # transparently forwards to the DataManager instance.
-    from forven.data_manager import get_data_manager
+    from axiom.data_manager import get_data_manager
     assert isinstance(get_data_manager(), DataManager)
 
 
@@ -694,13 +694,13 @@ def test_singleton_is_data_manager_instance():
 
 def test_backfill_summary_includes_skip_reason_when_probe_returns_none(tmp_path):
     """When probe_start_date returns None, summary should record skip_reason."""
-    from forven.data_manager import DataManager
+    from axiom.data_manager import DataManager
     dm = DataManager()
 
-    with patch("forven.data_manager.bv_client") as mock_bv:
+    with patch("axiom.data_manager.bv_client") as mock_bv:
         mock_bv.fs_to_bv.return_value = "ETHUSDT"
         mock_bv.probe_start_date.return_value = None  # simulate probe failure
-        with patch("forven.data_manager.FUNDING_DIR", tmp_path / "funding"):
+        with patch("axiom.data_manager.FUNDING_DIR", tmp_path / "funding"):
             result = dm.backfill(symbol="ETH-USDT", streams=("funding",))
 
     sym_result = result.get("ETH-USDT") or result.get("ETHUSDT") or {}
@@ -709,14 +709,14 @@ def test_backfill_summary_includes_skip_reason_when_probe_returns_none(tmp_path)
 
 def test_backfill_summary_records_rows_added_for_funding(tmp_path):
     """When backfill succeeds, summary records rows added for funding stream."""
-    from forven.data_manager import DataManager
+    from axiom.data_manager import DataManager
     dm = DataManager()
 
-    with patch("forven.data_manager.bv_client") as mock_bv:
+    with patch("axiom.data_manager.bv_client") as mock_bv:
         mock_bv.fs_to_bv.return_value = "ETHUSDT"
         mock_bv.probe_start_date.return_value = (2020, 11)
         mock_bv.backfill_funding.return_value = 500
-        with patch("forven.data_manager.FUNDING_DIR", tmp_path / "funding"):
+        with patch("axiom.data_manager.FUNDING_DIR", tmp_path / "funding"):
             result = dm.backfill(symbol="ETH-USDT", streams=("funding",))
 
     sym_result = result.get("ETH-USDT") or result.get("ETHUSDT") or {}
@@ -730,11 +730,11 @@ def test_backfill_summary_records_rows_added_for_funding(tmp_path):
 
 def test_collect_funding_falls_back_to_ohlcv_symbols_when_no_active_strategies(tmp_path):
     """collect_funding should use all OHLCV symbols when get_active_symbols() is empty."""
-    from forven.data_manager import DataManager
+    from axiom.data_manager import DataManager
     dm = DataManager()
 
     with patch.object(dm, "get_active_symbols", return_value=set()):
-        with patch("forven.data.DATA_DIR", tmp_path / "ohlcv"):
+        with patch("axiom.data.DATA_DIR", tmp_path / "ohlcv"):
             (tmp_path / "ohlcv" / "BTC-USDT").mkdir(parents=True)
             with patch.object(dm._funding, "collect", return_value=0) as mock_collect:
                 dm.collect_funding()
@@ -742,7 +742,7 @@ def test_collect_funding_falls_back_to_ohlcv_symbols_when_no_active_strategies(t
 
 
 def test_collect_funding_fallback_excludes_non_futures(monkeypatch, tmp_path):
-    monkeypatch.setattr("forven.data.DATA_DIR", tmp_path)
+    monkeypatch.setattr("axiom.data.DATA_DIR", tmp_path)
     # Dirs: valid perpetual + equity alias + experiment dir
     for d in ("BTC-USDT", "AAPL", "EXPERIMENT-X"):
         (tmp_path / d).mkdir()
@@ -756,7 +756,7 @@ def test_collect_funding_fallback_excludes_non_futures(monkeypatch, tmp_path):
 
 def test_collect_funding_fallback_normalizes_bare_aliases(monkeypatch, tmp_path):
     """Bare-alias dirs (e.g. 'BTC') should resolve to paired form before collect()."""
-    monkeypatch.setattr("forven.data.DATA_DIR", tmp_path)
+    monkeypatch.setattr("axiom.data.DATA_DIR", tmp_path)
     # Bare alias dir AND its resolved pair dir both exist
     for d in ("BTC", "BTC-USDT"):
         (tmp_path / d).mkdir()
@@ -771,13 +771,13 @@ def test_collect_funding_fallback_normalizes_bare_aliases(monkeypatch, tmp_path)
 
 
 def test_collect_liquidations_disabled_by_default(monkeypatch):
-    monkeypatch.delenv("FORVEN_ENABLE_LIQUIDATIONS", raising=False)
+    monkeypatch.delenv("AXIOM_ENABLE_LIQUIDATIONS", raising=False)
     out = data_manager.collect_liquidations()
     assert out == {"symbols": {}, "total_rows": 0, "disabled": True}
 
 
 def test_collect_liquidations_runs_when_enabled(monkeypatch):
-    monkeypatch.setenv("FORVEN_ENABLE_LIQUIDATIONS", "1")
+    monkeypatch.setenv("AXIOM_ENABLE_LIQUIDATIONS", "1")
     monkeypatch.setattr(data_manager, "get_active_symbols", lambda: set())
     out = data_manager.collect_liquidations()
     assert "disabled" not in out
@@ -789,7 +789,7 @@ def test_collect_liquidations_runs_when_enabled(monkeypatch):
 
 class TestHttpSession:
     def test_session_has_retry_adapter_for_https(self):
-        from forven.data_manager import _http_session
+        from axiom.data_manager import _http_session
         sess = _http_session()
         adapter = sess.get_adapter("https://fapi.binance.com")
         assert adapter.max_retries.total >= 3
@@ -798,7 +798,7 @@ class TestHttpSession:
         assert 503 in adapter.max_retries.status_forcelist
 
     def test_session_is_cached_singleton(self):
-        from forven.data_manager import _http_session
+        from axiom.data_manager import _http_session
         assert _http_session() is _http_session()
 
 
@@ -808,8 +808,8 @@ class TestHttpSession:
 
 class TestParquetCache:
     def test_cache_hit_does_not_reread_until_mtime_changes(self, tmp_path, monkeypatch):
-        from forven.data_manager import _parquet_read_cache, _save_stream_parquet
-        import forven.data_manager as dm
+        from axiom.data_manager import _parquet_read_cache, _save_stream_parquet
+        import axiom.data_manager as dm
         import pandas as pd
         df = pd.DataFrame({
             "timestamp": [pd.Timestamp("2026-01-01", tz="UTC")],
@@ -841,7 +841,7 @@ class TestParquetCache:
 
     def test_cache_hit_returns_isolated_copy(self, tmp_path):
         """Callers must not be able to poison the cache via in-place mutation."""
-        from forven.data_manager import _parquet_read_cache, _save_stream_parquet
+        from axiom.data_manager import _parquet_read_cache, _save_stream_parquet
         import pandas as pd
         df = pd.DataFrame({
             "timestamp": [pd.Timestamp("2026-01-01", tz="UTC")],
@@ -860,11 +860,11 @@ class TestParquetCache:
         assert "injected" not in b.columns
 
     def test_cache_returns_none_for_missing(self, tmp_path):
-        from forven.data_manager import _parquet_read_cache
+        from axiom.data_manager import _parquet_read_cache
         assert _parquet_read_cache(tmp_path / "missing.parquet") is None
 
     def test_parquet_read_cache_returns_independent_copy(self, tmp_path):
-        from forven.data_manager import _save_stream_parquet, _parquet_read_cache
+        from axiom.data_manager import _save_stream_parquet, _parquet_read_cache
         import pandas as pd
         df = pd.DataFrame({
             "timestamp": pd.to_datetime(["2026-01-01"], utc=True),
@@ -885,7 +885,7 @@ class TestParquetCache:
 
 class TestMergeAsofParquet:
     def test_merge_pulls_backward_and_fills_default(self, tmp_path, monkeypatch):
-        from forven.data_manager import _merge_asof_parquet, _save_stream_parquet
+        from axiom.data_manager import _merge_asof_parquet, _save_stream_parquet
         import pandas as pd
 
         src = pd.DataFrame({
@@ -903,7 +903,7 @@ class TestMergeAsofParquet:
         assert list(out["funding_rate"]) == [0.01, 0.02]
 
     def test_returns_df_unchanged_when_missing(self, tmp_path):
-        from forven.data_manager import _merge_asof_parquet
+        from axiom.data_manager import _merge_asof_parquet
         import pandas as pd
         base = pd.DataFrame({
             "timestamp": pd.to_datetime(["2026-01-01"], utc=True),
@@ -913,7 +913,7 @@ class TestMergeAsofParquet:
         assert list(out.columns) == ["timestamp", "close"]
 
     def test_honours_rename_map(self, tmp_path):
-        from forven.data_manager import _merge_asof_parquet, _save_stream_parquet
+        from axiom.data_manager import _merge_asof_parquet, _save_stream_parquet
         import pandas as pd
         src = pd.DataFrame({
             "timestamp": pd.to_datetime(["2026-01-01"], utc=True),
@@ -932,7 +932,7 @@ class TestMergeAsofParquet:
         assert out["vix_close"].iloc[0] == 50.0
 
     def test_collision_replaces_existing_column(self, tmp_path):
-        from forven.data_manager import _merge_asof_parquet, _save_stream_parquet
+        from axiom.data_manager import _merge_asof_parquet, _save_stream_parquet
         import pandas as pd
         src = pd.DataFrame({
             "timestamp": pd.to_datetime(["2026-01-01 00:00"], utc=True),
@@ -952,7 +952,7 @@ class TestMergeAsofParquet:
         assert out["funding_rate"].iloc[0] == 0.05
 
     def test_duplicate_src_timestamps_last_wins(self, tmp_path):
-        from forven.data_manager import _merge_asof_parquet, _save_stream_parquet
+        from axiom.data_manager import _merge_asof_parquet, _save_stream_parquet
         import pandas as pd
         src = pd.DataFrame({
             "timestamp": pd.to_datetime(["2026-01-01", "2026-01-01"], utc=True),
@@ -971,7 +971,7 @@ class TestMergeAsofParquet:
 
 class TestCombineAndSave:
     def test_merges_dedupes_returns_rows_added(self, tmp_path):
-        from forven.data_manager import _combine_and_save, _load_stream_parquet
+        from axiom.data_manager import _combine_and_save, _load_stream_parquet
         import pandas as pd
         existing = pd.DataFrame({
             "timestamp": pd.to_datetime(["2026-01-01", "2026-01-02"], utc=True),
@@ -988,7 +988,7 @@ class TestCombineAndSave:
         assert len(loaded) == 3
 
     def test_first_write_with_no_existing(self, tmp_path):
-        from forven.data_manager import _combine_and_save
+        from axiom.data_manager import _combine_and_save
         import pandas as pd
         new = pd.DataFrame({"timestamp": pd.to_datetime(["2026-01-01"], utc=True), "x": [9.0]})
         added = _combine_and_save(None, new, tmp_path / "s.parquet", stream="t", symbol="global")
@@ -997,7 +997,7 @@ class TestCombineAndSave:
 
 class TestValidateStreamDf:
     def test_drops_future_timestamps(self):
-        from forven.data_manager import _validate_stream_df
+        from axiom.data_manager import _validate_stream_df
         import pandas as pd
         future = pd.Timestamp.now(tz="UTC") + pd.Timedelta(days=10)
         df = pd.DataFrame({
@@ -1009,7 +1009,7 @@ class TestValidateStreamDf:
         assert dropped["future_ts"] == 1
 
     def test_drops_negative_required_columns(self):
-        from forven.data_manager import _validate_stream_df
+        from axiom.data_manager import _validate_stream_df
         import pandas as pd
         df = pd.DataFrame({
             "timestamp": pd.to_datetime(["2026-01-01", "2026-01-02"], utc=True),
@@ -1020,7 +1020,7 @@ class TestValidateStreamDf:
         assert dropped["negative_oi"] == 1
 
     def test_passthrough_when_clean(self):
-        from forven.data_manager import _validate_stream_df
+        from axiom.data_manager import _validate_stream_df
         import pandas as pd
         df = pd.DataFrame({
             "timestamp": pd.to_datetime(["2026-01-01"], utc=True),
@@ -1033,7 +1033,7 @@ class TestValidateStreamDf:
 
 def test_stream_locks_do_not_grow_indefinitely():
     import gc
-    from forven.data_manager import _get_stream_lock, _stream_locks
+    from axiom.data_manager import _get_stream_lock, _stream_locks
     before = len(_stream_locks)
     for i in range(1000):
         lock = _get_stream_lock(f"ephemeral::key::{i}")
@@ -1045,12 +1045,12 @@ def test_stream_locks_do_not_grow_indefinitely():
 
 
 def test_data_manager_is_lazy():
-    # Do NOT pop / reimport forven.data_manager here. Prior versions did, but
+    # Do NOT pop / reimport Axiom.data_manager here. Prior versions did, but
     # that left sys.modules pointing at a fresh module while classes imported
     # at pytest-collection time (e.g. DataManager in test_backtest_funding_smoke)
     # retained .__globals__ bound to the ORIGINAL module — so subsequent
-    # patch("forven.data_manager.FUNDING_DIR", ...) calls silently missed.
-    import forven.data_manager as mod
+    # patch("axiom.data_manager.FUNDING_DIR", ...) calls silently missed.
+    import axiom.data_manager as mod
     # Module-level `data_manager` is still present for back-compat
     assert hasattr(mod, "data_manager")
     # get_data_manager returns the same lazy-cached instance
@@ -1065,16 +1065,16 @@ def test_data_manager_is_lazy():
 # ---------------------------------------------------------------------------
 
 def test_funding_collector_drops_future_rows(monkeypatch, tmp_path):
-    from forven.data_manager import FundingCollector
+    from axiom.data_manager import FundingCollector
     future = int((pd.Timestamp.now(tz="UTC") + pd.Timedelta(days=30)).timestamp() * 1000)
     past = int(pd.Timestamp("2026-01-01", tz="UTC").timestamp() * 1000)
     fake_rows = [
         {"timestamp": future, "fundingRate": 0.01},
         {"timestamp": past, "fundingRate": 0.02},
     ]
-    monkeypatch.setattr("forven.data_manager.FUNDING_DIR", tmp_path)
+    monkeypatch.setattr("axiom.data_manager.FUNDING_DIR", tmp_path)
     monkeypatch.setattr(
-        "forven.data_manager._get_futures_exchange",
+        "axiom.data_manager._get_futures_exchange",
         lambda: type(
             "E",
             (),
@@ -1089,16 +1089,16 @@ def test_funding_collector_drops_future_rows(monkeypatch, tmp_path):
 
 
 def test_oi_collector_drops_negative_open_interest(monkeypatch, tmp_path):
-    from forven.data_manager import OICollector
+    from axiom.data_manager import OICollector
     base_ms = int(pd.Timestamp("2026-01-01", tz="UTC").timestamp() * 1000)
     fake_rows = [
         {"timestamp": base_ms, "openInterestAmount": 1000.0},
         {"timestamp": base_ms + 3600_000, "openInterestAmount": -500.0},
         {"timestamp": base_ms + 2 * 3600_000, "openInterestAmount": 1500.0},
     ]
-    monkeypatch.setattr("forven.data_manager.OI_DIR", tmp_path)
+    monkeypatch.setattr("axiom.data_manager.OI_DIR", tmp_path)
     monkeypatch.setattr(
-        "forven.data_manager._get_futures_exchange",
+        "axiom.data_manager._get_futures_exchange",
         lambda: type(
             "E",
             (),
@@ -1114,7 +1114,7 @@ def test_oi_collector_drops_negative_open_interest(monkeypatch, tmp_path):
 
 
 def test_lsr_collector_drops_negative_ratio(monkeypatch, tmp_path):
-    from forven.data_manager import LongShortRatioCollector
+    from axiom.data_manager import LongShortRatioCollector
     base_ms = int(pd.Timestamp("2026-01-01", tz="UTC").timestamp() * 1000)
     fake_rows = [
         {
@@ -1145,10 +1145,10 @@ def test_lsr_collector_drops_negative_ratio(monkeypatch, tmp_path):
             return fake_rows
 
     monkeypatch.setattr(
-        "forven.data_manager._http_session",
+        "axiom.data_manager._http_session",
         lambda: type("S", (), {"get": lambda self, *a, **kw: _Resp()})(),
     )
-    monkeypatch.setattr("forven.data_manager.DERIVATIVES_DIR", tmp_path)
+    monkeypatch.setattr("axiom.data_manager.DERIVATIVES_DIR", tmp_path)
     c = LongShortRatioCollector()
     added = c.collect("BTC-USDT")
     loaded = pd.read_parquet(tmp_path / "BTC-USDT" / "long_short_ratio_1h.parquet")
@@ -1162,8 +1162,8 @@ def test_lsr_collector_drops_negative_ratio(monkeypatch, tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_macro_incremental_uses_minimal_period(monkeypatch, tmp_path):
-    from forven.data_manager import MacroCollector, _save_stream_parquet
-    monkeypatch.setattr("forven.data_manager.MACRO_DIR", tmp_path)
+    from axiom.data_manager import MacroCollector, _save_stream_parquet
+    monkeypatch.setattr("axiom.data_manager.MACRO_DIR", tmp_path)
 
     # Seed with data up to 3 days ago
     three_days_ago = pd.Timestamp.now(tz="UTC").floor("D") - pd.Timedelta(days=3)
@@ -1186,8 +1186,8 @@ def test_macro_incremental_uses_minimal_period(monkeypatch, tmp_path):
 
 
 def test_macro_cold_start_uses_one_year(monkeypatch, tmp_path):
-    from forven.data_manager import MacroCollector
-    monkeypatch.setattr("forven.data_manager.MACRO_DIR", tmp_path)
+    from axiom.data_manager import MacroCollector
+    monkeypatch.setattr("axiom.data_manager.MACRO_DIR", tmp_path)
     captured = {}
 
     def fake_download(ticker, period, interval, progress, auto_adjust):
@@ -1205,13 +1205,13 @@ def test_macro_cold_start_uses_one_year(monkeypatch, tmp_path):
 # ---------------------------------------------------------------------------
 
 def _reset_data_manager_stats():
-    from forven.data_manager import _stats, _stats_lock
+    from axiom.data_manager import _stats, _stats_lock
     with _stats_lock:
         _stats.clear()
 
 
 def test_data_manager_stats_tracks_last_success(monkeypatch, tmp_path):
-    from forven.data_manager import data_manager_stats
+    from axiom.data_manager import data_manager_stats
     _reset_data_manager_stats()
     monkeypatch.setattr(data_manager, "get_active_symbols", lambda: set())
     data_manager.collect_funding()  # no-op but records "ran"
@@ -1224,7 +1224,7 @@ def test_data_manager_stats_tracks_last_success(monkeypatch, tmp_path):
 
 
 def test_data_manager_stats_tracks_errors(monkeypatch):
-    from forven.data_manager import data_manager_stats
+    from axiom.data_manager import data_manager_stats
     _reset_data_manager_stats()
 
     def boom():
@@ -1243,7 +1243,7 @@ def test_collect_funding_all_symbols_failing_records_failure(monkeypatch):
     """Audit B-19: a run where 100% of per-symbol fetches fail must be recorded
     as a FAILURE with attempted/failed counts — not a green rows=0 success —
     so check_data_freshness/data_health_score see a total outage."""
-    from forven.data_manager import data_manager_stats
+    from axiom.data_manager import data_manager_stats
     _reset_data_manager_stats()
 
     monkeypatch.setattr(data_manager, "get_active_symbols", lambda: {"BTC-USDT", "ETH-USDT"})
@@ -1273,7 +1273,7 @@ def test_collect_funding_all_symbols_failing_records_failure(monkeypatch):
 def test_collect_funding_partial_failure_is_visible_but_not_fatal(monkeypatch):
     """One failing symbol out of two: the run still counts as a success (data
     DID arrive) but the failure is visible in counts and per-symbol detail."""
-    from forven.data_manager import data_manager_stats
+    from axiom.data_manager import data_manager_stats
     _reset_data_manager_stats()
 
     monkeypatch.setattr(data_manager, "get_active_symbols", lambda: {"BTC-USDT", "ETH-USDT"})
@@ -1302,7 +1302,7 @@ def test_collect_funding_partial_failure_is_visible_but_not_fatal(monkeypatch):
 
 def test_collect_ohlcv_all_pairs_failing_records_failure(monkeypatch):
     """The OHLCV keep-alive sweep records failure when every pair fails."""
-    from forven.data_manager import DataManager, data_manager_stats
+    from axiom.data_manager import DataManager, data_manager_stats
     _reset_data_manager_stats()
     dm = DataManager()
 

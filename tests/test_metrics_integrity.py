@@ -1,4 +1,4 @@
-"""Tests for data-quality metric invariants and runtime loadability hygiene.
+﻿"""Tests for data-quality metric invariants and runtime loadability hygiene.
 
 These guard against the failure mode where an engine/data bug produces
 implausible metrics (e.g. a zeroed in-sample leg) and the pipeline silently
@@ -6,7 +6,7 @@ consumes them as legitimate gate failures, or where a strategy with an
 unloadable runtime sits in an active stage forever.
 """
 
-from forven.metrics_integrity import (
+from axiom.metrics_integrity import (
     DATA_QUALITY_HOLD_PREFIX,
     check_metrics_integrity,
     data_quality_hold_reason,
@@ -74,7 +74,7 @@ class TestCheckMetricsIntegrity:
 
 class TestGuardrailQuarantine:
     def test_quick_screen_guardrails_hold_anomalous_metrics(self):
-        from forven.brain import _quick_screen_overfitting_guardrails
+        from axiom.brain import _quick_screen_overfitting_guardrails
 
         can_proceed, reason = _quick_screen_overfitting_guardrails(_metrics(0, 58))
         assert can_proceed is False
@@ -82,7 +82,7 @@ class TestGuardrailQuarantine:
         assert "(reject)" not in reason
 
     def test_gauntlet_entry_guardrails_hold_anomalous_metrics(self):
-        from forven.brain import _gauntlet_entry_guardrails
+        from axiom.brain import _gauntlet_entry_guardrails
 
         can_proceed, reason = _gauntlet_entry_guardrails("S-test", _metrics(0, 58))
         assert can_proceed is False
@@ -92,7 +92,7 @@ class TestGuardrailQuarantine:
 
 class TestSweepTreatsHoldAsNonTerminal:
     def test_data_quality_hold_is_not_terminal(self):
-        from forven.evolution import _is_terminal_quick_screen_gate_failure
+        from axiom.evolution import _is_terminal_quick_screen_gate_failure
 
         reason = (
             "quick_screen→gauntlet blocked: "
@@ -101,13 +101,13 @@ class TestSweepTreatsHoldAsNonTerminal:
         assert _is_terminal_quick_screen_gate_failure(reason) is False
 
     def test_data_quality_hold_overrides_other_reject_text(self):
-        from forven.evolution import _is_terminal_quick_screen_gate_failure
+        from axiom.evolution import _is_terminal_quick_screen_gate_failure
 
         combined = "DataQualityHold: in_sample lost; Gate5: Trades 0 < 30 (reject)"
         assert _is_terminal_quick_screen_gate_failure(combined) is False
 
     def test_plain_reject_text_is_still_terminal(self):
-        from forven.evolution import _is_terminal_quick_screen_gate_failure
+        from axiom.evolution import _is_terminal_quick_screen_gate_failure
 
         assert _is_terminal_quick_screen_gate_failure(
             "quick_screen→gauntlet blocked: Gate5: Trades 0 < 30 (reject)"
@@ -116,12 +116,12 @@ class TestSweepTreatsHoldAsNonTerminal:
 
 class TestRuntimeLoadability:
     def test_registered_builtin_type_resolves(self):
-        from forven.strategies.registry import runtime_unloadable_reason
+        from axiom.strategies.registry import runtime_unloadable_reason
 
         assert runtime_unloadable_reason("rsi_momentum", None) is None
 
     def test_unregistered_type_reports_reason(self):
-        from forven.strategies.registry import runtime_unloadable_reason
+        from axiom.strategies.registry import runtime_unloadable_reason
 
         reason = runtime_unloadable_reason(
             "definitely_not_a_real_strategy_type_xyz",
@@ -131,12 +131,12 @@ class TestRuntimeLoadability:
         assert "not registered" in reason or "could not be resolved" in reason
 
     def test_missing_both_types_reports_reason(self):
-        from forven.strategies.registry import runtime_unloadable_reason
+        from axiom.strategies.registry import runtime_unloadable_reason
 
         assert runtime_unloadable_reason(None, "") is not None
 
     def test_evolution_helper_delegates(self):
-        from forven.evolution import _runtime_unloadable_reason
+        from axiom.evolution import _runtime_unloadable_reason
 
         assert _runtime_unloadable_reason("rsi_momentum", None) is None
         assert _runtime_unloadable_reason("nope_xyz", "nope_xyz") is not None

@@ -1,14 +1,14 @@
-"""Recover missing or overwritten agent ROLE.md files from the unified Forven workspace.
+﻿"""Recover missing or overwritten agent ROLE.md files from the unified Axiom workspace.
 
 This script is intentionally conservative:
 - It merges persona payloads from all available snapshots and keeps the richer
   version per agent when duplicates exist.
 - It mirrors recovered personas into the workspace:
-  `~/.forven/workspace/agents/*/ROLE.md`.
-- It updates `name` and `instructions` columns in `~/.forven/forven.db`.
+  `~/.Axiom/workspace/agents/*/ROLE.md`.
+- It updates `name` and `instructions` columns in `~/.Axiom/axiom.db`.
   IMPORTANT: it does NOT touch the `role` column — that column is a type slug
   (e.g. 'strategy-developer') consumed by Brain's fan-out filter at
-  forven/brain.py, and overwriting it with ROLE.md prose silently removes
+  Axiom/brain.py, and overwriting it with ROLE.md prose silently removes
   agents from the swarm.
 
 Useful when ROLE.md content is unexpectedly short/blank after a workspace migration.
@@ -24,10 +24,10 @@ from pathlib import Path
 WORKSPACE_REL = Path("workspace") / "agents"
 
 ROOT = Path.home()
-TARGET_WORKSPACES = [ROOT / ".forven", ROOT / ".judex"]
+TARGET_WORKSPACES = [ROOT / ".Axiom", ROOT / ".judex"]
 TARGET_DBS = [
-    ROOT / ".forven" / "forven.db",
-    ROOT / ".judex" / "forven.db",
+    ROOT / ".Axiom" / "axiom.db",
+    ROOT / ".judex" / "axiom.db",
 ]
 SOURCE_DB_CANDIDATES = TARGET_DBS.copy()
 

@@ -1,5 +1,5 @@
-"""
-Forven Process Watchdog
+﻿"""
+Axiom Process Watchdog
 =======================
 Monitors the bot and daemon processes. Restarts the bot if the scheduler
 has stalled (no jobs have run for >5 minutes).
@@ -9,7 +9,7 @@ Usage:
     python scripts/watchdog.py --loop   # run continuously every 60s
 
 The watchdog is intentionally simple and self-contained to avoid depending
-on any Forven internals that might be broken.
+on any Axiom internals that might be broken.
 """
 
 import os
@@ -26,14 +26,14 @@ from pathlib import Path
 # Configuration
 # ---------------------------------------------------------------------------
 
-FORVEN_HOME = Path(os.environ.get("FORVEN_HOME", os.path.expanduser("~/.forven")))
-BOT_LOCK = FORVEN_HOME / "bot.lock"
-DAEMON_LOCK = FORVEN_HOME / "daemon.lock"
-DB_PATH = FORVEN_HOME / "forven.db"
-LOG_PATH = FORVEN_HOME / "logs" / "watchdog.log"
+AXIOM_HOME = Path(os.environ.get("AXIOM_HOME", os.path.expanduser("~/.Axiom")))
+BOT_LOCK = AXIOM_HOME / "bot.lock"
+DAEMON_LOCK = AXIOM_HOME / "daemon.lock"
+DB_PATH = AXIOM_HOME / "axiom.db"
+LOG_PATH = AXIOM_HOME / "logs" / "watchdog.log"
 POLL_INTERVAL = 60  # seconds between checks
 SCHEDULER_STALE_THRESHOLD = 300  # 5 minutes — scheduler must tick within this window
-BOT_START_CMD = [sys.executable, "-m", "forven", "bot", "start"]
+BOT_START_CMD = [sys.executable, "-m", "Axiom", "bot", "start"]
 BOT_STARTUP_GRACE_SECONDS = 180  # allow a fresh gateway time to connect and tick
 
 logging.basicConfig(

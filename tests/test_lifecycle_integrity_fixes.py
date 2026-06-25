@@ -1,4 +1,4 @@
-"""2026-06-09 audit M-12 / M-13 / B-26 — lifecycle-integrity fixes.
+﻿"""2026-06-09 audit M-12 / M-13 / B-26 — lifecycle-integrity fixes.
 
 M-12: policy._check_repeated_failure_auto_archive must archive through
 brain.transition_stage (canonical guard honoured, pending tasks + active
@@ -23,13 +23,13 @@ from __future__ import annotations
 import json
 from datetime import datetime, timedelta, timezone
 
-import forven.policy as policy
-from forven.brain import _SYSTEM_FORCE_ACTORS, _USER_ACTORS, transition_stage
-from forven.db import get_db
-from forven.evolution import _archive_terminal_quick_screen_gate_failure
-from forven.gauntlet.engine import demote_failed_gate_strategies
-from forven.gauntlet.store import WORKFLOW_DEFINITION_VERSION, create_or_get_workflow
-from forven.gauntlet.tasks import run_quick_screen_gate
+import axiom.policy as policy
+from axiom.brain import _SYSTEM_FORCE_ACTORS, _USER_ACTORS, transition_stage
+from axiom.db import get_db
+from axiom.evolution import _archive_terminal_quick_screen_gate_failure
+from axiom.gauntlet.engine import demote_failed_gate_strategies
+from axiom.gauntlet.store import WORKFLOW_DEFINITION_VERSION, create_or_get_workflow
+from axiom.gauntlet.tasks import run_quick_screen_gate
 
 
 def _insert_strategy(
@@ -117,7 +117,7 @@ def test_auto_archive_actor_is_system_force_capable_but_not_user():
     assert "evolution_terminal_archive" not in _USER_ACTORS
 
 
-def test_auto_archive_goes_through_transition_stage_with_terminal_cleanup(forven_db):
+def test_auto_archive_goes_through_transition_stage_with_terminal_cleanup(AXIOM_db):
     """Archive must update stage_changed_at, cancel pending agent_tasks and any
     active gauntlet workflow — the cleanups the raw UPDATE used to skip."""
     strategy_id = "s-m12-cleanup"
@@ -163,7 +163,7 @@ def test_auto_archive_goes_through_transition_stage_with_terminal_cleanup(forven
     assert event["to_state"] == "archived"
 
 
-def test_auto_archive_never_archives_canonical_strategy(forven_db):
+def test_auto_archive_never_archives_canonical_strategy(AXIOM_db):
     """The canonical guard must hold: auto_archive is neither decay_tracker nor a
     forced user actor, so a canonical strategy stays put with canonical=1 intact."""
     strategy_id = "s-m12-canonical"
@@ -178,7 +178,7 @@ def test_auto_archive_never_archives_canonical_strategy(forven_db):
     assert int(row["canonical"]) == 1
 
 
-def test_auto_archive_succeeds_under_ghost_protection(forven_db):
+def test_auto_archive_succeeds_under_ghost_protection(AXIOM_db):
     """5x genuine ran-and-failed rejections must archive even when the metrics blob
     would trip verify_fitness_before_archive (force=True via _SYSTEM_FORCE_ACTORS)."""
     strategy_id = "s-m12-ghost"
@@ -203,7 +203,7 @@ def _gate_step(workflow_id: str) -> dict:
     )
 
 
-def test_quick_screen_gate_reports_failed_gate_when_guardrails_block(forven_db):
+def test_quick_screen_gate_reports_failed_gate_when_guardrails_block(AXIOM_db):
     """A hard overfitting-guardrail verdict (Gate5 trades < 30) must surface as a
     terminal failed_gate, not a phantom 'passed' that burns the whole pipeline."""
     strategy_id = "s-m13-overfit"
@@ -222,7 +222,7 @@ def test_quick_screen_gate_reports_failed_gate_when_guardrails_block(forven_db):
     assert _strategy_row(strategy_id)["stage"] == "quick_screen"
 
 
-def test_quick_screen_gate_reports_blocked_runtime_when_backtest_evidence_missing(forven_db):
+def test_quick_screen_gate_reports_blocked_runtime_when_backtest_evidence_missing(AXIOM_db):
     """canonical_backtest_required is transient (the backtest row may still be
     persisting) — the step must retry, not report passed."""
     strategy_id = "s-m13-no-evidence"
@@ -237,7 +237,7 @@ def test_quick_screen_gate_reports_blocked_runtime_when_backtest_evidence_missin
     assert _strategy_row(strategy_id)["stage"] == "quick_screen"
 
 
-def test_quick_screen_gate_passes_and_advances_stage_with_real_evidence(forven_db):
+def test_quick_screen_gate_passes_and_advances_stage_with_real_evidence(AXIOM_db):
     strategy_id = "s-m13-pass"
     _insert_strategy(strategy_id, stage="quick_screen", metrics=GOOD_METRICS)
     with get_db() as conn:
@@ -259,7 +259,7 @@ def test_quick_screen_gate_passes_and_advances_stage_with_real_evidence(forven_d
     assert _strategy_row(strategy_id)["stage"] == "gauntlet"
 
 
-def test_evolution_terminal_archive_succeeds_under_ghost_protection(forven_db):
+def test_evolution_terminal_archive_succeeds_under_ghost_protection(AXIOM_db):
     """The dedicated evolution_terminal_archive actor keeps force=True effective, so
     the terminal archive of a hard quick-screen reject happens even when the strategy
     has no metrics (previously blocked by ghost protection 323x/7d)."""
@@ -282,7 +282,7 @@ def test_evolution_terminal_archive_succeeds_under_ghost_protection(forven_db):
     assert event["actor"] == "evolution_terminal_archive"
 
 
-def test_evolution_terminal_archive_still_respects_canonical_guard(forven_db):
+def test_evolution_terminal_archive_still_respects_canonical_guard(AXIOM_db):
     strategy_id = "s-m13-evo-canonical"
     _insert_strategy(strategy_id, stage="quick_screen", metrics=GOOD_METRICS, canonical=1)
 
@@ -320,7 +320,7 @@ def _fail_workflow(workflow_id: str) -> None:
         )
 
 
-def test_restored_strategy_survives_demote_sweep(forven_db):
+def test_restored_strategy_survives_demote_sweep(AXIOM_db):
     strategy_id = "s-b26-restore"
     _insert_strategy(strategy_id, stage="quick_screen", metrics=GOOD_METRICS)
     workflow = create_or_get_workflow(strategy_id=strategy_id, created_by="pytest")
@@ -353,7 +353,7 @@ def test_restored_strategy_survives_demote_sweep(forven_db):
     assert _strategy_row(strategy_id)["stage"] == "quick_screen"
 
 
-def test_restore_resets_cancelled_workflow_so_strategy_is_not_stranded(forven_db):
+def test_restore_resets_cancelled_workflow_so_strategy_is_not_stranded(AXIOM_db):
     """Archival cancels the active workflow; without a reset the restored strategy
     would sit in quick_screen forever (backfill skips same-version workflows and
     create_or_get_workflow returns the dead row)."""
@@ -372,7 +372,7 @@ def test_restore_resets_cancelled_workflow_so_strategy_is_not_stranded(forven_db
     assert all(step["status"] == "pending" for step in _step_rows(workflow["id"]))
 
 
-def test_restore_retires_old_version_failed_workflow_instead_of_resetting(forven_db):
+def test_restore_retires_old_version_failed_workflow_instead_of_resetting(AXIOM_db):
     strategy_id = "s-b26-old-version"
     _insert_strategy(strategy_id, stage="quick_screen", metrics=GOOD_METRICS)
     workflow = create_or_get_workflow(strategy_id=strategy_id, created_by="pytest")
@@ -401,11 +401,11 @@ def test_restore_retires_old_version_failed_workflow_instead_of_resetting(forven
 # =====================================================================================
 
 
-def test_quick_screen_guardrails_defer_in_testing_mode(forven_db):
+def test_quick_screen_guardrails_defer_in_testing_mode(AXIOM_db):
     """testing_mode must defer the S9100200 guardrails (like the gauntlet gate does),
     so the pipeline is not emptied at quick_screen by floors only enforceable later."""
-    from forven.brain import _quick_screen_overfitting_guardrails
-    from forven.policy import load_pipeline_config, save_pipeline_config
+    from axiom.brain import _quick_screen_overfitting_guardrails
+    from axiom.policy import load_pipeline_config, save_pipeline_config
 
     cfg = load_pipeline_config()
     cfg["testing_mode"] = True
@@ -420,9 +420,9 @@ def test_quick_screen_guardrails_defer_in_testing_mode(forven_db):
     assert "testing_mode" in reason
 
 
-def test_quick_screen_guardrails_still_hard_reject_without_testing_mode(forven_db):
-    from forven.brain import _quick_screen_overfitting_guardrails
-    from forven.policy import load_pipeline_config, save_pipeline_config
+def test_quick_screen_guardrails_still_hard_reject_without_testing_mode(AXIOM_db):
+    from axiom.brain import _quick_screen_overfitting_guardrails
+    from axiom.policy import load_pipeline_config, save_pipeline_config
 
     cfg = load_pipeline_config()
     cfg["testing_mode"] = False
@@ -437,11 +437,11 @@ def test_quick_screen_guardrails_still_hard_reject_without_testing_mode(forven_d
     assert "Gate1" in reason  # IS sharpe floor
 
 
-def test_quick_screen_guardrail_floors_are_wired_settings(forven_db):
+def test_quick_screen_guardrail_floors_are_wired_settings(AXIOM_db):
     """min_trades / min_robustness_score were hardcoded fallbacks (30 / 50) invisible
     to Settings — relaxing them must actually relax the gate."""
-    from forven.brain import _quick_screen_overfitting_guardrails
-    from forven.policy import load_pipeline_config, save_pipeline_config
+    from axiom.brain import _quick_screen_overfitting_guardrails
+    from axiom.policy import load_pipeline_config, save_pipeline_config
 
     cfg = load_pipeline_config()
     cfg["testing_mode"] = False
@@ -458,12 +458,12 @@ def test_quick_screen_guardrail_floors_are_wired_settings(forven_db):
     assert can_proceed is True, reason
 
 
-def test_quick_screen_data_quality_hold_survives_testing_mode(forven_db):
+def test_quick_screen_data_quality_hold_survives_testing_mode(AXIOM_db):
     """The metrics-integrity quarantine is NOT a tunable gate — testing_mode must
     never wave through implausible payloads (zeroed IS leg next to active OOS)."""
-    from forven.brain import _quick_screen_overfitting_guardrails
-    from forven.metrics_integrity import DATA_QUALITY_HOLD_PREFIX
-    from forven.policy import load_pipeline_config, save_pipeline_config
+    from axiom.brain import _quick_screen_overfitting_guardrails
+    from axiom.metrics_integrity import DATA_QUALITY_HOLD_PREFIX
+    from axiom.policy import load_pipeline_config, save_pipeline_config
 
     cfg = load_pipeline_config()
     cfg["testing_mode"] = True

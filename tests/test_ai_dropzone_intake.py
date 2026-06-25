@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import importlib
 import sys
@@ -6,12 +6,12 @@ from datetime import datetime, timezone
 
 import pytest
 
-import forven.brain as brain_mod
-from forven.db import create_strategy_container, get_db
-from forven.strategies import custom as custom_pkg
-from forven.strategies import intake as intake_mod
-from forven.strategies import registry
-from forven.strategy_lifecycle import StrategyPromoteBody, promote_strategy, read_strategies
+import axiom.brain as brain_mod
+from axiom.db import create_strategy_container, get_db
+from axiom.strategies import custom as custom_pkg
+from axiom.strategies import intake as intake_mod
+from axiom.strategies import registry
+from axiom.strategy_lifecycle import StrategyPromoteBody, promote_strategy, read_strategies
 
 
 def _write_custom_strategy(
@@ -22,13 +22,13 @@ def _write_custom_strategy(
 ) -> None:
     lines = [
         "import pandas as pd",
-        "from forven.strategies.base import BaseStrategy, Signal",
+        "from axiom.strategies.base import BaseStrategy, Signal",
         "",
     ]
     if embedded_hypothesis_id:
         lines.extend(
             [
-                f'FORVEN_HYPOTHESIS_ID = "{embedded_hypothesis_id}"',
+                f'AXIOM_HYPOTHESIS_ID = "{embedded_hypothesis_id}"',
                 "",
             ]
         )
@@ -62,7 +62,7 @@ def _write_custom_strategy(
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
-def test_register_custom_strategy_file_creates_quick_screen_ai_row(forven_db, monkeypatch, tmp_path):
+def test_register_custom_strategy_file_creates_quick_screen_ai_row(AXIOM_db, monkeypatch, tmp_path):
     temp_custom_dir = tmp_path / "custom"
     temp_custom_dir.mkdir()
     strategy_file = temp_custom_dir / "btc_ai_dropzone_wave_test.py"
@@ -73,7 +73,7 @@ def test_register_custom_strategy_file_creates_quick_screen_ai_row(forven_db, mo
 
     registry.reset()
     importlib.invalidate_caches()
-    sys.modules.pop("forven.strategies.custom.btc_ai_dropzone_wave_test", None)
+    sys.modules.pop("axiom.strategies.custom.btc_ai_dropzone_wave_test", None)
 
     result = intake_mod.register_custom_strategy_file(file_path=str(strategy_file))
 
@@ -95,7 +95,7 @@ def test_register_custom_strategy_file_creates_quick_screen_ai_row(forven_db, mo
     assert str(row["source_ref"]) == str(strategy_file.resolve())
 
 
-def test_scan_custom_strategies_registers_active_file_once(forven_db, monkeypatch, tmp_path):
+def test_scan_custom_strategies_registers_active_file_once(AXIOM_db, monkeypatch, tmp_path):
     temp_custom_dir = tmp_path / "custom"
     temp_custom_dir.mkdir()
     strategy_file = temp_custom_dir / "btc_ai_dropzone_wave_test.py"
@@ -106,7 +106,7 @@ def test_scan_custom_strategies_registers_active_file_once(forven_db, monkeypatc
 
     registry.reset()
     importlib.invalidate_caches()
-    sys.modules.pop("forven.strategies.custom.btc_ai_dropzone_wave_test", None)
+    sys.modules.pop("axiom.strategies.custom.btc_ai_dropzone_wave_test", None)
 
     # Dry-run scan: discovers but does NOT create DB rows
     dry_result = intake_mod.scan_custom_strategies()
@@ -137,7 +137,7 @@ def test_scan_custom_strategies_registers_active_file_once(forven_db, monkeypatc
     assert str(rows[0]["type"]) == "ai_dropzone_wave_test"
 
 
-def test_scan_custom_strategies_skips_archived_modules_by_default(forven_db, monkeypatch, tmp_path):
+def test_scan_custom_strategies_skips_archived_modules_by_default(AXIOM_db, monkeypatch, tmp_path):
     temp_custom_dir = tmp_path / "custom"
     temp_custom_dir.mkdir()
     active_file = temp_custom_dir / "btc_active_wave.py"
@@ -150,8 +150,8 @@ def test_scan_custom_strategies_skips_archived_modules_by_default(forven_db, mon
 
     registry.reset()
     importlib.invalidate_caches()
-    sys.modules.pop("forven.strategies.custom.btc_active_wave", None)
-    sys.modules.pop("forven.strategies.custom.btc_archived_wave_s00123", None)
+    sys.modules.pop("axiom.strategies.custom.btc_active_wave", None)
+    sys.modules.pop("axiom.strategies.custom.btc_archived_wave_s00123", None)
 
     result = intake_mod.scan_custom_strategies(register=True)
 
@@ -169,7 +169,7 @@ def test_scan_custom_strategies_skips_archived_modules_by_default(forven_db, mon
     assert [str(row["type"]) for row in rows] == ["active_wave_test"]
 
 
-def test_register_custom_strategy_file_rejects_duplicate_db_strategy(forven_db, monkeypatch, tmp_path):
+def test_register_custom_strategy_file_rejects_duplicate_db_strategy(AXIOM_db, monkeypatch, tmp_path):
     temp_custom_dir = tmp_path / "custom"
     temp_custom_dir.mkdir()
     strategy_file = temp_custom_dir / "btc_ai_dropzone_wave_test.py"
@@ -192,13 +192,13 @@ def test_register_custom_strategy_file_rejects_duplicate_db_strategy(forven_db, 
 
     registry.reset()
     importlib.invalidate_caches()
-    sys.modules.pop("forven.strategies.custom.btc_ai_dropzone_wave_test", None)
+    sys.modules.pop("axiom.strategies.custom.btc_ai_dropzone_wave_test", None)
 
     with pytest.raises(ValueError, match="already registered"):
         intake_mod.register_custom_strategy_file(file_path=str(strategy_file))
 
 
-def test_read_strategies_exposes_ai_dropzone_provenance_and_backtest_flag(forven_db):
+def test_read_strategies_exposes_ai_dropzone_provenance_and_backtest_flag(AXIOM_db):
     with get_db() as conn:
         strategy_id, _, _ = create_strategy_container(
             conn=conn,
@@ -240,7 +240,7 @@ def test_read_strategies_exposes_ai_dropzone_provenance_and_backtest_flag(forven
     assert row["has_backtest_results"] is True
 
 
-def test_promote_strategy_blocks_unbacktested_ai_dropzone_rows(forven_db):
+def test_promote_strategy_blocks_unbacktested_ai_dropzone_rows(AXIOM_db):
     with get_db() as conn:
         strategy_id, _, _ = create_strategy_container(
             conn=conn,
@@ -259,7 +259,7 @@ def test_promote_strategy_blocks_unbacktested_ai_dropzone_rows(forven_db):
     assert "completed backtest" in str(result["error"]).lower()
 
 
-def test_promote_strategy_allows_ai_dropzone_rows_after_backtest(forven_db, monkeypatch):
+def test_promote_strategy_allows_ai_dropzone_rows_after_backtest(AXIOM_db, monkeypatch):
     with get_db() as conn:
         strategy_id, _, _ = create_strategy_container(
             conn=conn,
@@ -300,7 +300,7 @@ def test_promote_strategy_allows_ai_dropzone_rows_after_backtest(forven_db, monk
     assert result["to_status"] == "gauntlet"
 
 
-def test_promote_strategy_keeps_non_ai_rows_unchanged(forven_db, monkeypatch):
+def test_promote_strategy_keeps_non_ai_rows_unchanged(AXIOM_db, monkeypatch):
     with get_db() as conn:
         strategy_id, _, _ = create_strategy_container(
             conn=conn,
@@ -323,7 +323,7 @@ def test_promote_strategy_keeps_non_ai_rows_unchanged(forven_db, monkeypatch):
     assert result["to_status"] == "gauntlet"
 
 
-def test_auto_intake_recent_files_requires_embedded_hypothesis_id(forven_db, monkeypatch, tmp_path):
+def test_auto_intake_recent_files_requires_embedded_hypothesis_id(AXIOM_db, monkeypatch, tmp_path):
     temp_custom_dir = tmp_path / "custom"
     temp_custom_dir.mkdir()
     strategy_file = temp_custom_dir / "btc_recent_auto_intake.py"
@@ -334,7 +334,7 @@ def test_auto_intake_recent_files_requires_embedded_hypothesis_id(forven_db, mon
 
     registry.reset()
     importlib.invalidate_caches()
-    sys.modules.pop("forven.strategies.custom.btc_recent_auto_intake", None)
+    sys.modules.pop("axiom.strategies.custom.btc_recent_auto_intake", None)
 
     result = intake_mod.auto_intake_recent_files(max_age_minutes=10)
 
@@ -349,8 +349,8 @@ def test_auto_intake_recent_files_requires_embedded_hypothesis_id(forven_db, mon
     assert rows == []
 
 
-def test_auto_intake_recent_files_links_embedded_hypothesis_id(forven_db, monkeypatch, tmp_path):
-    from forven.hypotheses import create_hypothesis
+def test_auto_intake_recent_files_links_embedded_hypothesis_id(AXIOM_db, monkeypatch, tmp_path):
+    from axiom.hypotheses import create_hypothesis
 
     hypothesis = create_hypothesis(
         title="Recent auto-intake lineage",
@@ -376,7 +376,7 @@ def test_auto_intake_recent_files_links_embedded_hypothesis_id(forven_db, monkey
 
     registry.reset()
     importlib.invalidate_caches()
-    sys.modules.pop("forven.strategies.custom.btc_recent_hypothesis_linked", None)
+    sys.modules.pop("axiom.strategies.custom.btc_recent_hypothesis_linked", None)
 
     result = intake_mod.auto_intake_recent_files(max_age_minutes=10)
 

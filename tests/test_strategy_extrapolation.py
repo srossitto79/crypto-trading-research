@@ -1,7 +1,7 @@
-"""Structured strategy extrapolation (source fragments -> tagged StrategySpec)."""
+﻿"""Structured strategy extrapolation (source fragments -> tagged StrategySpec)."""
 import json
 
-from forven.strategy_extrapolation import extrapolate_strategy_spec, record_extrapolation_gaps
+from axiom.strategy_extrapolation import extrapolate_strategy_spec, record_extrapolation_gaps
 
 
 def _llm(payload: dict):
@@ -49,8 +49,8 @@ def test_extrapolate_strips_code_fence():
     assert res["spec"]["timeframe"]["value"] == "4h"
 
 
-def test_record_extrapolation_gaps_only_low_confidence_inferred(forven_db):
-    from forven.hypotheses import create_hypothesis, list_hypothesis_data_gaps
+def test_record_extrapolation_gaps_only_low_confidence_inferred(AXIOM_db):
+    from axiom.hypotheses import create_hypothesis, list_hypothesis_data_gaps
 
     h = create_hypothesis(
         title="t", market_thesis="m", mechanism="x", why_now=None,

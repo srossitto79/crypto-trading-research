@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
@@ -15,9 +15,9 @@ def _insert_strategy(conn, idx: int, name: str, type_: str | None = None) -> Non
     )
 
 
-def test_strategy_diversity_guard_detects_rsi_saturation(forven_db):
-    from forven.db import get_db
-    from forven.strategy_diversity import render_strategy_diversity_guard, recent_strategy_family_counts
+def test_strategy_diversity_guard_detects_rsi_saturation(AXIOM_db):
+    from axiom.db import get_db
+    from axiom.strategy_diversity import render_strategy_diversity_guard, recent_strategy_family_counts
 
     with get_db() as conn:
         for idx in range(1, 8):
@@ -38,9 +38,9 @@ def test_strategy_diversity_guard_detects_rsi_saturation(forven_db):
     assert "Do not create another RSI" in guard
 
 
-def test_strategy_diversity_guard_stays_quiet_when_balanced(forven_db):
-    from forven.db import get_db
-    from forven.strategy_diversity import render_strategy_diversity_guard
+def test_strategy_diversity_guard_stays_quiet_when_balanced(AXIOM_db):
+    from axiom.db import get_db
+    from axiom.strategy_diversity import render_strategy_diversity_guard
 
     families = [
         ("BTC-RSI_MOMENTUM-S00001", "rsi_momentum"),
@@ -59,7 +59,7 @@ def test_strategy_diversity_guard_stays_quiet_when_balanced(forven_db):
 
 
 def test_filter_recall_records_limits_one_family_dominance():
-    from forven.strategy_diversity import filter_recall_records_for_diversity
+    from axiom.strategy_diversity import filter_recall_records_for_diversity
 
     records = [
         {"document": f"Strategy rsi_momentum {idx}", "metadata": {"strategy_type": "rsi_momentum"}}

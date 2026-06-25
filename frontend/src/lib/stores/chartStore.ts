@@ -281,7 +281,7 @@ export function resetColorIndex() {
 }
 
 // Layout persistence using localStorage
-const LAYOUTS_KEY = 'forven_chart_layouts';
+const LAYOUTS_KEY = 'axiom_chart_layouts';
 
 export function saveLayout(layout: ChartLayout): void {
 	const layouts = getLayouts();

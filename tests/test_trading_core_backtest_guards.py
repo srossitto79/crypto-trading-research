@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from datetime import datetime, timezone
 
@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import forven.strategies.backtest as backtest_mod
+import axiom.strategies.backtest as backtest_mod
 
 
 def _fake_ohlcv(n: int) -> pd.DataFrame:
@@ -170,7 +170,7 @@ def test_backtest_strategy_filters_pre_boundary_oos_trades(monkeypatch):
     boundary = frame.index[split_idx]
     call_counter = {"count": 0}
 
-    monkeypatch.setattr("forven.api_core.get_settings", lambda: {})
+    monkeypatch.setattr("axiom.api_core.get_settings", lambda: {})
     monkeypatch.setattr(backtest_mod, "load_backtest_candles", lambda **_kwargs: frame)
 
     def _fake_run_signal_walk(*args, **kwargs):
@@ -201,7 +201,7 @@ def test_backtest_strategy_filters_pre_boundary_oos_trades(monkeypatch):
 def test_walk_forward_uses_stricter_robustness_threshold(monkeypatch):
     frame = _fake_ohlcv(1_000)
 
-    monkeypatch.setattr("forven.api_core.get_settings", lambda: {})
+    monkeypatch.setattr("axiom.api_core.get_settings", lambda: {})
     monkeypatch.setattr(backtest_mod, "load_backtest_candles", lambda **_kwargs: frame)
 
     def _fake_run_signal_walk(*args, **kwargs):
@@ -239,7 +239,7 @@ def test_walk_forward_uses_stricter_robustness_threshold(monkeypatch):
 def test_certified_strategy_types_backtest_without_unknown_type_errors(strategy_type, monkeypatch):
     frame = _fake_ohlcv(320)
 
-    monkeypatch.setattr("forven.api_core.get_settings", lambda: {})
+    monkeypatch.setattr("axiom.api_core.get_settings", lambda: {})
     monkeypatch.setattr(backtest_mod, "load_backtest_candles", lambda **_kwargs: frame)
     monkeypatch.setattr(backtest_mod, "_run_signal_walk", lambda *args, **kwargs: [])
     monkeypatch.setattr(backtest_mod, "compute_metrics", _metrics_stub)

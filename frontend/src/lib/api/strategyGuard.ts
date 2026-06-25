@@ -2,7 +2,7 @@
  * Strategy AST-guard client — backs the AI Drop Zone "Scan" pre-flight.
  *
  * Calls POST /api/strategy-guard/scan, which runs the static AST guard
- * (forven/sandbox/ast_guard.py) against a strategy file WITHOUT executing it.
+ * (axiom/sandbox/ast_guard.py) against a strategy file WITHOUT executing it.
  * This is a UX pre-check only; registration enforces the same guard server-side
  * regardless. Kinds mirror the backend's AstReport.Finding.kind exactly.
  */

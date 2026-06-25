@@ -603,7 +603,7 @@
 </script>
 
 <svelte:head>
-	<title>Memory | Forven</title>
+	<title>Memory | Axiom</title>
 </svelte:head>
 
 <div class="min-h-full bg-[#050505] text-gray-100">

@@ -1,13 +1,13 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from forven.db import get_db
+from axiom.db import get_db
 
 
-def test_list_hypotheses_returns_operator_fields(forven_db):
-    from forven.api import app
-    from forven.hypotheses import create_hypothesis, record_data_gap
+def test_list_hypotheses_returns_operator_fields(AXIOM_db):
+    from axiom.api import app
+    from axiom.hypotheses import create_hypothesis, record_data_gap
 
     hypothesis = create_hypothesis(
         title="Funding dislocation mean reversion",
@@ -56,9 +56,9 @@ def test_list_hypotheses_returns_operator_fields(forven_db):
     assert item["open_data_gap_count"] == 1
 
 
-def test_get_hypothesis_detail_returns_strategies_artifacts_and_data_gaps(forven_db):
-    from forven.api import app
-    from forven.hypotheses import add_hypothesis_artifact, create_hypothesis, record_data_gap
+def test_get_hypothesis_detail_returns_strategies_artifacts_and_data_gaps(AXIOM_db):
+    from axiom.api import app
+    from axiom.hypotheses import add_hypothesis_artifact, create_hypothesis, record_data_gap
 
     hypothesis = create_hypothesis(
         title="Public benchmark idea",
@@ -105,9 +105,9 @@ def test_get_hypothesis_detail_returns_strategies_artifacts_and_data_gaps(forven
     assert body["data_gaps"][0]["missing_dataset"] == "liquidations"
 
 
-def test_list_hypotheses_accepts_manager_view_and_search(forven_db):
-    from forven.api import app
-    from forven.hypotheses import archive_hypothesis, create_hypothesis
+def test_list_hypotheses_accepts_manager_view_and_search(AXIOM_db):
+    from axiom.api import app
+    from axiom.hypotheses import archive_hypothesis, create_hypothesis
 
     archived = create_hypothesis(
         title="Funding search target",
@@ -138,9 +138,9 @@ def test_list_hypotheses_accepts_manager_view_and_search(forven_db):
     assert body["hypotheses"][0]["manager_state"] == "archived"
 
 
-def test_hypothesis_lifecycle_endpoints_transition_and_return_payload(forven_db):
-    from forven.api import app
-    from forven.hypotheses import create_hypothesis
+def test_hypothesis_lifecycle_endpoints_transition_and_return_payload(AXIOM_db):
+    from axiom.api import app
+    from axiom.hypotheses import create_hypothesis
 
     created = create_hypothesis(
         title="API lifecycle coverage",
@@ -166,9 +166,9 @@ def test_hypothesis_lifecycle_endpoints_transition_and_return_payload(forven_db)
     assert restored.json()["hypothesis"]["restored_at"] is not None
 
 
-def test_bulk_hypothesis_lifecycle_endpoints_accept_selected_ids(forven_db):
-    from forven.api import app
-    from forven.hypotheses import create_hypothesis
+def test_bulk_hypothesis_lifecycle_endpoints_accept_selected_ids(AXIOM_db):
+    from axiom.api import app
+    from axiom.hypotheses import create_hypothesis
 
     first = create_hypothesis(
         title="First API bulk hypothesis",
@@ -201,9 +201,9 @@ def test_bulk_hypothesis_lifecycle_endpoints_accept_selected_ids(forven_db):
     assert {item["manager_state"] for item in body["hypotheses"]} == {"archived"}
 
 
-def test_ranked_data_gaps_endpoint_returns_top_blockers(forven_db):
-    from forven.api import app
-    from forven.hypotheses import create_hypothesis, record_data_gap
+def test_ranked_data_gaps_endpoint_returns_top_blockers(AXIOM_db):
+    from axiom.api import app
+    from axiom.hypotheses import create_hypothesis, record_data_gap
 
     hypothesis = create_hypothesis(
         title="Gap leaderboard",
@@ -231,9 +231,9 @@ def test_ranked_data_gaps_endpoint_returns_top_blockers(forven_db):
     assert body["items"][0]["missing_dataset"] == "funding_rates"
 
 
-def test_list_hypotheses_pagination_is_backward_compatible_and_slices(forven_db):
-    from forven.api import app
-    from forven.hypotheses import create_hypothesis
+def test_list_hypotheses_pagination_is_backward_compatible_and_slices(AXIOM_db):
+    from axiom.api import app
+    from axiom.hypotheses import create_hypothesis
 
     for i in range(5):
         create_hypothesis(
@@ -274,9 +274,9 @@ def test_list_hypotheses_pagination_is_backward_compatible_and_slices(forven_db)
     assert tail["hypotheses"] == []
 
 
-def test_hypotheses_counts_endpoint_returns_all_buckets(forven_db):
-    from forven.api import app
-    from forven.hypotheses import archive_hypothesis, create_hypothesis, trash_hypothesis
+def test_hypotheses_counts_endpoint_returns_all_buckets(AXIOM_db):
+    from axiom.api import app
+    from axiom.hypotheses import archive_hypothesis, create_hypothesis, trash_hypothesis
 
     client = TestClient(app)
     # Baseline: init_db may seed a legacy archived hypothesis, so compare deltas.
@@ -325,9 +325,9 @@ def test_hypotheses_counts_endpoint_returns_all_buckets(forven_db):
     assert active["id"]  # referenced so the active row is meaningful
 
 
-def test_ranked_data_gaps_surface_requesting_hypotheses(forven_db):
-    from forven.api import app
-    from forven.hypotheses import create_hypothesis, record_data_gap
+def test_ranked_data_gaps_surface_requesting_hypotheses(AXIOM_db):
+    from axiom.api import app
+    from axiom.hypotheses import create_hypothesis, record_data_gap
 
     direct = create_hypothesis(
         title="Direct requester",
@@ -387,8 +387,8 @@ def test_ranked_data_gaps_surface_requesting_hypotheses(forven_db):
     assert requesters[via_strategy["id"]]["title"] == "Strategy requester"
 
 
-def test_get_hypothesis_detail_returns_404_for_unknown_id(forven_db):
-    from forven.api import app
+def test_get_hypothesis_detail_returns_404_for_unknown_id(AXIOM_db):
+    from axiom.api import app
 
     client = TestClient(app)
     response = client.get("/api/hypotheses/HYP-UNKNOWN")
@@ -396,9 +396,9 @@ def test_get_hypothesis_detail_returns_404_for_unknown_id(forven_db):
     assert response.status_code == 404
 
 
-def test_strategy_container_includes_parent_hypothesis_id(forven_db):
-    from forven.api import app
-    from forven.hypotheses import create_hypothesis
+def test_strategy_container_includes_parent_hypothesis_id(AXIOM_db):
+    from axiom.api import app
+    from axiom.hypotheses import create_hypothesis
 
     hypothesis = create_hypothesis(
         title="Container backlink",
@@ -428,9 +428,9 @@ def test_strategy_container_includes_parent_hypothesis_id(forven_db):
     assert body["strategy"]["hypothesis_id"] == hypothesis["id"]
 
 
-def test_detail_excludes_cached_content_by_default(forven_db):
-    from forven.api import app
-    from forven.hypotheses import add_hypothesis_artifact, create_hypothesis
+def test_detail_excludes_cached_content_by_default(AXIOM_db):
+    from axiom.api import app
+    from axiom.hypotheses import add_hypothesis_artifact, create_hypothesis
 
     hyp = create_hypothesis(
         title="t",
@@ -467,9 +467,9 @@ def test_detail_excludes_cached_content_by_default(forven_db):
     assert art["content_bytes"] is not None
 
 
-def test_detail_includes_cached_content_when_requested(forven_db):
-    from forven.api import app
-    from forven.hypotheses import add_hypothesis_artifact, create_hypothesis
+def test_detail_includes_cached_content_when_requested(AXIOM_db):
+    from axiom.api import app
+    from axiom.hypotheses import add_hypothesis_artifact, create_hypothesis
 
     hyp = create_hypothesis(
         title="t",
@@ -501,10 +501,10 @@ def test_detail_includes_cached_content_when_requested(forven_db):
     assert body["artifacts"][0]["cached_content"] == "the cached body"
 
 
-def test_discover_endpoint_triggers_discovery_on_operator_demand(forven_db):
+def test_discover_endpoint_triggers_discovery_on_operator_demand(AXIOM_db):
     """POST /api/hypotheses/discover runs discovery even though the autonomous_discovery
     setting is OFF by default (operator demand), and dedups through the route."""
-    from forven.api import app
+    from axiom.api import app
 
     client = TestClient(app)
     first = client.post("/api/hypotheses/discover")

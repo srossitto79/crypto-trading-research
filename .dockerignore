@@ -31,9 +31,11 @@ frontend/build
 Thumbs.db
 
 # ── Data / State (mounted as volume at runtime) ─────────────────────
+.axiom
+.axiom_home
 .forven
 .forven_home
-data
+.data
 *.db
 *.db-journal
 *.db-wal

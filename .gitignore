@@ -27,9 +27,12 @@ venv/
 data/
 .data/
 .forven/
+.forven_home/
 .juddex/
 .juddex_home/
 .judex/
+.axiom/
+.axiom_home/
 .chromadb/
 chromadb_data/
 chroma/
@@ -49,6 +52,7 @@ chroma_data/
 *.log
 /logs/
 /.forven_logs/
+/.axiom_logs/
 
 # Tool-session droppings
 .superpowers/
@@ -58,6 +62,7 @@ chroma_data/
 
 # Secrets & credentials
 .forven_key
+.axiom_key
 .webhook_secret
 
 # Frontend build artifacts
@@ -83,6 +88,7 @@ test-results/
 
 # Local workspace state
 .forven_home/
+.axiom_home/
 ~/
 .claude/settings.local.json
 .claude/settings.json
@@ -92,6 +98,8 @@ test-results/
 custom/
 forven/strategies/custom/*
 !forven/strategies/custom/__init__.py
+axiom/strategies/custom/*
+!axiom/strategies/custom/__init__.py
 
 # Root-level ad hoc scripts and exports
 _audit_*.py
@@ -114,7 +122,7 @@ risk_audit_*.txt
 /bt_request.json
 
 # Stray root-level strategy scratch — AI strategies belong in
-# forven/strategies/custom/ (already ignored). These patterns only match the
+# axiom/strategies/custom/ (already ignored). These patterns only match the
 # repo root so they never shadow real package modules.
 /S[0-9]*.py
 /s[0-9]*.py

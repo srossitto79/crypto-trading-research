@@ -1,5 +1,5 @@
-"""Tests for the enrich+enqueue pipeline:
-- forven.hypotheses.update_hypothesis
+﻿"""Tests for the enrich+enqueue pipeline:
+- Axiom.hypotheses.update_hypothesis
 - update_hypothesis_fields agent tool
 - operator-URL-paste auto-enqueues a strategy-developer research task
 """
@@ -11,10 +11,10 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
-from forven.api import app
-from forven.control_plane import ops as control_plane_ops
-from forven.db import get_db
-from forven.hypotheses import (
+from axiom.api import app
+from axiom.control_plane import ops as control_plane_ops
+from axiom.db import get_db
+from axiom.hypotheses import (
     add_hypothesis_artifact,
     create_hypothesis,
     get_hypothesis,
@@ -40,7 +40,7 @@ def _base_hypothesis():
 # ---- update_hypothesis ----
 
 
-def test_update_hypothesis_patches_only_supplied_fields(forven_db):
+def test_update_hypothesis_patches_only_supplied_fields(AXIOM_db):
     hyp = _base_hypothesis()
     updated = update_hypothesis(
         hyp["id"],
@@ -58,7 +58,7 @@ def test_update_hypothesis_patches_only_supplied_fields(forven_db):
     assert updated["origin_role"] == "operator"
 
 
-def test_update_hypothesis_all_fields(forven_db):
+def test_update_hypothesis_all_fields(AXIOM_db):
     hyp = _base_hypothesis()
     updated = update_hypothesis(
         hyp["id"],
@@ -79,7 +79,7 @@ def test_update_hypothesis_all_fields(forven_db):
     assert updated["novelty_score"] == pytest.approx(0.5)
 
 
-def test_update_hypothesis_no_fields_returns_current(forven_db):
+def test_update_hypothesis_no_fields_returns_current(AXIOM_db):
     hyp = _base_hypothesis()
     updated_at_before = hyp.get("updated_at")
     updated = update_hypothesis(hyp["id"])
@@ -88,12 +88,12 @@ def test_update_hypothesis_no_fields_returns_current(forven_db):
     assert updated.get("updated_at") == updated_at_before
 
 
-def test_update_hypothesis_missing_id_raises(forven_db):
+def test_update_hypothesis_missing_id_raises(AXIOM_db):
     with pytest.raises(ValueError):
         update_hypothesis("HYP-nonexistent", title="x")
 
 
-def test_update_hypothesis_empty_required_fields_raises(forven_db):
+def test_update_hypothesis_empty_required_fields_raises(AXIOM_db):
     hyp = _base_hypothesis()
     with pytest.raises(ValueError):
         update_hypothesis(hyp["id"], title="")
@@ -104,8 +104,8 @@ def test_update_hypothesis_empty_required_fields_raises(forven_db):
 # ---- agent tool: update_hypothesis_fields ----
 
 
-def test_update_hypothesis_fields_tool_partial_update(forven_db):
-    from forven.agents.tools_research import _tool_update_hypothesis_fields
+def test_update_hypothesis_fields_tool_partial_update(AXIOM_db):
+    from axiom.agents.tools_research import _tool_update_hypothesis_fields
 
     hyp = _base_hypothesis()
     out = json.loads(_tool_update_hypothesis_fields({
@@ -120,8 +120,8 @@ def test_update_hypothesis_fields_tool_partial_update(forven_db):
     assert out["hypothesis"]["mechanism"] == "Mechanism TBD."
 
 
-def test_update_hypothesis_fields_tool_unknown_id_returns_error(forven_db):
-    from forven.agents.tools_research import _tool_update_hypothesis_fields
+def test_update_hypothesis_fields_tool_unknown_id_returns_error(AXIOM_db):
+    from axiom.agents.tools_research import _tool_update_hypothesis_fields
     out = json.loads(_tool_update_hypothesis_fields({
         "hypothesis_id": "HYP-fake",
         "title": "x",
@@ -130,10 +130,10 @@ def test_update_hypothesis_fields_tool_unknown_id_returns_error(forven_db):
     assert "not found" in out["error"].lower() or "hypothesis" in out["error"].lower()
 
 
-def test_update_hypothesis_fields_tool_ignores_immutable_fields(forven_db):
+def test_update_hypothesis_fields_tool_ignores_immutable_fields(AXIOM_db):
     """Extra keys in params (lane, source_type, id) are silently ignored — tool only
     forwards the allowlisted kwargs to update_hypothesis."""
-    from forven.agents.tools_research import _tool_update_hypothesis_fields
+    from axiom.agents.tools_research import _tool_update_hypothesis_fields
 
     hyp = _base_hypothesis()
     out = json.loads(_tool_update_hypothesis_fields({
@@ -151,10 +151,10 @@ def test_update_hypothesis_fields_tool_ignores_immutable_fields(forven_db):
 # ---- agent tool: list_hypothesis_artifacts ----
 
 
-def test_list_hypothesis_artifacts_tool_returns_cached_content(forven_db):
+def test_list_hypothesis_artifacts_tool_returns_cached_content(AXIOM_db):
     """Agents need to read cached transcripts/articles attached at paste time —
     without this tool they only see the task input and fabricate a mechanism."""
-    from forven.agents.tools_research import _tool_list_hypothesis_artifacts
+    from axiom.agents.tools_research import _tool_list_hypothesis_artifacts
 
     hyp = _base_hypothesis()
     add_hypothesis_artifact(
@@ -179,8 +179,8 @@ def test_list_hypothesis_artifacts_tool_returns_cached_content(forven_db):
     assert "FULL TRANSCRIPT BODY" in (art.get("cached_content") or "")
 
 
-def test_list_hypothesis_artifacts_tool_missing_id_returns_error(forven_db):
-    from forven.agents.tools_research import _tool_list_hypothesis_artifacts
+def test_list_hypothesis_artifacts_tool_missing_id_returns_error(AXIOM_db):
+    from axiom.agents.tools_research import _tool_list_hypothesis_artifacts
 
     out = json.loads(_tool_list_hypothesis_artifacts({}))
     assert out["ok"] is False
@@ -189,7 +189,7 @@ def test_list_hypothesis_artifacts_tool_missing_id_returns_error(forven_db):
 # ---- paste auto-enqueues research task ----
 
 
-def test_from_url_enqueues_strategy_developer_research_task(forven_db):
+def test_from_url_enqueues_strategy_developer_research_task(AXIOM_db):
     fake_preview = {
         "status": "ok",
         "url": "https://youtube.com/watch?v=abc",
@@ -205,7 +205,7 @@ def test_from_url_enqueues_strategy_developer_research_task(forven_db):
     control_plane_ops.update_system_mode("auto")
 
     with patch(
-        "forven.research_sources.url_ingest.inspect_youtube_video",
+        "axiom.research_sources.url_ingest.inspect_youtube_video",
         return_value=fake_preview,
     ):
         client = TestClient(app)
@@ -238,7 +238,7 @@ def test_from_url_enqueues_strategy_developer_research_task(forven_db):
     assert input_data["source_type"] == "youtube"
 
 
-def test_from_url_in_manual_mode_enqueues_operator_research(forven_db):
+def test_from_url_in_manual_mode_enqueues_operator_research(AXIOM_db):
     # URL paste is itself an explicit operator action — submitting after paste
     # should enrich the hypothesis fields without requiring a second Re-research
     # click. The task is source="user", which bypasses the manual-mode freeze.
@@ -256,7 +256,7 @@ def test_from_url_in_manual_mode_enqueues_operator_research(forven_db):
     control_plane_ops.update_system_mode("manual")
 
     with patch(
-        "forven.research_sources.url_ingest.inspect_youtube_video",
+        "axiom.research_sources.url_ingest.inspect_youtube_video",
         return_value=fake_preview,
     ):
         client = TestClient(app)
@@ -283,7 +283,7 @@ def test_from_url_in_manual_mode_enqueues_operator_research(forven_db):
     assert row["source"] == "user"
 
 
-def test_from_url_enqueue_failure_does_not_break_paste(forven_db):
+def test_from_url_enqueue_failure_does_not_break_paste(AXIOM_db):
     """If assign_task blows up, the hypothesis is still created; task info carries the error."""
     fake_preview = {
         "ok": True,
@@ -299,9 +299,9 @@ def test_from_url_enqueue_failure_does_not_break_paste(forven_db):
     control_plane_ops.update_system_mode("auto")
 
     with patch(
-        "forven.research_sources.url_ingest.blog.inspect_blog_article",
+        "axiom.research_sources.url_ingest.blog.inspect_blog_article",
         return_value=fake_preview,
-    ), patch("forven.brain.assign_task", side_effect=_raise):
+    ), patch("axiom.brain.assign_task", side_effect=_raise):
         client = TestClient(app)
         r = client.post(
             "/api/hypotheses/from_url",
@@ -315,7 +315,7 @@ def test_from_url_enqueue_failure_does_not_break_paste(forven_db):
     assert "scheduler offline" in (body["task"].get("error") or "")
 
 
-def test_preview_url_does_not_enqueue_task(forven_db):
+def test_preview_url_does_not_enqueue_task(AXIOM_db):
     """Preview is read-only — it must not create hypotheses or tasks."""
     fake_preview = {
         "ok": True,
@@ -329,7 +329,7 @@ def test_preview_url_does_not_enqueue_task(forven_db):
         before_hyp_count = conn.execute("SELECT COUNT(*) AS n FROM hypotheses").fetchone()["n"]
 
     with patch(
-        "forven.research_sources.url_ingest.blog.inspect_blog_article",
+        "axiom.research_sources.url_ingest.blog.inspect_blog_article",
         return_value=fake_preview,
     ):
         client = TestClient(app)
@@ -345,7 +345,7 @@ def test_preview_url_does_not_enqueue_task(forven_db):
     assert hyp_count == before_hyp_count
 
 
-def test_manual_create_in_manual_mode_defers_research_but_explicit_research_still_runs(forven_db):
+def test_manual_create_in_manual_mode_defers_research_but_explicit_research_still_runs(AXIOM_db):
     control_plane_ops.update_system_mode("manual")
     client = TestClient(app)
 

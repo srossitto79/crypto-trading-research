@@ -4,7 +4,7 @@
 </script>
 
 <svelte:head>
-	<title>Integrations · Forven</title>
+	<title>Integrations · Axiom</title>
 </svelte:head>
 
 <IntegrationTabs active="ai-clients">

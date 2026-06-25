@@ -15,5 +15,5 @@ What you'd like to see.
 
 **Additional context**
 Anything else (screenshots, links, related issues). For open-ended discussion,
-the [Discord](https://discord.gg/vzSQTneq6a) and [r/Forven](https://www.reddit.com/r/Forven/)
+the [Discord](https://discord.gg/vzSQTneq6a) and [r/Axiom](https://www.reddit.com/r/Forven/)
 are great too.

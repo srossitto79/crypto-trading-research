@@ -14,7 +14,7 @@ Use this checklist to harden Hyperliquid restart recovery so a daemon/backend re
 
 ## Incident Anchor
 
-- Hyperliquid testnet held an open BTC long while Forven showed `0` open positions.
+- Hyperliquid testnet held an open BTC long while Axiom showed `0` open positions.
 - The live residual size matched trade `E0095` (`0.00471 BTC`).
 - The live Hyperliquid reduce-only stop order `49994803084` matched `E0095.signal_data.exchange_stop_order_id`.
 - The daemon reconciler detected `missing_in_sqlite` but did not adopt the exchange position back into active management.
@@ -43,7 +43,7 @@ Use this checklist to harden Hyperliquid restart recovery so a daemon/backend re
 
 ### Startup Preflight
 
-- [x] Add a startup recovery preflight in `forven.daemon.run()` before entering the main loop.
+- [x] Add a startup recovery preflight in `axiom.daemon.run()` before entering the main loop.
 - [x] Fetch Hyperliquid positions before scanner execution resumes.
 - [x] Fetch Hyperliquid open orders before scanner execution resumes.
 - [x] Fetch Hyperliquid account snapshot before scanner execution resumes.
@@ -121,7 +121,7 @@ Use this checklist to harden Hyperliquid restart recovery so a daemon/backend re
 
 ### P0 Acceptance Criteria
 
-- [x] After restart, any live Hyperliquid position is visible in Forven within seconds.
+- [x] After restart, any live Hyperliquid position is visible in Axiom within seconds.
 - [x] After restart, any recovered position is back under risk management before new entries are allowed.
 - [x] Restart cannot leave exchange exposure invisible while the UI shows `0` open positions.
 - [x] Restart cannot resume new entries while a recovered position lacks protection.

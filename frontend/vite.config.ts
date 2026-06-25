@@ -2,9 +2,9 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vitest/config';
 
 const backendOrigin =
-	process.env.FORVEN_CLIENT_BASE ||
-	process.env.FORVEN_API_ORIGIN ||
-	`http://127.0.0.1:${process.env.FORVEN_PORT ?? '8003'}`;
+	process.env.AXIOM_CLIENT_BASE ||
+	process.env.AXIOM_API_ORIGIN ||
+	`http://127.0.0.1:${process.env.AXIOM_PORT ?? '8003'}`;
 const isVitest = process.env.VITEST === 'true';
 
 export default defineConfig({

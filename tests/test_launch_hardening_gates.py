@@ -1,4 +1,4 @@
-"""Launch hardening (2026-06-13 audit): regression coverage for the gate fixes.
+﻿"""Launch hardening (2026-06-13 audit): regression coverage for the gate fixes.
 
 1. quick_screen.min_trades is ENFORCED (was dead code — the gate only rejected
    the zero/zero case, so a 5-trade luck strategy advanced to the gauntlet).
@@ -12,8 +12,8 @@ import copy
 import json
 from datetime import datetime, timedelta, timezone
 
-from forven.db import get_db
-from forven.policy import (
+from axiom.db import get_db
+from axiom.policy import (
     DEFAULT_PIPELINE_CONFIG,
     _evaluate_paper_gate,
     _evaluate_quick_screen_gate,
@@ -56,7 +56,7 @@ def _config_with(section, **overrides):
 
 # --- 1. quick_screen.min_trades is enforced -------------------------------
 
-def test_quick_screen_rejects_low_trade_count(forven_db):
+def test_quick_screen_rejects_low_trade_count(AXIOM_db):
     with get_db() as conn:
         _insert_strategy(
             conn, "qs-few",
@@ -70,7 +70,7 @@ def test_quick_screen_rejects_low_trade_count(forven_db):
     assert "20 minimum" in msg  # Default preset quick_screen.min_trades relaxed 30 -> 20
 
 
-def test_quick_screen_min_trades_clears_at_sufficient_sample(forven_db):
+def test_quick_screen_min_trades_clears_at_sufficient_sample(AXIOM_db):
     # 40 trades clears the count floor — any subsequent rejection must NOT be
     # the min_trades one (proves the floor isn't blocking adequately-sampled
     # strategies).
@@ -80,7 +80,7 @@ def test_quick_screen_min_trades_clears_at_sufficient_sample(forven_db):
     assert "statistically meaningless" not in msg
 
 
-def test_quick_screen_min_trades_honors_operator_knob(forven_db):
+def test_quick_screen_min_trades_honors_operator_knob(AXIOM_db):
     # Lowering the floor to 5 lets a 5-trade strategy clear the count check.
     cfg = _config_with("quick_screen", min_trades=5)
     with get_db() as conn:
@@ -100,7 +100,7 @@ _STRONG_BACKTEST = {
 }
 
 
-def test_paper_gate_rejects_weak_forward_edge(forven_db):
+def test_paper_gate_rejects_weak_forward_edge(AXIOM_db):
     # 50 dispersed trades: net-positive return but a near-zero forward Sharpe
     # (lots of tiny wins, a couple of large losses). Strong backtest PF gets it
     # PAST the historical floors so it reaches the forward-edge check.
@@ -113,7 +113,7 @@ def test_paper_gate_rejects_weak_forward_edge(forven_db):
     assert "forward" in msg.lower()
 
 
-def test_paper_gate_sharpe_floor_skipped_for_zero_variance(forven_db):
+def test_paper_gate_sharpe_floor_skipped_for_zero_variance(AXIOM_db):
     # A degenerate constant-return series has an undefined t-stat; the Sharpe
     # floor must NOT reject it (the PF floor still applies, and PF=inf here).
     with get_db() as conn:
@@ -128,7 +128,7 @@ def test_required_tests_guard_restores_walk_forward():
     soak-era required_tests=['monte_carlo'] makes the strict Monte-Carlo bootstrap
     the SOLE gate and starves graduation — the normalizer restores the launch
     default whenever a non-empty required list lacks walk_forward."""
-    from forven.policy import _normalize_pipeline_config
+    from axiom.policy import _normalize_pipeline_config
 
     drift = _normalize_pipeline_config({"gauntlet": {"required_tests": ["monte_carlo"]}})
     assert "walk_forward" in drift["gauntlet"]["required_tests"]
@@ -143,7 +143,7 @@ def test_required_tests_guard_restores_walk_forward():
     assert enforce_all["gauntlet"]["required_tests"] == []
 
 
-def test_paper_gate_forward_floors_disabled_when_zeroed(forven_db):
+def test_paper_gate_forward_floors_disabled_when_zeroed(AXIOM_db):
     # Operator opts out of the forward-edge floors -> the weak strategy is no
     # longer rejected for forward edge (it may still fail other checks, but not
     # the forward-edge ones).

@@ -1,4 +1,4 @@
-"""Regression tests for pipeline hardening changes."""
+﻿"""Regression tests for pipeline hardening changes."""
 
 from __future__ import annotations
 
@@ -10,15 +10,15 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from fastapi import HTTPException
 
-import forven.evolution as evolution
-import forven.policy as policy
-from forven.api_core import read_lifecycle_strategy
-from forven.brain import assign_task, escalate_to_engineer, promote_strategy as brain_promote_strategy, transition_stage
-from forven.db import append_strategy_event, create_approval, create_task_container, get_db, init_db, kv_get, kv_set
-from forven.evolution import check_paper_graduation, run_testing_step, run_weekly_review
-from forven.monitoring import run_decay_tracker
-from forven.policy import evaluate_promotion
-from forven.scheduler import (
+import axiom.evolution as evolution
+import axiom.policy as policy
+from axiom.api_core import read_lifecycle_strategy
+from axiom.brain import assign_task, escalate_to_engineer, promote_strategy as brain_promote_strategy, transition_stage
+from axiom.db import append_strategy_event, create_approval, create_task_container, get_db, init_db, kv_get, kv_set
+from axiom.evolution import check_paper_graduation, run_testing_step, run_weekly_review
+from axiom.monitoring import run_decay_tracker
+from axiom.policy import evaluate_promotion
+from axiom.scheduler import (
     _DATA_MANAGER_OHLCV_KEEPALIVE_TIMEOUT_SECONDS,
     _USER_PRIORITY_MAX_DEFER_SECONDS,
     _job_hard_timeout_seconds,
@@ -28,10 +28,10 @@ from forven.scheduler import (
     recover_stale_scheduler_job_locks,
     run_job,
     reset_scheduler_job_locks,
-    seed_forven_jobs,
+    seed_AXIOM_jobs,
 )
-from forven.strategy_lifecycle import StrategyPromoteBody, promote_strategy as lifecycle_promote_strategy
-from forven.strategies.backtest import _sync_strategy_metrics_and_promote_if_eligible
+from axiom.strategy_lifecycle import StrategyPromoteBody, promote_strategy as lifecycle_promote_strategy
+from axiom.strategies.backtest import _sync_strategy_metrics_and_promote_if_eligible
 
 
 def _insert_strategy(
@@ -108,8 +108,8 @@ def _disable_readiness_gates():
     written before these gates existed continue to test the original gate logic
     in isolation.  Production code and new tests should have these gates enabled.
     """
-    from forven.db import kv_set
-    kv_set("forven:pipeline:settings", {
+    from axiom.db import kv_set
+    kv_set("axiom:pipeline:settings", {
         "gate_multi_tf_sweep_enabled": False,
         "gate_optimization_required_enabled": False,
         "gate_params_applied_enabled": False,
@@ -121,7 +121,7 @@ def _disable_readiness_gates():
 
 
 @pytest.fixture(autouse=True)
-def _readiness_gates_off(forven_db):
+def _readiness_gates_off(AXIOM_db):
     """Automatically disable readiness gates for all tests in this module."""
     _disable_readiness_gates()
 
@@ -224,7 +224,7 @@ def _insert_required_validation_results(strategy_id: str, *, failing: str | None
         _insert_validation_result(strategy_id, result_type, passing=result_type != failing)
 
 
-def test_transition_stage_updates_stage_changed_at_and_events(forven_db):
+def test_transition_stage_updates_stage_changed_at_and_events(AXIOM_db):
     _insert_strategy(
         "s-transition",
         stage="quick_screen",
@@ -273,7 +273,7 @@ def test_transition_stage_updates_stage_changed_at_and_events(forven_db):
     assert event["actor"] == "test"
 
 
-def test_attempt_stage_promotion_reports_blocked_transition_when_transition_stage_stays_put(forven_db):
+def test_attempt_stage_promotion_reports_blocked_transition_when_transition_stage_stays_put(AXIOM_db):
     _insert_strategy(
         "s-attempt-blocked",
         stage="quick_screen",
@@ -309,7 +309,7 @@ def test_attempt_stage_promotion_reports_blocked_transition_when_transition_stag
     assert row["status"] == "quick_screen"
 
 
-def test_transition_stage_supports_research_only_lane(forven_db):
+def test_transition_stage_supports_research_only_lane(AXIOM_db):
     _insert_strategy("s-research-lane", stage="quick_screen", owner="simulation-agent")
 
     demotion = transition_stage(
@@ -351,7 +351,7 @@ def test_transition_stage_supports_research_only_lane(forven_db):
     ]
 
 
-def test_transition_stage_allows_forced_rejected_to_paper_without_backtests(forven_db):
+def test_transition_stage_allows_forced_rejected_to_paper_without_backtests(AXIOM_db):
     _insert_strategy("s-rejected-force", stage="rejected", owner="brain", metrics=None)
 
     transition = transition_stage(
@@ -382,7 +382,7 @@ def test_transition_stage_allows_forced_rejected_to_paper_without_backtests(forv
     assert event["actor"] == "manual"
 
 
-def test_transition_stage_blocks_unforced_rejected_to_paper_without_backtests(forven_db):
+def test_transition_stage_blocks_unforced_rejected_to_paper_without_backtests(AXIOM_db):
     _insert_strategy("s-rejected-no-force", stage="rejected", owner="brain", metrics=None)
 
     transition = transition_stage(
@@ -407,7 +407,7 @@ def test_transition_stage_blocks_unforced_rejected_to_paper_without_backtests(fo
     assert row["status"] == "rejected"
 
 
-def test_transition_stage_queues_operator_approval_for_automated_paper_archive(forven_db):
+def test_transition_stage_queues_operator_approval_for_automated_paper_archive(AXIOM_db):
     _insert_strategy(
         "s-paper-archive-approval",
         stage="paper",
@@ -458,7 +458,7 @@ def test_transition_stage_queues_operator_approval_for_automated_paper_archive(f
     assert approval["requested_status"] == "archived"
 
 
-def test_transition_stage_force_archives_without_unbound_transition_locals(forven_db):
+def test_transition_stage_force_archives_without_unbound_transition_locals(AXIOM_db):
     _insert_strategy(
         "s-force-archive",
         stage="quick_screen",
@@ -497,7 +497,7 @@ def test_transition_stage_force_archives_without_unbound_transition_locals(forve
     assert "pipeline hygiene" in str(event["reason"] or "").lower()
 
 
-def test_transition_stage_reuses_existing_dethrone_approval_for_automated_paper_demotion(forven_db):
+def test_transition_stage_reuses_existing_dethrone_approval_for_automated_paper_demotion(AXIOM_db):
     _insert_strategy(
         "s-paper-existing-approval",
         stage="paper",
@@ -547,7 +547,7 @@ def test_transition_stage_reuses_existing_dethrone_approval_for_automated_paper_
     assert int(approval_count) == 1
 
 
-def test_read_lifecycle_strategy_missing_raises_404(forven_db):
+def test_read_lifecycle_strategy_missing_raises_404(AXIOM_db):
     with pytest.raises(HTTPException) as excinfo:
         read_lifecycle_strategy("missing-strategy")
 
@@ -555,7 +555,7 @@ def test_read_lifecycle_strategy_missing_raises_404(forven_db):
     assert "strategy not found" in str(excinfo.value.detail)
 
 
-def test_transition_stage_keeps_paper_when_live_graduation_gate_fails(forven_db):
+def test_transition_stage_keeps_paper_when_live_graduation_gate_fails(AXIOM_db):
     _insert_strategy(
         "s-paper-gate-blocked",
         stage="paper",
@@ -602,7 +602,7 @@ def test_transition_stage_keeps_paper_when_live_graduation_gate_fails(forven_db)
     assert details["requested_stage"] == "live_graduated"
 
 
-def test_brain_promote_strategy_returns_false_when_live_gate_blocks(forven_db):
+def test_brain_promote_strategy_returns_false_when_live_gate_blocks(AXIOM_db):
     _insert_strategy(
         "s-brain-paper-blocked",
         stage="paper",
@@ -638,7 +638,7 @@ def test_brain_promote_strategy_returns_false_when_live_gate_blocks(forven_db):
     assert int(activity["c"]) == 0
 
 
-def test_brain_promote_strategy_resolves_prefixed_display_name(forven_db, caplog):
+def test_brain_promote_strategy_resolves_prefixed_display_name(AXIOM_db, caplog):
     """The brain agent often passes the prefixed display name (ETH-BOLLINGER-S00619)
     instead of the bare id. promote_strategy must resolve the trailing Sxxxxx token
     and advance the strategy, without logging a spurious 'Strategy not found'."""
@@ -649,7 +649,7 @@ def test_brain_promote_strategy_resolves_prefixed_display_name(forven_db, caplog
             ("ETH-BOLLINGER-S09999", "S09999"),
         )
 
-    with caplog.at_level("ERROR", logger="forven.brain"):
+    with caplog.at_level("ERROR", logger="axiom.brain"):
         success, reason = brain_promote_strategy("ETH-BOLLINGER-S09999", "research_only")
 
     assert success is True, reason
@@ -659,14 +659,14 @@ def test_brain_promote_strategy_resolves_prefixed_display_name(forven_db, caplog
     assert "Strategy not found: ETH-BOLLINGER-S09999" not in caplog.text
 
 
-def test_brain_promote_strategy_non_strategy_id_stays_not_found(forven_db):
+def test_brain_promote_strategy_non_strategy_id_stays_not_found(AXIOM_db):
     """A non-S-prefixed id (e.g. a hypothesis) must NOT be mis-resolved to a strategy."""
     success, reason = brain_promote_strategy("H00217", "research_only")
     assert success is False
     assert "not found" in reason.lower()
 
 
-def test_lifecycle_promote_strategy_returns_error_when_live_gate_blocks(forven_db):
+def test_lifecycle_promote_strategy_returns_error_when_live_gate_blocks(AXIOM_db):
     _insert_strategy(
         "s-api-paper-blocked",
         stage="paper",
@@ -693,7 +693,7 @@ def test_lifecycle_promote_strategy_returns_error_when_live_gate_blocks(forven_d
     assert "gate failure" in result["error"].lower() or "paper" in result["error"].lower()
 
 
-def test_gate_rejection_does_not_fetch_market_data(forven_db, monkeypatch):
+def test_gate_rejection_does_not_fetch_market_data(AXIOM_db, monkeypatch):
     """Gate-rejection logging must never trigger a live market-data fetch.
 
     Regime enrichment in _log_gate_rejection_record must be cache-only. A
@@ -703,7 +703,7 @@ def test_gate_rejection_does_not_fetch_market_data(forven_db, monkeypatch):
     of the ~197s-per-test live-gate cases).
     """
     import pandas as pd
-    import forven.scanner as scanner
+    import axiom.scanner as scanner
 
     fetch_calls: list[tuple] = []
 
@@ -737,7 +737,7 @@ def test_gate_rejection_does_not_fetch_market_data(forven_db, monkeypatch):
     )
 
 
-def test_gate_rejection_logging_never_blocks_on_held_write_lock(forven_db):
+def test_gate_rejection_logging_never_blocks_on_held_write_lock(AXIOM_db):
     """Gate-rejection telemetry must be best-effort, never stall the pipeline.
 
     transition_stage evaluates the promotion gate *inside* its own open write
@@ -751,7 +751,7 @@ def test_gate_rejection_logging_never_blocks_on_held_write_lock(forven_db):
     Simulate the held lock with get_db_immediate (BEGIN IMMEDIATE) and assert
     log_gate_rejection returns promptly rather than blocking on busy_timeout.
     """
-    from forven.db import get_db_immediate, log_gate_rejection
+    from axiom.db import get_db_immediate, log_gate_rejection
 
     _insert_strategy("s-locked", stage="paper", owner="risk-manager")
 
@@ -778,7 +778,7 @@ def test_gate_rejection_logging_never_blocks_on_held_write_lock(forven_db):
     )
 
 
-def test_signal_result_logging_never_blocks_on_held_write_lock(forven_db):
+def test_signal_result_logging_never_blocks_on_held_write_lock(AXIOM_db):
     """Scanner signal telemetry must be best-effort, never stall the scan loop.
 
     record_signal_result's own docstring promises it will NEVER block the
@@ -787,7 +787,7 @@ def test_signal_result_logging_never_blocks_on_held_write_lock(forven_db):
     log_gate_rejection). Assert it returns promptly while another connection
     holds the write lock.
     """
-    from forven.db import get_db_immediate, record_signal_result
+    from axiom.db import get_db_immediate, record_signal_result
 
     with get_db_immediate() as holder:
         holder.execute(
@@ -811,7 +811,7 @@ def test_signal_result_logging_never_blocks_on_held_write_lock(forven_db):
     )
 
 
-def test_create_approval_defers_phase5_when_handed_open_transaction(forven_db):
+def test_create_approval_defers_phase5_when_handed_open_transaction(AXIOM_db):
     """Phase 5 auto-apply must not fire when create_approval runs inside a
     caller's open write transaction.
 
@@ -829,12 +829,12 @@ def test_create_approval_defers_phase5_when_handed_open_transaction(forven_db):
     """
     from unittest.mock import patch
 
-    from forven.control_plane.approval_modes import save_settings
-    from forven.db import create_approval, get_db
+    from axiom.control_plane.approval_modes import save_settings
+    from axiom.db import create_approval, get_db
 
     save_settings({"modes": {"strategy_dethrone_recommendation": "smart"}})
 
-    with patch("forven.control_plane.smart_approval.apply_smart_decision") as auto_apply:
+    with patch("axiom.control_plane.smart_approval.apply_smart_decision") as auto_apply:
         with get_db() as caller_conn:
             create_approval(
                 "strategy_dethrone_recommendation",
@@ -853,14 +853,14 @@ def test_create_approval_defers_phase5_when_handed_open_transaction(forven_db):
     )
 
 
-def test_create_approval_off_mode_auto_applies_on_conn_less_path(forven_db):
+def test_create_approval_off_mode_auto_applies_on_conn_less_path(AXIOM_db):
     """The conn-is-None guard must not break the normal auto-apply path.
 
     An off-allowlisted category in mode='off' should still be auto-approved on
     insert when create_approval owns the transaction (conn is None).
     """
-    from forven.control_plane.approval_modes import save_settings
-    from forven.db import create_approval, get_approval
+    from axiom.control_plane.approval_modes import save_settings
+    from axiom.db import create_approval, get_approval
 
     save_settings({"modes": {"param_optimization": "off"}})
 
@@ -881,12 +881,12 @@ def test_create_approval_off_mode_auto_applies_on_conn_less_path(forven_db):
     assert approval["auto_approved"] == 1
 
 
-def test_task_container_deduplicates_active_strategy_tasks(forven_db):
+def test_task_container_deduplicates_active_strategy_tasks(AXIOM_db):
     init_db()
     # Default MANUAL mode parks system-sourced tasks as paused_manual; this test
     # asserts on the pending/running active set, so run under AUTO where the
     # deduped task lands as pending.
-    from forven.system_pause import set_system_mode
+    from axiom.system_pause import set_system_mode
 
     set_system_mode("auto")
     with get_db() as conn:
@@ -925,12 +925,12 @@ def test_task_container_deduplicates_active_strategy_tasks(forven_db):
     assert int(active) == 1
 
 
-def test_run_weekly_review_empty_contract(forven_db):
+def test_run_weekly_review_empty_contract(AXIOM_db):
     result = run_weekly_review()
     assert result == {"retired": [], "top_performers": [], "total_deployed": 0}
 
 
-def test_run_weekly_review_uses_recent_live_trade_metrics(forven_db):
+def test_run_weekly_review_uses_recent_live_trade_metrics(AXIOM_db):
     _insert_strategy(
         "s-weekly-live",
         stage="live_graduated",
@@ -974,7 +974,7 @@ def test_run_weekly_review_uses_recent_live_trade_metrics(forven_db):
     assert approval["requested_status"] == "archived"
 
 
-def test_paper_graduation_uses_live_paper_trades_not_backtest_metrics(forven_db):
+def test_paper_graduation_uses_live_paper_trades_not_backtest_metrics(AXIOM_db):
     _insert_strategy(
         "s-paper-live",
         stage="paper_trading",
@@ -1001,7 +1001,7 @@ def test_paper_graduation_uses_live_paper_trades_not_backtest_metrics(forven_db)
     assert row["status"] == "paper_trading"
 
 
-def test_decay_tracker_handles_paper_trading_and_transitions_atomically(forven_db):
+def test_decay_tracker_handles_paper_trading_and_transitions_atomically(AXIOM_db):
     _insert_strategy(
         "s-decay",
         stage="paper_trading",
@@ -1035,7 +1035,7 @@ def test_decay_tracker_handles_paper_trading_and_transitions_atomically(forven_d
     assert event["to_state"] == "paper"
 
 
-def test_decay_tracker_ignores_nonmatching_trade_sources_for_paper_stage(forven_db):
+def test_decay_tracker_ignores_nonmatching_trade_sources_for_paper_stage(AXIOM_db):
     _insert_strategy(
         "s-decay-source-scope",
         stage="paper_trading",
@@ -1064,10 +1064,10 @@ def test_decay_tracker_ignores_nonmatching_trade_sources_for_paper_stage(forven_
     assert row["status"] == "paper_trading"
 
 
-def test_scheduler_running_since_guard_prevents_overlap(forven_db):
-    seed_forven_jobs()
+def test_scheduler_running_since_guard_prevents_overlap(AXIOM_db):
+    seed_AXIOM_jobs()
     now = datetime.now(timezone.utc)
-    job_id = "forven-testing-cycle"
+    job_id = "Axiom-testing-cycle"
 
     assert _try_mark_job_running(job_id, now) is True
     assert _try_mark_job_running(job_id, now) is False
@@ -1079,13 +1079,13 @@ def test_scheduler_running_since_guard_prevents_overlap(forven_db):
     assert _try_mark_job_running(job_id, now) is True
 
 
-def test_scheduler_job_takeover_window_uses_job_specific_timeout(forven_db):
-    seed_forven_jobs()
+def test_scheduler_job_takeover_window_uses_job_specific_timeout(AXIOM_db):
+    seed_AXIOM_jobs()
     now = datetime.now(timezone.utc)
 
     with get_db() as conn:
-        ideation = dict(conn.execute("SELECT * FROM scheduler_jobs WHERE id = ?", ("forven-ideation-daily",)).fetchone())
-        testing = dict(conn.execute("SELECT * FROM scheduler_jobs WHERE id = ?", ("forven-testing-cycle",)).fetchone())
+        ideation = dict(conn.execute("SELECT * FROM scheduler_jobs WHERE id = ?", ("Axiom-ideation-daily",)).fetchone())
+        testing = dict(conn.execute("SELECT * FROM scheduler_jobs WHERE id = ?", ("Axiom-testing-cycle",)).fetchone())
 
     ideation_stale_seconds = _job_running_stale_seconds(ideation)
     testing_stale_seconds = _job_running_stale_seconds(testing)
@@ -1097,24 +1097,24 @@ def test_scheduler_job_takeover_window_uses_job_specific_timeout(forven_db):
     with get_db() as conn:
         conn.execute(
             "UPDATE scheduler_jobs SET running_since = ? WHERE id = ?",
-            (ideation_stale, "forven-ideation-daily"),
+            (ideation_stale, "Axiom-ideation-daily"),
         )
         conn.execute(
             "UPDATE scheduler_jobs SET running_since = ? WHERE id = ?",
-            (testing_fresh, "forven-testing-cycle"),
+            (testing_fresh, "Axiom-testing-cycle"),
         )
 
-    assert _try_mark_job_running("forven-ideation-daily", now, stale_seconds=ideation_stale_seconds) is True
-    assert _try_mark_job_running("forven-testing-cycle", now, stale_seconds=testing_stale_seconds) is False
+    assert _try_mark_job_running("Axiom-ideation-daily", now, stale_seconds=ideation_stale_seconds) is True
+    assert _try_mark_job_running("Axiom-testing-cycle", now, stale_seconds=testing_stale_seconds) is False
 
 
-def test_recover_stale_scheduler_job_locks_uses_job_specific_timeout(forven_db):
-    seed_forven_jobs()
+def test_recover_stale_scheduler_job_locks_uses_job_specific_timeout(AXIOM_db):
+    seed_AXIOM_jobs()
     now = datetime.now(timezone.utc)
 
     with get_db() as conn:
-        ideation = dict(conn.execute("SELECT * FROM scheduler_jobs WHERE id = ?", ("forven-ideation-daily",)).fetchone())
-        testing = dict(conn.execute("SELECT * FROM scheduler_jobs WHERE id = ?", ("forven-testing-cycle",)).fetchone())
+        ideation = dict(conn.execute("SELECT * FROM scheduler_jobs WHERE id = ?", ("Axiom-ideation-daily",)).fetchone())
+        testing = dict(conn.execute("SELECT * FROM scheduler_jobs WHERE id = ?", ("Axiom-testing-cycle",)).fetchone())
 
     ideation_stale_seconds = _job_running_stale_seconds(ideation)
     testing_stale_seconds = _job_running_stale_seconds(testing)
@@ -1122,11 +1122,11 @@ def test_recover_stale_scheduler_job_locks_uses_job_specific_timeout(forven_db):
     with get_db() as conn:
         conn.execute(
             "UPDATE scheduler_jobs SET running_since = ? WHERE id = ?",
-            ((now - timedelta(seconds=ideation_stale_seconds + 5)).isoformat(), "forven-ideation-daily"),
+            ((now - timedelta(seconds=ideation_stale_seconds + 5)).isoformat(), "Axiom-ideation-daily"),
         )
         conn.execute(
             "UPDATE scheduler_jobs SET running_since = ? WHERE id = ?",
-            ((now - timedelta(seconds=max(60, testing_stale_seconds - 30))).isoformat(), "forven-testing-cycle"),
+            ((now - timedelta(seconds=max(60, testing_stale_seconds - 30))).isoformat(), "Axiom-testing-cycle"),
         )
 
     recovered = recover_stale_scheduler_job_locks(now=now)
@@ -1134,11 +1134,11 @@ def test_recover_stale_scheduler_job_locks_uses_job_specific_timeout(forven_db):
     with get_db() as conn:
         ideation_row = conn.execute(
             "SELECT running_since FROM scheduler_jobs WHERE id = ?",
-            ("forven-ideation-daily",),
+            ("Axiom-ideation-daily",),
         ).fetchone()
         testing_row = conn.execute(
             "SELECT running_since FROM scheduler_jobs WHERE id = ?",
-            ("forven-testing-cycle",),
+            ("Axiom-testing-cycle",),
         ).fetchone()
 
     assert recovered == 1
@@ -1146,14 +1146,14 @@ def test_recover_stale_scheduler_job_locks_uses_job_specific_timeout(forven_db):
     assert testing_row["running_since"] is not None
 
 
-def test_reset_scheduler_job_locks_clears_inherited_running_since(forven_db):
-    seed_forven_jobs()
+def test_reset_scheduler_job_locks_clears_inherited_running_since(AXIOM_db):
+    seed_AXIOM_jobs()
     now = datetime.now(timezone.utc).isoformat()
 
     with get_db() as conn:
         conn.execute(
             "UPDATE scheduler_jobs SET running_since = ? WHERE id IN (?, ?)",
-            (now, "forven-ideation-daily", "forven-testing-cycle"),
+            (now, "Axiom-ideation-daily", "Axiom-testing-cycle"),
         )
 
     cleared = reset_scheduler_job_locks()
@@ -1161,7 +1161,7 @@ def test_reset_scheduler_job_locks_clears_inherited_running_since(forven_db):
     with get_db() as conn:
         rows = conn.execute(
             "SELECT id, running_since FROM scheduler_jobs WHERE id IN (?, ?)",
-            ("forven-ideation-daily", "forven-testing-cycle"),
+            ("Axiom-ideation-daily", "Axiom-testing-cycle"),
         ).fetchall()
 
     assert cleared == 2
@@ -1175,12 +1175,12 @@ def test_data_manager_scheduler_jobs_run_with_hard_timeout(monkeypatch):
         captured.append((timeout_seconds, kwargs))
         return {"ok": True}
 
-    monkeypatch.setattr("forven.scheduler._run_sync_job", fake_run_sync_job)
+    monkeypatch.setattr("axiom.scheduler._run_sync_job", fake_run_sync_job)
 
     status, error = asyncio.run(
         run_job(
             {
-                "id": "forven-data-ohlcv-keepalive",
+                "id": "Axiom-data-ohlcv-keepalive",
                 "name": "DataManager OHLCV Keep-Alive",
                 "command": "data-ohlcv-keepalive",
                 "payload": json.dumps({"kind": "data_manager_collect_ohlcv"}),
@@ -1193,17 +1193,17 @@ def test_data_manager_scheduler_jobs_run_with_hard_timeout(monkeypatch):
     assert captured == [(_DATA_MANAGER_OHLCV_KEEPALIVE_TIMEOUT_SECONDS, {"max_pairs_per_run": 1})]
 
 
-def test_scheduler_hard_timeout_budget_expands_for_longer_jobs(forven_db):
-    seed_forven_jobs()
+def test_scheduler_hard_timeout_budget_expands_for_longer_jobs(AXIOM_db):
+    seed_AXIOM_jobs()
 
     with get_db() as conn:
         daily_learning = dict(conn.execute(
             "SELECT * FROM scheduler_jobs WHERE id = ?",
-            ("forven-daily-learning",),
+            ("Axiom-daily-learning",),
         ).fetchone())
         data_keepalive = dict(conn.execute(
             "SELECT * FROM scheduler_jobs WHERE id = ?",
-            ("forven-data-ohlcv-keepalive",),
+            ("Axiom-data-ohlcv-keepalive",),
         ).fetchone())
 
     assert _job_hard_timeout_seconds(daily_learning) == 665.0
@@ -1211,8 +1211,8 @@ def test_scheduler_hard_timeout_budget_expands_for_longer_jobs(forven_db):
     assert _job_hard_timeout_seconds(data_keepalive) == 215.0
 
 
-def test_scheduler_user_priority_deferral_window_is_bounded(forven_db):
-    job_id = "forven-testing-cycle"
+def test_scheduler_user_priority_deferral_window_is_bounded(AXIOM_db):
+    job_id = "Axiom-testing-cycle"
     now = datetime.now(timezone.utc)
 
     should_defer, elapsed = _should_defer_job_for_user_activity(job_id, now)
@@ -1226,7 +1226,7 @@ def test_scheduler_user_priority_deferral_window_is_bounded(forven_db):
     assert elapsed2 >= 0
 
     kv_set(
-        f"forven:scheduler:deferring:{job_id}",
+        f"axiom:scheduler:deferring:{job_id}",
         (now - timedelta(seconds=_USER_PRIORITY_MAX_DEFER_SECONDS + 5)).isoformat(),
     )
     should_defer3, elapsed3 = _should_defer_job_for_user_activity(job_id, now)
@@ -1239,7 +1239,7 @@ def test_scheduler_user_priority_deferral_window_is_bounded(forven_db):
     assert elapsed4 == 0
 
 
-def test_testing_step_auto_promotes_with_existing_pass_metrics(forven_db):
+def test_testing_step_auto_promotes_with_existing_pass_metrics(AXIOM_db):
     now = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
         conn.execute(
@@ -1251,7 +1251,7 @@ def test_testing_step_auto_promotes_with_existing_pass_metrics(forven_db):
         # so the "existing pass metrics" path still goes through.
         conn.execute(
             "INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?)",
-            ("forven:settings", json.dumps({"auto_approve_promotions": "true"})),
+            ("axiom:settings", json.dumps({"auto_approve_promotions": "true"})),
         )
 
     _insert_strategy(
@@ -1299,10 +1299,10 @@ def test_testing_step_skips_when_previous_invocation_is_running():
     assert float(result["running_for_seconds"] or 0.0) >= 0.0
 
 
-def test_adaptive_pipeline_plan_scales_assignments_with_backlog(forven_db):
+def test_adaptive_pipeline_plan_scales_assignments_with_backlog(AXIOM_db):
     """When drain mode is on, plan should process ALL candidates with scaled budget."""
     kv_set(
-        "forven:settings",
+        "axiom:settings",
         {
             "adaptive_pipeline_throughput_enabled": True,
             "pipeline_target_clear_hours": 1,
@@ -1325,9 +1325,9 @@ def test_adaptive_pipeline_plan_scales_assignments_with_backlog(forven_db):
     assert int(plan["drain_max_seconds"]) >= 180
 
 
-def test_static_pipeline_plan_respects_manual_limits_when_adaptive_disabled(forven_db):
+def test_static_pipeline_plan_respects_manual_limits_when_adaptive_disabled(AXIOM_db):
     kv_set(
-        "forven:settings",
+        "axiom:settings",
         {
             "adaptive_pipeline_throughput_enabled": False,
             "pipeline_target_clear_hours": 1,
@@ -1348,9 +1348,9 @@ def test_static_pipeline_plan_respects_manual_limits_when_adaptive_disabled(forv
     assert int(plan["drain_max_seconds"]) == 240
 
 
-def test_pipeline_plan_parses_string_booleans_from_settings(forven_db):
+def test_pipeline_plan_parses_string_booleans_from_settings(AXIOM_db):
     kv_set(
-        "forven:settings",
+        "axiom:settings",
         {
             "adaptive_pipeline_throughput_enabled": "false",
             "pipeline_assignments_per_cycle": 2,
@@ -1366,7 +1366,7 @@ def test_pipeline_plan_parses_string_booleans_from_settings(forven_db):
     assert int(plan["max_assignments"]) == 2
 
 
-def test_evaluate_promotion_requires_verdict_evidence_for_paper(forven_db):
+def test_evaluate_promotion_requires_verdict_evidence_for_paper(AXIOM_db):
     _insert_strategy(
         "s-gauntlet-evidence",
         stage="gauntlet",
@@ -1389,7 +1389,7 @@ def test_evaluate_promotion_requires_verdict_evidence_for_paper(forven_db):
     assert "walk-forward" in reason.lower() or ("missing" in reason.lower() and ("verdict" in reason.lower() or "required" in reason.lower()))
 
 
-def test_evaluate_promotion_accepts_persisted_validation_artifacts_for_paper(forven_db):
+def test_evaluate_promotion_accepts_persisted_validation_artifacts_for_paper(AXIOM_db):
     _insert_strategy(
         "s-gauntlet-persisted-evidence",
         stage="gauntlet",
@@ -1411,12 +1411,12 @@ def test_evaluate_promotion_accepts_persisted_validation_artifacts_for_paper(for
     assert passed is True, reason
 
 
-def test_evaluate_promotion_blocks_failed_required_verdict_tests_for_paper(forven_db):
+def test_evaluate_promotion_blocks_failed_required_verdict_tests_for_paper(AXIOM_db):
     # cost_stress is advisory at the gauntlet->paper gate in the Default preset
     # (deferred to paper->live); explicitly require it here to exercise the
     # failed-REQUIRED-verdict hard block.
     kv_set(
-        "forven:pipeline_thresholds",
+        "axiom:pipeline_thresholds",
         {"gauntlet": {"required_tests": ["walk_forward", "param_jitter", "cost_stress"]}},
     )
     _insert_strategy(
@@ -1441,9 +1441,9 @@ def test_evaluate_promotion_blocks_failed_required_verdict_tests_for_paper(forve
     assert "failed" in reason.lower() and ("verdict" in reason.lower() or "required" in reason.lower() or "gauntlet" in reason.lower())
 
 
-def test_evaluate_promotion_does_not_hard_block_failed_optional_verdict_tests(forven_db):
+def test_evaluate_promotion_does_not_hard_block_failed_optional_verdict_tests(AXIOM_db):
     kv_set(
-        "forven:pipeline_thresholds",
+        "axiom:pipeline_thresholds",
         {
             "gauntlet": {
                 # walk_forward must be in the required set (the normalizer restores
@@ -1478,14 +1478,14 @@ def test_evaluate_promotion_does_not_hard_block_failed_optional_verdict_tests(fo
     assert passed is True, reason
 
 
-def test_evaluate_promotion_uses_required_tests_for_derived_robustness(forven_db):
+def test_evaluate_promotion_uses_required_tests_for_derived_robustness(AXIOM_db):
     # required_tests must include walk_forward (the OOS gate) or the normalizer
     # restores the launch default — so this exercises "derived robustness uses
     # ONLY the required tests" with a valid walk_forward-inclusive set: the
     # required test passes, a non-required one fails, and the stored composite of
     # 0 is overridden by the derived score.
     kv_set(
-        "forven:pipeline_thresholds",
+        "axiom:pipeline_thresholds",
         {
             "gauntlet": {
                 "required_tests": ["walk_forward"],
@@ -1517,9 +1517,9 @@ def test_evaluate_promotion_uses_required_tests_for_derived_robustness(forven_db
     assert passed is True, reason
 
 
-def test_evaluate_promotion_still_blocks_failed_required_walk_forward(forven_db):
+def test_evaluate_promotion_still_blocks_failed_required_walk_forward(AXIOM_db):
     kv_set(
-        "forven:pipeline_thresholds",
+        "axiom:pipeline_thresholds",
         {
             "gauntlet": {
                 "required_tests": ["monte_carlo", "walk_forward"],
@@ -1551,7 +1551,7 @@ def test_evaluate_promotion_still_blocks_failed_required_walk_forward(forven_db)
     assert "walk-forward" in reason.lower() or "walk_forward" in reason.lower()
 
 
-def test_evaluate_promotion_ignores_failed_legacy_verdict_when_artifacts_pass(forven_db):
+def test_evaluate_promotion_ignores_failed_legacy_verdict_when_artifacts_pass(AXIOM_db):
     _insert_strategy(
         "s-gauntlet-legacy-fail",
         stage="gauntlet",
@@ -1577,7 +1577,7 @@ def test_evaluate_promotion_ignores_failed_legacy_verdict_when_artifacts_pass(fo
     assert passed is True, reason
 
 
-def test_evaluate_promotion_blocks_unprofitable_robust_gauntlet_candidate(forven_db):
+def test_evaluate_promotion_blocks_unprofitable_robust_gauntlet_candidate(AXIOM_db):
     _insert_strategy(
         "s-gauntlet-unprofitable",
         stage="gauntlet",
@@ -1600,7 +1600,7 @@ def test_evaluate_promotion_blocks_unprofitable_robust_gauntlet_candidate(forven
     assert "return too low" in reason.lower()
 
 
-def test_testing_step_does_not_synthesize_gauntlet_evidence_from_validation_backtest(forven_db, monkeypatch):
+def test_testing_step_does_not_synthesize_gauntlet_evidence_from_validation_backtest(AXIOM_db, monkeypatch):
     _insert_strategy(
         "s-code-first-pass",
         stage="gauntlet",
@@ -1609,7 +1609,7 @@ def test_testing_step_does_not_synthesize_gauntlet_evidence_from_validation_back
     )
 
     monkeypatch.setattr(
-        "forven.evolution._advance_gauntlet_readiness",
+        "axiom.evolution._advance_gauntlet_readiness",
         lambda **_kwargs: (_ for _ in ()).throw(RuntimeError("force code-first path")),
     )
 
@@ -1632,7 +1632,7 @@ def test_testing_step_does_not_synthesize_gauntlet_evidence_from_validation_back
             },
         }
 
-    monkeypatch.setattr("forven.evolution._run_backtest_validation_matrix_sync", _fake_validation_matrix)
+    monkeypatch.setattr("axiom.evolution._run_backtest_validation_matrix_sync", _fake_validation_matrix)
 
     result = run_testing_step(code_first=True)
     assert bool(result.get("validated")) is True
@@ -1652,7 +1652,7 @@ def test_testing_step_does_not_synthesize_gauntlet_evidence_from_validation_back
     assert "verdict_tests" not in stored_metrics
 
 
-def test_testing_step_keeps_gauntlet_stage_when_validation_backtest_is_not_artifact_evidence(forven_db, monkeypatch):
+def test_testing_step_keeps_gauntlet_stage_when_validation_backtest_is_not_artifact_evidence(AXIOM_db, monkeypatch):
     _insert_strategy(
         "s-code-first-fail",
         stage="gauntlet",
@@ -1661,7 +1661,7 @@ def test_testing_step_keeps_gauntlet_stage_when_validation_backtest_is_not_artif
     )
 
     monkeypatch.setattr(
-        "forven.evolution._advance_gauntlet_readiness",
+        "axiom.evolution._advance_gauntlet_readiness",
         lambda **_kwargs: (_ for _ in ()).throw(RuntimeError("force code-first path")),
     )
 
@@ -1683,7 +1683,7 @@ def test_testing_step_keeps_gauntlet_stage_when_validation_backtest_is_not_artif
             },
         }
 
-    monkeypatch.setattr("forven.evolution._run_backtest_validation_matrix_sync", _fake_validation_matrix)
+    monkeypatch.setattr("axiom.evolution._run_backtest_validation_matrix_sync", _fake_validation_matrix)
 
     result = run_testing_step(code_first=True)
     assert bool(result.get("validated")) is True
@@ -1699,7 +1699,7 @@ def test_testing_step_keeps_gauntlet_stage_when_validation_backtest_is_not_artif
     assert row["status"] == "gauntlet"
 
 
-def test_testing_step_dedupes_same_day_identical_gate_failures(forven_db, monkeypatch):
+def test_testing_step_dedupes_same_day_identical_gate_failures(AXIOM_db, monkeypatch):
     """Identical same-day gauntlet failures should not auto-archive due to retry dedupe."""
     _insert_strategy(
         "s-gate-failure-archive",
@@ -1709,7 +1709,7 @@ def test_testing_step_dedupes_same_day_identical_gate_failures(forven_db, monkey
     )
 
     monkeypatch.setattr(
-        "forven.evolution._advance_gauntlet_readiness",
+        "axiom.evolution._advance_gauntlet_readiness",
         lambda **_kwargs: (_ for _ in ()).throw(RuntimeError("force code-first path")),
     )
 
@@ -1734,7 +1734,7 @@ def test_testing_step_dedupes_same_day_identical_gate_failures(forven_db, monkey
             },
         }
 
-    monkeypatch.setattr("forven.evolution._run_backtest_validation_matrix_sync", _fake_validation_matrix)
+    monkeypatch.setattr("axiom.evolution._run_backtest_validation_matrix_sync", _fake_validation_matrix)
 
     # Gauntlet threshold is 2 — archive should happen by the 2nd run
     for _ in range(2):
@@ -1757,8 +1757,8 @@ def test_testing_step_dedupes_same_day_identical_gate_failures(forven_db, monkey
     assert int(failure_count) == 1
 
 
-def test_testing_step_configured_threshold_still_dedupes_same_day_identical_failures(forven_db, monkeypatch):
-    kv_set("forven:settings", {"pipeline_gate_failure_archive_attempts": 2})
+def test_testing_step_configured_threshold_still_dedupes_same_day_identical_failures(AXIOM_db, monkeypatch):
+    kv_set("axiom:settings", {"pipeline_gate_failure_archive_attempts": 2})
     _insert_strategy(
         "s-gate-failure-archive-fast",
         stage="gauntlet",
@@ -1767,7 +1767,7 @@ def test_testing_step_configured_threshold_still_dedupes_same_day_identical_fail
     )
 
     monkeypatch.setattr(
-        "forven.evolution._advance_gauntlet_readiness",
+        "axiom.evolution._advance_gauntlet_readiness",
         lambda **_kwargs: (_ for _ in ()).throw(RuntimeError("force code-first path")),
     )
 
@@ -1792,7 +1792,7 @@ def test_testing_step_configured_threshold_still_dedupes_same_day_identical_fail
             },
         }
 
-    monkeypatch.setattr("forven.evolution._run_backtest_validation_matrix_sync", _fake_validation_matrix)
+    monkeypatch.setattr("axiom.evolution._run_backtest_validation_matrix_sync", _fake_validation_matrix)
 
     for _ in range(2):
         run_testing_step(code_first=True)
@@ -1814,7 +1814,7 @@ def test_testing_step_configured_threshold_still_dedupes_same_day_identical_fail
     assert int(failure_count) == 1
 
 
-def test_testing_step_archives_terminal_quick_screen_gate_failure_immediately(forven_db, monkeypatch):
+def test_testing_step_archives_terminal_quick_screen_gate_failure_immediately(AXIOM_db, monkeypatch):
     _insert_strategy(
         "s-quick-terminal-reject",
         stage="quick_screen",
@@ -1843,7 +1843,7 @@ def test_testing_step_archives_terminal_quick_screen_gate_failure_immediately(fo
             },
         }
 
-    monkeypatch.setattr("forven.evolution._run_backtest_validation_matrix_sync", _fake_validation_matrix)
+    monkeypatch.setattr("axiom.evolution._run_backtest_validation_matrix_sync", _fake_validation_matrix)
 
     result = run_testing_step(code_first=True)
 
@@ -1868,7 +1868,7 @@ def test_testing_step_archives_terminal_quick_screen_gate_failure_immediately(fo
     assert int(post_mortems) == 0
 
 
-def test_pipeline_hygiene_archives_existing_terminal_quick_screen_gate_failure(forven_db):
+def test_pipeline_hygiene_archives_existing_terminal_quick_screen_gate_failure(AXIOM_db):
     _insert_strategy(
         "s-quick-terminal-sweep",
         stage="quick_screen",
@@ -1910,7 +1910,7 @@ def test_pipeline_hygiene_archives_existing_terminal_quick_screen_gate_failure(f
     assert int(post_mortems) == 0
 
 
-def test_terminal_stage_transition_cancels_pending_strategy_tasks(forven_db):
+def test_terminal_stage_transition_cancels_pending_strategy_tasks(AXIOM_db):
     _insert_strategy(
         "s-terminal-task-cleanup",
         stage="quick_screen",
@@ -1944,7 +1944,7 @@ def test_terminal_stage_transition_cancels_pending_strategy_tasks(forven_db):
     assert "terminal stage" in task["error"]
 
 
-def test_quick_screen_rejection_does_not_queue_post_mortem_task(forven_db):
+def test_quick_screen_rejection_does_not_queue_post_mortem_task(AXIOM_db):
     _insert_strategy(
         "s-quick-reject-no-postmortem",
         stage="quick_screen",
@@ -1968,7 +1968,7 @@ def test_quick_screen_rejection_does_not_queue_post_mortem_task(forven_db):
     assert int(post_mortems) == 0
 
 
-def test_assign_task_infers_strategy_id_and_cancels_terminal_work(forven_db):
+def test_assign_task_infers_strategy_id_and_cancels_terminal_work(AXIOM_db):
     _insert_strategy(
         "S09999",
         stage="rejected",
@@ -1997,7 +1997,7 @@ def test_assign_task_infers_strategy_id_and_cancels_terminal_work(forven_db):
     assert "already terminal" in row["error"]
 
 
-def test_assign_task_does_not_infer_strategy_id_for_candidate_creation_siblings(forven_db):
+def test_assign_task_does_not_infer_strategy_id_for_candidate_creation_siblings(AXIOM_db):
     _insert_strategy(
         "S09999",
         stage="backtest_failed",
@@ -2037,7 +2037,7 @@ def test_assign_task_does_not_infer_strategy_id_for_candidate_creation_siblings(
     assert row["error"] is None
 
 
-def test_repeated_paper_failures_do_not_auto_queue_dethrone_for_operator_owned_strategy(forven_db):
+def test_repeated_paper_failures_do_not_auto_queue_dethrone_for_operator_owned_strategy(AXIOM_db):
     """Paper/live are operator-owned (param-locked): background gate re-evaluations
     must NOT auto-queue a paper->gauntlet dethrone recommendation, and must NOT
     auto-archive the strategy. (Updated contract — see the paper param/metric lock:
@@ -2095,7 +2095,7 @@ def test_repeated_paper_failures_do_not_auto_queue_dethrone_for_operator_owned_s
     assert approval is None
 
 
-def test_repeated_failure_auto_archive_ignores_prior_stage_cycle_failures(forven_db):
+def test_repeated_failure_auto_archive_ignores_prior_stage_cycle_failures(AXIOM_db):
     _insert_strategy(
         "s-gauntlet-recovered-cycle",
         stage="gauntlet",
@@ -2161,7 +2161,7 @@ def test_repeated_failure_auto_archive_ignores_prior_stage_cycle_failures(forven
     assert row["status"] == "archived"
 
 
-def test_insufficient_paper_duration_does_not_create_dethrone_recommendation(forven_db):
+def test_insufficient_paper_duration_does_not_create_dethrone_recommendation(AXIOM_db):
     _insert_strategy(
         "s-paper-insufficient-evidence",
         stage="paper",
@@ -2207,7 +2207,7 @@ def test_insufficient_paper_duration_does_not_create_dethrone_recommendation(for
     assert int(approval_count) == 0
 
 
-def test_insufficient_paper_evidence_clears_stale_pending_dethrone_recommendation(forven_db):
+def test_insufficient_paper_evidence_clears_stale_pending_dethrone_recommendation(AXIOM_db):
     _insert_strategy(
         "s-paper-clears-stale-approval",
         stage="paper",
@@ -2259,7 +2259,7 @@ def test_insufficient_paper_evidence_clears_stale_pending_dethrone_recommendatio
     assert "Auto-cleared 1 stale dethrone approval" in str(event["reason"])
 
 
-def test_backtest_sync_updates_metrics_and_promotes_quick_screen_when_gate_passes(forven_db):
+def test_backtest_sync_updates_metrics_and_promotes_quick_screen_when_gate_passes(AXIOM_db):
     _insert_strategy(
         "s-sync-promote",
         stage="quick_screen",
@@ -2304,7 +2304,7 @@ def test_backtest_sync_updates_metrics_and_promotes_quick_screen_when_gate_passe
     assert float(stored.get("sharpe", 0)) == 1.6
 
 
-def test_backtest_sync_does_not_auto_promote_gauntlet_to_paper(forven_db):
+def test_backtest_sync_does_not_auto_promote_gauntlet_to_paper(AXIOM_db):
     _insert_strategy(
         "s-sync-gauntlet",
         stage="gauntlet",
@@ -2335,7 +2335,7 @@ def test_backtest_sync_does_not_auto_promote_gauntlet_to_paper(forven_db):
     assert row["status"] == "gauntlet"
 
 
-def test_backtest_sync_does_not_mutate_terminal_stage_metrics(forven_db):
+def test_backtest_sync_does_not_mutate_terminal_stage_metrics(AXIOM_db):
     _insert_strategy(
         "s-sync-archived",
         stage="archived",
@@ -2372,7 +2372,7 @@ def test_validation_backtest_does_not_sync_strategy_state(monkeypatch):
         captured.update(kwargs)
         return {"trades": [], "metrics": {"sharpe": 1.0}}
 
-    monkeypatch.setattr("forven.strategies.backtest.backtest_strategy", _fake_backtest_strategy)
+    monkeypatch.setattr("axiom.strategies.backtest.backtest_strategy", _fake_backtest_strategy)
 
     result = evolution._run_backtest_validation_sync(
         strategy_id="s-validation-no-sync",
@@ -2386,7 +2386,7 @@ def test_validation_backtest_does_not_sync_strategy_state(monkeypatch):
     assert captured["sync_strategy_state"] is False
 
 
-def test_request_fix_reports_to_triage_queue_not_engineer(forven_db):
+def test_request_fix_reports_to_triage_queue_not_engineer(AXIOM_db):
     """The autonomous full-stack-engineer code path is RETIRED: escalate_to_engineer
     records a bug to the operator triage queue (notification + code-review-log) and
     creates NO task/approval and changes NO code."""
@@ -2396,7 +2396,7 @@ def test_request_fix_reports_to_triage_queue_not_engineer(forven_db):
         requesting_agent="brain",
         requesting_task_id="B0001",
         severity="critical",
-        context={"affected_apis": ["forven_run_verdict"], "error": "HTTP 404"},
+        context={"affected_apis": ["AXIOM_run_verdict"], "error": "HTTP 404"},
     )
     second = escalate_to_engineer(
         title="Strategy codegen emits deprecated pandas fillna(method=)",
@@ -2431,15 +2431,15 @@ def test_request_fix_reports_to_triage_queue_not_engineer(forven_db):
 
 
 def test_resolve_initial_stage_certified_returns_quick_screen():
-    from forven.strategies.certification import certify_execution_strategy, resolve_initial_stage
+    from axiom.strategies.certification import certify_execution_strategy, resolve_initial_stage
     cert = certify_execution_strategy("rsi_momentum", {"rsi_threshold": 30, "lookback_period": 14})
     assert cert.certified
     assert resolve_initial_stage(cert) == "quick_screen"
 
 
 def test_resolve_initial_stage_uncertified_returns_research_only():
-    from forven.strategies.certification import StrategyExecutionCertification, resolve_initial_stage
-    from forven.strategies.params import ParamCanonicalizationMeta
+    from axiom.strategies.certification import StrategyExecutionCertification, resolve_initial_stage
+    from axiom.strategies.params import ParamCanonicalizationMeta
     # Build an uncertified certification manually
     cert = StrategyExecutionCertification(
         strategy_type="bad_strategy",
@@ -2457,7 +2457,7 @@ def test_resolve_initial_stage_uncertified_returns_research_only():
     assert resolve_initial_stage(cert) == "research_only"
 
 
-def test_transition_quick_screen_to_gauntlet_blocked_without_backtest(forven_db):
+def test_transition_quick_screen_to_gauntlet_blocked_without_backtest(AXIOM_db):
     _insert_strategy("s-no-bt", stage="quick_screen")
     result = transition_stage(
         strategy_id="s-no-bt",
@@ -2471,7 +2471,7 @@ def test_transition_quick_screen_to_gauntlet_blocked_without_backtest(forven_db)
     assert row["stage"] == "quick_screen"
 
 
-def test_transition_quick_screen_to_gauntlet_allowed_with_backtest(forven_db):
+def test_transition_quick_screen_to_gauntlet_allowed_with_backtest(AXIOM_db):
     _insert_strategy("s-has-bt", stage="quick_screen", metrics={"sharpe": 1.5, "total_trades": 30, "total_return_pct": 10, "max_drawdown_pct": 5})
     _insert_backtest_result("s-has-bt")
     transition_stage(
@@ -2485,7 +2485,7 @@ def test_transition_quick_screen_to_gauntlet_allowed_with_backtest(forven_db):
     assert row["stage"] == "gauntlet"
 
 
-def test_demotion_thrash_redirects_to_research_only_after_3(forven_db):
+def test_demotion_thrash_redirects_to_research_only_after_3(AXIOM_db):
     _insert_strategy("s-thrash", stage="gauntlet", metrics={"sharpe": 1.5, "total_trades": 30})
     # Set demotion_count to 2 so next demotion hits threshold
     with get_db() as conn:
@@ -2504,8 +2504,8 @@ def test_demotion_thrash_redirects_to_research_only_after_3(forven_db):
     assert row["status_reason"] == "max_retries_exceeded"
 
 
-def test_migration_snapshot_saves_and_restores(forven_db):
-    from forven.db import save_migration_snapshot, restore_migration_snapshot
+def test_migration_snapshot_saves_and_restores(AXIOM_db):
+    from axiom.db import save_migration_snapshot, restore_migration_snapshot
     _insert_strategy("s-snap", stage="gauntlet")
     with get_db() as conn:
         snap_id = save_migration_snapshot(conn, "s-snap", "test_reason")
@@ -2525,10 +2525,10 @@ def test_migration_snapshot_saves_and_restores(forven_db):
     assert row["stage"] == "gauntlet"
 
 
-def test_gauntlet_migration_demotes_strategies_without_backtest(forven_db):
-    from forven.brain import run_gauntlet_backtest_migration
+def test_gauntlet_migration_demotes_strategies_without_backtest(AXIOM_db):
+    from axiom.brain import run_gauntlet_backtest_migration
     # Clear the migration flag if set
-    kv_set("forven:migration:gauntlet_backtest_demotion_done", None)
+    kv_set("axiom:migration:gauntlet_backtest_demotion_done", None)
 
     _insert_strategy("s-mig-nobt", stage="gauntlet")
     run_gauntlet_backtest_migration()
@@ -2538,9 +2538,9 @@ def test_gauntlet_migration_demotes_strategies_without_backtest(forven_db):
     assert row["stage"] == "quick_screen"
 
 
-def test_gauntlet_migration_skips_strategies_with_backtest(forven_db):
-    from forven.brain import run_gauntlet_backtest_migration
-    kv_set("forven:migration:gauntlet_backtest_demotion_done", None)
+def test_gauntlet_migration_skips_strategies_with_backtest(AXIOM_db):
+    from axiom.brain import run_gauntlet_backtest_migration
+    kv_set("axiom:migration:gauntlet_backtest_demotion_done", None)
 
     _insert_strategy("s-mig-hasbt", stage="gauntlet")
     _insert_backtest_result("s-mig-hasbt")
@@ -2551,9 +2551,9 @@ def test_gauntlet_migration_skips_strategies_with_backtest(forven_db):
     assert row["stage"] == "gauntlet"
 
 
-def test_gauntlet_migration_runs_once_only(forven_db):
-    from forven.brain import run_gauntlet_backtest_migration
-    kv_set("forven:migration:gauntlet_backtest_demotion_done", None)
+def test_gauntlet_migration_runs_once_only(AXIOM_db):
+    from axiom.brain import run_gauntlet_backtest_migration
+    kv_set("axiom:migration:gauntlet_backtest_demotion_done", None)
 
     _insert_strategy("s-mig-once", stage="gauntlet")
     run_gauntlet_backtest_migration()  # First run — demotes
@@ -2572,8 +2572,8 @@ def test_gauntlet_migration_runs_once_only(forven_db):
 # ── PASS 2 TESTS: Pruning + Research Recovery ─────────────────────────────
 
 
-def test_stale_gauntlet_no_backtest_48h_demoted(forven_db):
-    from forven.evolution import _run_stale_cleanup
+def test_stale_gauntlet_no_backtest_48h_demoted(AXIOM_db):
+    from axiom.evolution import _run_stale_cleanup
     old_time = (datetime.now(timezone.utc) - timedelta(hours=50)).isoformat()
     _insert_strategy("s-stale-g", stage="gauntlet", stage_changed_at=old_time)
     _run_stale_cleanup()
@@ -2582,8 +2582,8 @@ def test_stale_gauntlet_no_backtest_48h_demoted(forven_db):
     assert row["stage"] == "quick_screen"
 
 
-def test_stale_quick_screen_no_activity_7d_archived(forven_db):
-    from forven.evolution import _run_stale_cleanup
+def test_stale_quick_screen_no_activity_7d_archived(AXIOM_db):
+    from axiom.evolution import _run_stale_cleanup
     old_time = (datetime.now(timezone.utc) - timedelta(days=8)).isoformat()
     _insert_strategy(
         "s-stale-qs", stage="quick_screen", stage_changed_at=old_time,
@@ -2595,8 +2595,8 @@ def test_stale_quick_screen_no_activity_7d_archived(forven_db):
     assert row is None or row["stage"] == "archived"
 
 
-def test_research_recovery_on_edit_promotes_if_certified(forven_db):
-    from forven.brain import try_research_recovery
+def test_research_recovery_on_edit_promotes_if_certified(AXIOM_db):
+    from axiom.brain import try_research_recovery
     _insert_strategy("s-recov", stage="research_only")
     # Give it a valid type that will certify
     with get_db() as conn:
@@ -2609,8 +2609,8 @@ def test_research_recovery_on_edit_promotes_if_certified(forven_db):
     assert row["stage"] == "quick_screen"
 
 
-def test_research_recovery_on_edit_debounce_5min(forven_db):
-    from forven.api_core import _try_research_recovery_on_edit
+def test_research_recovery_on_edit_debounce_5min(AXIOM_db):
+    from axiom.api_core import _try_research_recovery_on_edit
     _insert_strategy("s-debounce", stage="research_only")
     with get_db() as conn:
         conn.execute("UPDATE strategies SET type = 'rsi_momentum', params = ? WHERE id = 's-debounce'",
@@ -2619,8 +2619,8 @@ def test_research_recovery_on_edit_debounce_5min(forven_db):
     # First call — should run
     _try_research_recovery_on_edit("s-debounce")
     # Check debounce key exists
-    from forven.db import kv_get
-    assert kv_get("forven:recert_debounce:s-debounce") is not None
+    from axiom.db import kv_get
+    assert kv_get("axiom:recert_debounce:s-debounce") is not None
 
     # Reset strategy back to research_only to test debounce prevents second call
     with get_db() as conn:
@@ -2632,8 +2632,8 @@ def test_research_recovery_on_edit_debounce_5min(forven_db):
     assert row["stage"] == "research_only"
 
 
-def test_research_recovery_sweep_max_3_per_cycle(forven_db):
-    from forven.evolution import _sweep_research_recovery
+def test_research_recovery_sweep_max_3_per_cycle(AXIOM_db):
+    from axiom.evolution import _sweep_research_recovery
     # Create 5 research_only strategies with valid params
     for i in range(5):
         _insert_strategy(f"s-sweep-{i}", stage="research_only")
@@ -2654,8 +2654,8 @@ def test_research_recovery_sweep_max_3_per_cycle(forven_db):
     assert promoted_count <= 3
 
 
-def test_research_recovery_sweep_oldest_first(forven_db):
-    from forven.evolution import _sweep_research_recovery
+def test_research_recovery_sweep_oldest_first(AXIOM_db):
+    from axiom.evolution import _sweep_research_recovery
     # Create strategies with different ages
     for i, offset_hours in enumerate([100, 200, 50]):
         ts = (datetime.now(timezone.utc) - timedelta(hours=offset_hours)).isoformat()
@@ -2675,8 +2675,8 @@ def test_research_recovery_sweep_oldest_first(forven_db):
     assert row["stage"] == "quick_screen"
 
 
-def test_research_only_30d_inactive_archived(forven_db):
-    from forven.evolution import _sweep_research_recovery
+def test_research_only_30d_inactive_archived(AXIOM_db):
+    from axiom.evolution import _sweep_research_recovery
     old_time = (datetime.now(timezone.utc) - timedelta(days=35)).isoformat()
     _insert_strategy("s-30d", stage="research_only", stage_changed_at=old_time)
     with get_db() as conn:
@@ -2690,7 +2690,7 @@ def test_research_only_30d_inactive_archived(forven_db):
 
 
 def test_failure_tier_classification():
-    from forven.strategies.certification import classify_failure_tier
+    from axiom.strategies.certification import classify_failure_tier
     tier, reason = classify_failure_tier("param_out_of_range: rsi_threshold too high")
     assert tier == 1
     assert reason == "param_out_of_range"
@@ -2706,35 +2706,35 @@ def test_failure_tier_classification():
 # ── PASS 3 TESTS: Scheduler Defaults + Throttle + Agent Awareness ─────────
 
 
-def test_default_ideation_interval_is_120(forven_db):
-    from forven.api_core import _DEFAULT_SETTINGS_PAYLOAD
+def test_default_ideation_interval_is_120(AXIOM_db):
+    from axiom.api_core import _DEFAULT_SETTINGS_PAYLOAD
     assert _DEFAULT_SETTINGS_PAYLOAD["ideation_interval_minutes"] == 120
 
 
-def test_default_coding_interval_is_60(forven_db):
-    from forven.api_core import _DEFAULT_SETTINGS_PAYLOAD
+def test_default_coding_interval_is_60(AXIOM_db):
+    from axiom.api_core import _DEFAULT_SETTINGS_PAYLOAD
     assert _DEFAULT_SETTINGS_PAYLOAD["coding_interval_minutes"] == 60
 
 
-def test_default_testing_interval_is_60(forven_db):
-    from forven.api_core import _DEFAULT_SETTINGS_PAYLOAD
+def test_default_testing_interval_is_60(AXIOM_db):
+    from axiom.api_core import _DEFAULT_SETTINGS_PAYLOAD
     assert _DEFAULT_SETTINGS_PAYLOAD["testing_interval_minutes"] == 60
 
 
-def test_default_assignments_per_cycle_is_3(forven_db):
-    from forven.api_core import _DEFAULT_SETTINGS_PAYLOAD
+def test_default_assignments_per_cycle_is_3(AXIOM_db):
+    from axiom.api_core import _DEFAULT_SETTINGS_PAYLOAD
     assert _DEFAULT_SETTINGS_PAYLOAD["pipeline_assignments_per_cycle"] == 3
 
 
-def test_backlog_throttle_activates_above_30_gauntlet(forven_db):
+def test_backlog_throttle_activates_above_30_gauntlet(AXIOM_db):
     """With drain mode on (default), all candidates are processed regardless of gauntlet count."""
-    from forven.evolution import _resolve_pipeline_execution_plan
+    from axiom.evolution import _resolve_pipeline_execution_plan
     # Insert 35 gauntlet strategies
     for i in range(35):
         _insert_strategy(f"s-throttle-{i}", stage="gauntlet")
 
     # Drain mode on (default) — uncapped drain processes all candidates
-    kv_set("forven:settings", {
+    kv_set("axiom:settings", {
         "adaptive_pipeline_throughput_enabled": True,
         "pipeline_assignments_per_cycle": 10,
         "pipeline_drain_mode": True,
@@ -2746,13 +2746,13 @@ def test_backlog_throttle_activates_above_30_gauntlet(forven_db):
     assert plan["drain"] is True
 
 
-def test_backlog_throttle_inactive_below_30_gauntlet(forven_db):
-    from forven.evolution import _resolve_pipeline_execution_plan
+def test_backlog_throttle_inactive_below_30_gauntlet(AXIOM_db):
+    from axiom.evolution import _resolve_pipeline_execution_plan
     # Insert only 20 gauntlet strategies
     for i in range(20):
         _insert_strategy(f"s-no-throttle-{i}", stage="gauntlet")
 
-    kv_set("forven:settings", {
+    kv_set("axiom:settings", {
         "adaptive_pipeline_throughput_enabled": True,
         "pipeline_assignments_per_cycle": 10,
     })
@@ -2761,15 +2761,15 @@ def test_backlog_throttle_inactive_below_30_gauntlet(forven_db):
     assert plan.get("throttled") is not True
 
 
-def test_gauntlet_overflow_alert_after_7_days(forven_db):
-    from forven.evolution import _check_gauntlet_overflow_alert
+def test_gauntlet_overflow_alert_after_7_days(AXIOM_db):
+    from axiom.evolution import _check_gauntlet_overflow_alert
     # Insert 46 gauntlet strategies (above 45 threshold)
     for i in range(46):
         _insert_strategy(f"s-overflow-{i}", stage="gauntlet")
 
     # Set a start time 8 days ago
     old_time = (datetime.now(timezone.utc) - timedelta(days=8)).isoformat()
-    kv_set("forven:alert:gauntlet_overflow_start", old_time)
+    kv_set("axiom:alert:gauntlet_overflow_start", old_time)
 
     _check_gauntlet_overflow_alert()
 
@@ -2781,7 +2781,7 @@ def test_gauntlet_overflow_alert_after_7_days(forven_db):
     assert int(log_row["c"]) >= 1
 
 
-def test_ideation_prompt_congestion_warning_when_gauntlet_above_30(forven_db):
+def test_ideation_prompt_congestion_warning_when_gauntlet_above_30(AXIOM_db):
     # This tests the prompt injection — we check that the congestion warning
     # appears in the ideation prompt when gauntlet > 30
     for i in range(35):
@@ -2792,7 +2792,7 @@ def test_ideation_prompt_congestion_warning_when_gauntlet_above_30(forven_db):
         rows = conn.execute("SELECT * FROM strategies").fetchall()
         strategies = [dict(r) for r in rows]
 
-    from forven.evolution import _strategy_stage
+    from axiom.evolution import _strategy_stage
     by_status = {}
     for s in strategies:
         stage = _strategy_stage(s)
@@ -2810,12 +2810,12 @@ def test_ideation_prompt_congestion_warning_when_gauntlet_above_30(forven_db):
 
 
 def test_brain_research_recovery_flag_default_false():
-    from forven.lab_features import brain_research_recovery_enabled
+    from axiom.lab_features import brain_research_recovery_enabled
     assert brain_research_recovery_enabled() is False
 
 
-def test_mutation_audit_log_records_changes(forven_db):
-    from forven.db import log_mutation_audit
+def test_mutation_audit_log_records_changes(AXIOM_db):
+    from axiom.db import log_mutation_audit
     _insert_strategy("s-audit", stage="research_only")
     with get_db() as conn:
         log_mutation_audit(conn, "s-audit", "brain", "lookback_period", "14", "21")
@@ -2834,9 +2834,9 @@ def test_mutation_audit_log_records_changes(forven_db):
 # Scheduler circuit breaker
 # ---------------------------------------------------------------------------
 
-def test_scheduler_circuit_breaker_records_tick_success(forven_db):
+def test_scheduler_circuit_breaker_records_tick_success(AXIOM_db):
     """Successful tick resets consecutive error counter."""
-    from forven.scheduler import _record_scheduler_tick_success, _record_scheduler_tick_failure
+    from axiom.scheduler import _record_scheduler_tick_success, _record_scheduler_tick_failure
     # Simulate some errors first
     for _ in range(3):
         _record_scheduler_tick_failure(RuntimeError("test"))
@@ -2850,9 +2850,9 @@ def test_scheduler_circuit_breaker_records_tick_success(forven_db):
     assert kv_get("scheduler:last_successful_tick") is not None
 
 
-def test_scheduler_circuit_breaker_increments_errors(forven_db):
+def test_scheduler_circuit_breaker_increments_errors(AXIOM_db):
     """Tick failures increment the consecutive error counter."""
-    from forven.scheduler import _record_scheduler_tick_failure
+    from axiom.scheduler import _record_scheduler_tick_failure
     for i in range(5):
         count = _record_scheduler_tick_failure(RuntimeError(f"error-{i}"))
         assert count == i + 1
@@ -2864,7 +2864,7 @@ def test_scheduler_circuit_breaker_increments_errors(forven_db):
 
 def test_cpu_gate_force_claim_after_timeout():
     """After CPU_GATE_MAX_SKIP_MINUTES, the gate should force a claim attempt."""
-    import forven.lab_worker_service as lws
+    import axiom.lab_worker_service as lws
     old_skip_since = lws._cpu_gate_skip_since
     try:
         # Simulate being in skip mode for longer than the timeout
@@ -2884,11 +2884,11 @@ def test_cpu_gate_force_claim_after_timeout():
 def test_heartbeat_returns_abort_event():
     """Heartbeat thread now returns an abort event for failure escalation."""
     import threading
-    import forven.lab_worker_service as lws
+    import axiom.lab_worker_service as lws
     from unittest.mock import patch
 
-    with patch("forven.lab_worker_service.heartbeat_lab_job"):
-        with patch("forven.lab_worker_service._write_worker_status"):
+    with patch("axiom.lab_worker_service.heartbeat_lab_job"):
+        with patch("axiom.lab_worker_service._write_worker_status"):
             stop, thread = lws._start_non_matrix_job_heartbeat(
                 worker_id="test-worker",
                 job_id="test-job",
@@ -2909,7 +2909,7 @@ def test_heartbeat_returns_abort_event():
 
 def test_claim_next_lab_job_retry_on_lock():
     """claim_next_lab_job retries on database lock contention."""
-    from forven.lab_db import _CLAIM_MAX_RETRIES, _CLAIM_RETRY_BASE_SECONDS
+    from axiom.lab_db import _CLAIM_MAX_RETRIES, _CLAIM_RETRY_BASE_SECONDS
     assert _CLAIM_MAX_RETRIES == 5
     assert _CLAIM_RETRY_BASE_SECONDS == 0.1
 
@@ -2918,9 +2918,9 @@ def test_claim_next_lab_job_retry_on_lock():
 # Pipeline saturation gate
 # ---------------------------------------------------------------------------
 
-def test_pipeline_saturation_blocks_when_over_threshold(forven_db):
+def test_pipeline_saturation_blocks_when_over_threshold(AXIOM_db):
     """Pipeline saturation blocks strategy creation above threshold."""
-    from forven.lab_features import is_pipeline_saturated, PIPELINE_SATURATION_THRESHOLD
+    from axiom.lab_features import is_pipeline_saturated, PIPELINE_SATURATION_THRESHOLD
 
     # Insert enough strategies to exceed the threshold
     for i in range(PIPELINE_SATURATION_THRESHOLD + 5):
@@ -2932,9 +2932,9 @@ def test_pipeline_saturation_blocks_when_over_threshold(forven_db):
     assert "saturated" in reason.lower()
 
 
-def test_pipeline_saturation_allows_when_under_threshold(forven_db):
+def test_pipeline_saturation_allows_when_under_threshold(AXIOM_db):
     """Pipeline is not saturated when under threshold."""
-    from forven.lab_features import is_pipeline_saturated
+    from axiom.lab_features import is_pipeline_saturated
 
     # Insert only a few strategies
     for i in range(5):
@@ -2945,9 +2945,9 @@ def test_pipeline_saturation_allows_when_under_threshold(forven_db):
     assert active_count == 5
 
 
-def test_pipeline_saturation_ignores_archived(forven_db):
+def test_pipeline_saturation_ignores_archived(AXIOM_db):
     """Archived/rejected strategies don't count toward saturation."""
-    from forven.lab_features import is_pipeline_saturated
+    from axiom.lab_features import is_pipeline_saturated
 
     # Insert lots of archived strategies + a few active ones
     for i in range(200):
@@ -2960,9 +2960,9 @@ def test_pipeline_saturation_ignores_archived(forven_db):
     assert active_count == 10
 
 
-def test_pipeline_saturation_ignores_research_only(forven_db):
+def test_pipeline_saturation_ignores_research_only(AXIOM_db):
     """Research-only strategies live outside the tradable pipeline gate."""
-    from forven.lab_features import is_pipeline_saturated
+    from axiom.lab_features import is_pipeline_saturated
 
     for i in range(80):
         _insert_strategy(f"res-{i:04d}", stage="research_only")
@@ -2974,9 +2974,9 @@ def test_pipeline_saturation_ignores_research_only(forven_db):
     assert active_count == 12
 
 
-def test_pipeline_saturation_hysteresis(forven_db):
+def test_pipeline_saturation_hysteresis(AXIOM_db):
     """Once saturated, must drop below resume threshold to unsaturate."""
-    from forven.lab_features import is_pipeline_saturated, PIPELINE_SATURATION_THRESHOLD, PIPELINE_RESUME_THRESHOLD
+    from axiom.lab_features import is_pipeline_saturated, PIPELINE_SATURATION_THRESHOLD, PIPELINE_RESUME_THRESHOLD
 
     # Saturate the pipeline
     for i in range(PIPELINE_SATURATION_THRESHOLD + 5):
@@ -3011,10 +3011,10 @@ def test_pipeline_saturation_hysteresis(forven_db):
     assert "recovered" in reason3.lower()
 
 
-def test_brain_create_strategy_blocked_when_saturated(forven_db):
+def test_brain_create_strategy_blocked_when_saturated(AXIOM_db):
     """brain.create_strategy() refuses new strategies when pipeline saturated."""
-    from forven.hypotheses import create_hypothesis
-    from forven.lab_features import PIPELINE_SATURATION_THRESHOLD
+    from axiom.hypotheses import create_hypothesis
+    from axiom.lab_features import PIPELINE_SATURATION_THRESHOLD
 
     # Saturate the pipeline
     for i in range(PIPELINE_SATURATION_THRESHOLD + 5):
@@ -3034,7 +3034,7 @@ def test_brain_create_strategy_blocked_when_saturated(forven_db):
         target_timeframes=["1h"],
     )
 
-    from forven.brain import create_strategy
+    from axiom.brain import create_strategy
     result = create_strategy(
         strategy_id="should-fail",
         hypothesis_id=str(hypothesis["id"]),
@@ -3069,9 +3069,9 @@ def _insert_strategy_with_age(
     )
 
 
-def test_sweep_archives_zero_trade_gauntlet(forven_db):
+def test_sweep_archives_zero_trade_gauntlet(AXIOM_db):
     """Zero-trade gauntlet strategies older than 2 days get archived."""
-    from forven.evolution import _sweep_pipeline_hygiene
+    from axiom.evolution import _sweep_pipeline_hygiene
 
     _insert_strategy_with_age("sweep-zt-1", "gauntlet", metrics={"total_trades": 0, "sharpe": 0}, days_ago=3)
     _insert_strategy_with_age("sweep-zt-2", "gauntlet", metrics={"total_trades": 0, "sharpe": 0}, days_ago=1)  # too new
@@ -3086,9 +3086,9 @@ def test_sweep_archives_zero_trade_gauntlet(forven_db):
     assert s2["stage"] == "gauntlet"
 
 
-def test_sweep_archives_negative_sharpe_gauntlet(forven_db):
+def test_sweep_archives_negative_sharpe_gauntlet(AXIOM_db):
     """Negative sharpe with enough trades gets archived immediately."""
-    from forven.evolution import _sweep_pipeline_hygiene
+    from axiom.evolution import _sweep_pipeline_hygiene
 
     _insert_strategy_with_age("sweep-ns-1", "gauntlet", metrics={"sharpe_ratio": -1.5, "total_trades": 20}, days_ago=1)
 
@@ -3100,9 +3100,9 @@ def test_sweep_archives_negative_sharpe_gauntlet(forven_db):
     assert row["stage"] == "archived"
 
 
-def test_sweep_archives_stale_no_fitness_gauntlet(forven_db):
+def test_sweep_archives_stale_no_fitness_gauntlet(AXIOM_db):
     """Gauntlet strategy with no fitness after 10+ days gets archived."""
-    from forven.evolution import _sweep_pipeline_hygiene
+    from axiom.evolution import _sweep_pipeline_hygiene
 
     changed_at = (datetime.now(timezone.utc) - timedelta(days=11)).isoformat()
     # Manually insert with no fitness (bypass _insert_strategy auto-fitness)
@@ -3120,9 +3120,9 @@ def test_sweep_archives_stale_no_fitness_gauntlet(forven_db):
     assert result.get("gauntlet", 0) == 1
 
 
-def test_sweep_keeps_healthy_gauntlet(forven_db):
+def test_sweep_keeps_healthy_gauntlet(AXIOM_db):
     """Gauntlet strategy with fitness and good metrics is kept."""
-    from forven.evolution import _sweep_pipeline_hygiene
+    from axiom.evolution import _sweep_pipeline_hygiene
 
     _insert_strategy_with_age(
         "sweep-ok-1", "gauntlet",
@@ -3138,9 +3138,9 @@ def test_sweep_keeps_healthy_gauntlet(forven_db):
     assert row["stage"] == "gauntlet"
 
 
-def test_sweep_archives_stale_untested_quick_screen(forven_db):
+def test_sweep_archives_stale_untested_quick_screen(AXIOM_db):
     """Quick_screen strategies untested after 7+ days get archived."""
-    from forven.evolution import _sweep_pipeline_hygiene
+    from axiom.evolution import _sweep_pipeline_hygiene
 
     _insert_strategy_with_age("sweep-qs-1", "quick_screen", metrics=None, days_ago=8)
     _insert_strategy_with_age("sweep-qs-2", "quick_screen", metrics=None, days_ago=3)  # too new
@@ -3155,9 +3155,9 @@ def test_sweep_archives_stale_untested_quick_screen(forven_db):
     assert s2["stage"] == "quick_screen"
 
 
-def test_sweep_archives_tested_garbage_quick_screen(forven_db):
+def test_sweep_archives_tested_garbage_quick_screen(AXIOM_db):
     """Quick_screen tested with negative sharpe and negative return gets archived."""
-    from forven.evolution import _sweep_pipeline_hygiene
+    from axiom.evolution import _sweep_pipeline_hygiene
 
     _insert_strategy_with_age(
         "sweep-garb-1", "quick_screen",
@@ -3169,9 +3169,9 @@ def test_sweep_archives_tested_garbage_quick_screen(forven_db):
     assert result.get("quick_screen", 0) == 1
 
 
-def test_sweep_respects_cooldown(forven_db):
+def test_sweep_respects_cooldown(AXIOM_db):
     """Second sweep within cooldown period is skipped."""
-    from forven.evolution import _sweep_pipeline_hygiene
+    from axiom.evolution import _sweep_pipeline_hygiene
 
     _insert_strategy_with_age("sweep-cd-1", "gauntlet", metrics={"total_trades": 0, "sharpe": 0}, days_ago=5)
 
@@ -3190,9 +3190,9 @@ def test_sweep_respects_cooldown(forven_db):
 # ---------------------------------------------------------------------------
 
 
-def test_duplicate_gate_blocks_weaker_challenger(forven_db):
+def test_duplicate_gate_blocks_weaker_challenger(AXIOM_db):
     """A challenger that does NOT beat the incumbent stays blocked as a duplicate."""
-    kv_set("forven:settings", {"paper_slot_competition_enabled": True})
+    kv_set("axiom:settings", {"paper_slot_competition_enabled": True})
     _insert_strategy("incumbent-strong", stage="paper", metrics={"sharpe": 3.0, "total_trades": 40})
     _insert_strategy("challenger-weak", stage="quick_screen", metrics={"sharpe": 1.0, "total_trades": 40})
 
@@ -3202,9 +3202,9 @@ def test_duplicate_gate_blocks_weaker_challenger(forven_db):
     assert "duplicate" in reason.lower()
 
 
-def test_duplicate_gate_allows_materially_better_challenger(forven_db):
+def test_duplicate_gate_allows_materially_better_challenger(AXIOM_db):
     """A challenger that clearly beats the incumbent is NOT blocked as a duplicate."""
-    kv_set("forven:settings", {"paper_slot_competition_enabled": True})
+    kv_set("axiom:settings", {"paper_slot_competition_enabled": True})
     _insert_strategy("incumbent-weak", stage="paper", metrics={"sharpe": 1.0, "total_trades": 40})
     _insert_strategy("challenger-strong", stage="quick_screen", metrics={"sharpe": 3.0, "total_trades": 40})
 
@@ -3213,14 +3213,14 @@ def test_duplicate_gate_allows_materially_better_challenger(forven_db):
     assert "duplicate" not in reason.lower(), reason
 
 
-def test_materially_better_challenger_queues_dethrone_for_incumbent(forven_db):
+def test_materially_better_challenger_queues_dethrone_for_incumbent(AXIOM_db):
     """Beating the incumbent queues a challenger-driven dethrone recommendation.
 
     auto_approve_dethrone now defaults ON, which would immediately apply the
     dethrone; disable it explicitly here so we exercise the queued/awaiting-approval
     path (the auto-apply path is covered by test_auto_approve_dethrone_frees_the_slot).
     """
-    kv_set("forven:settings", {"auto_approve_dethrone": False, "paper_slot_competition_enabled": True})
+    kv_set("axiom:settings", {"auto_approve_dethrone": False, "paper_slot_competition_enabled": True})
     _insert_strategy("incumbent-weak2", stage="paper", metrics={"sharpe": 1.0, "total_trades": 40})
     _insert_strategy("challenger-strong2", stage="quick_screen", metrics={"sharpe": 3.0, "total_trades": 40})
 
@@ -3244,7 +3244,7 @@ def test_materially_better_challenger_queues_dethrone_for_incumbent(forven_db):
     assert payload.get("challenger_id") == "challenger-strong2"
 
 
-def test_insufficient_evidence_clear_preserves_challenger_dethrone(forven_db):
+def test_insufficient_evidence_clear_preserves_challenger_dethrone(AXIOM_db):
     """The insufficient-evidence auto-clear must NOT wipe a challenger-driven dethrone."""
     _insert_strategy("incumbent-protected", stage="paper", metrics={"fitness": 60.0})
     approval_id = create_approval(
@@ -3278,11 +3278,11 @@ def test_insufficient_evidence_clear_preserves_challenger_dethrone(forven_db):
     assert approval["decision"] is None
 
 
-def test_paper_gate_blocks_challenger_while_incumbent_holds_slot(forven_db):
+def test_paper_gate_blocks_challenger_while_incumbent_holds_slot(AXIOM_db):
     """A challenger cannot promote to paper while the incumbent still occupies the
     same symbol/timeframe slot, preserving the one-strategy-per-slot invariant
     (only when slot-competition is enabled)."""
-    kv_set("forven:settings", {"paper_slot_competition_enabled": True})
+    kv_set("axiom:settings", {"paper_slot_competition_enabled": True})
     _insert_strategy("incumbent-holds", stage="paper", metrics={"sharpe": 1.0, "total_trades": 40})
     _insert_strategy("challenger-waiting", stage="gauntlet", metrics={"sharpe": 3.0, "total_trades": 40})
 
@@ -3292,10 +3292,10 @@ def test_paper_gate_blocks_challenger_while_incumbent_holds_slot(forven_db):
     assert "slot" in reason.lower() or "occupie" in reason.lower() or "incumbent" in reason.lower()
 
 
-def test_auto_approve_dethrone_frees_the_slot(forven_db):
+def test_auto_approve_dethrone_frees_the_slot(AXIOM_db):
     """With auto_approve_dethrone enabled, a superior challenger's dethrone is applied,
     demoting the incumbent out of paper so the slot opens."""
-    kv_set("forven:settings", {"auto_approve_dethrone": True, "paper_slot_competition_enabled": True})
+    kv_set("axiom:settings", {"auto_approve_dethrone": True, "paper_slot_competition_enabled": True})
     _insert_strategy("incumbent-evicted", stage="paper", metrics={"sharpe": 1.0, "total_trades": 40})
     _insert_strategy("challenger-evictor", stage="quick_screen", metrics={"sharpe": 3.0, "total_trades": 40})
 
@@ -3317,7 +3317,7 @@ def _stale_gauntlet_metrics() -> dict:
     return {"sharpe": 0.8, "total_trades": 20, "total_return_pct": 10.0, "fitness": 1.0}
 
 
-def test_hygiene_archives_unpromotable_gauntlet_after_grace(forven_db, monkeypatch):
+def test_hygiene_archives_unpromotable_gauntlet_after_grace(AXIOM_db, monkeypatch):
     """A gauntlet strategy that looks alive but persistently fails the paper gate is
     archived by the hygiene sweep once it passes the un-promotable grace window."""
     monkeypatch.setattr(evolution, "_sweep_unloadable_runtimes", lambda now: 0)  # avoid pandas dep
@@ -3349,7 +3349,7 @@ def test_hygiene_archives_unpromotable_gauntlet_after_grace(forven_db, monkeypat
     assert stages["unprom-fresh"] == "gauntlet"     # within grace → left alone
 
 
-def test_hygiene_keeps_promotable_gauntlet_strategy(forven_db, monkeypatch):
+def test_hygiene_keeps_promotable_gauntlet_strategy(AXIOM_db, monkeypatch):
     """A gauntlet strategy past the grace window that PASSES the paper gate (e.g. a
     challenger merely waiting on a slot/approval) must NOT be archived by R6."""
     monkeypatch.setattr(evolution, "_sweep_unloadable_runtimes", lambda now: 0)

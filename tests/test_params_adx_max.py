@@ -1,6 +1,6 @@
-"""Test that adx_max is a recognized strategy parameter."""
+﻿"""Test that adx_max is a recognized strategy parameter."""
 
-from forven.strategies.params import _COMMON_ALLOWED_PARAMS, canonicalize_params
+from axiom.strategies.params import _COMMON_ALLOWED_PARAMS, canonicalize_params
 
 
 def test_adx_max_in_common_allowed_params():

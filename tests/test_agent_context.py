@@ -1,4 +1,4 @@
-"""Tests for build_agent_context() data schema injection."""
+﻿"""Tests for build_agent_context() data schema injection."""
 from datetime import date
 from unittest.mock import patch
 
@@ -16,13 +16,13 @@ def _make_read_workspace_mock(schema_content: str | None):
 def test_data_schema_injected_when_present():
     """build_agent_context includes DATA SCHEMA section when DATA_SCHEMA.md exists."""
     schema = "## Core Columns\n- timestamp\n- close"
-    with patch("forven.context.read_workspace", side_effect=_make_read_workspace_mock(schema)):
-        with patch("forven.context._get_chroma_recall", return_value=""):
-            # Patch at the source (forven.db.get_db) not forven.context.get_db — context.py
+    with patch("axiom.context.read_workspace", side_effect=_make_read_workspace_mock(schema)):
+        with patch("axiom.context._get_chroma_recall", return_value=""):
+            # Patch at the source (axiom.db.get_db) not Axiom.context.get_db — context.py
             # imports get_db locally inside the function body, so there is no module-level
-            # name to intercept at forven.context.get_db.
-            with patch("forven.db.get_db", side_effect=Exception("no db")):
-                from forven.context import build_agent_context
+            # name to intercept at Axiom.context.get_db.
+            with patch("axiom.db.get_db", side_effect=Exception("no db")):
+                from axiom.context import build_agent_context
                 result = build_agent_context(
                     agent_id="quant-researcher",
                     role_md="You are a quant researcher.",
@@ -33,11 +33,11 @@ def test_data_schema_injected_when_present():
 
 def test_data_schema_absent_does_not_raise():
     """build_agent_context works fine when DATA_SCHEMA.md is missing (optional=True)."""
-    with patch("forven.context.read_workspace", side_effect=_make_read_workspace_mock(None)):
-        with patch("forven.context._get_chroma_recall", return_value=""):
-            # See first test for why we patch forven.db.get_db and not forven.context.get_db
-            with patch("forven.db.get_db", side_effect=Exception("no db")):
-                from forven.context import build_agent_context
+    with patch("axiom.context.read_workspace", side_effect=_make_read_workspace_mock(None)):
+        with patch("axiom.context._get_chroma_recall", return_value=""):
+            # See first test for why we patch axiom.db.get_db and not Axiom.context.get_db
+            with patch("axiom.db.get_db", side_effect=Exception("no db")):
+                from axiom.context import build_agent_context
                 result = build_agent_context(
                     agent_id="quant-researcher",
                     role_md="You are a quant researcher.",
@@ -50,10 +50,10 @@ def test_data_schema_absent_does_not_raise():
 def test_build_agent_context_still_includes_chroma_recall_when_task_present():
     """Non-research agent context should keep Chroma recall behavior."""
     chroma_recall = "# RELEVANT PRIOR RESEARCH (from ChromaDB)\n- prior result"
-    with patch("forven.context.read_workspace", side_effect=_make_read_workspace_mock(None)):
-        with patch("forven.context._get_chroma_recall", return_value=chroma_recall):
-            with patch("forven.db.get_db", side_effect=Exception("no db")):
-                from forven.context import build_agent_context
+    with patch("axiom.context.read_workspace", side_effect=_make_read_workspace_mock(None)):
+        with patch("axiom.context._get_chroma_recall", return_value=chroma_recall):
+            with patch("axiom.db.get_db", side_effect=Exception("no db")):
+                from axiom.context import build_agent_context
                 result = build_agent_context(
                     agent_id="quant-researcher",
                     role_md="You are a quant researcher.",
@@ -65,14 +65,14 @@ def test_build_agent_context_still_includes_chroma_recall_when_task_present():
 
 
 def test_build_agent_context_includes_strategy_diversity_guard_when_saturated():
-    with patch("forven.context.read_workspace", side_effect=_make_read_workspace_mock(None)):
-        with patch("forven.context._get_chroma_recall", return_value=""):
+    with patch("axiom.context.read_workspace", side_effect=_make_read_workspace_mock(None)):
+        with patch("axiom.context._get_chroma_recall", return_value=""):
             with patch(
-                "forven.context.render_strategy_diversity_guard",
+                "axiom.context.render_strategy_diversity_guard",
                 return_value="# STRATEGY DIVERSITY GUARD\n- RSI is cooled down.",
             ):
-                with patch("forven.db.get_db", side_effect=Exception("no db")):
-                    from forven.context import build_agent_context
+                with patch("axiom.db.get_db", side_effect=Exception("no db")):
+                    from axiom.context import build_agent_context
 
                     result = build_agent_context(
                         agent_id="strategy-developer",
@@ -92,12 +92,12 @@ def test_build_agent_context_uses_utc_daily_memory_paths_when_enabled():
         requested_files.append(filename)
         return None
 
-    with patch("forven.context.read_workspace", side_effect=_mock_read_workspace):
-        with patch("forven.context._get_chroma_recall", return_value=""):
-            with patch("forven.context._utc_today", return_value=date(2026, 4, 14)):
-                with patch("forven.context._utc_yesterday", return_value=date(2026, 4, 13)):
-                    with patch("forven.db.get_db", side_effect=Exception("no db")):
-                        from forven.context import build_agent_context
+    with patch("axiom.context.read_workspace", side_effect=_mock_read_workspace):
+        with patch("axiom.context._get_chroma_recall", return_value=""):
+            with patch("axiom.context._utc_today", return_value=date(2026, 4, 14)):
+                with patch("axiom.context._utc_yesterday", return_value=date(2026, 4, 13)):
+                    with patch("axiom.db.get_db", side_effect=Exception("no db")):
+                        from axiom.context import build_agent_context
                         build_agent_context(
                             agent_id="quant-researcher",
                             role_md="You are a quant researcher.",

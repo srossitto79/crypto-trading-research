@@ -6,7 +6,7 @@
 		type GauntletTestEntry,
 		type GauntletTestKey,
 	} from '$lib/api/lifecycle';
-	import { getApprovals } from '$lib/api/forven';
+	import { getApprovals } from '$lib/api/axiom';
 
 	export let strategyId: string;
 	export let stage: string | null | undefined = null;

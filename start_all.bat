@@ -6,9 +6,9 @@ if exist "%ProgramFiles%\nodejs\npm.cmd" set "PATH=%ProgramFiles%\nodejs;%PATH%"
 if exist "%LocalAppData%\Programs\Python\Python311\python.exe" set "PATH=%LocalAppData%\Programs\Python\Python311;%PATH%"
 if exist "%LocalAppData%\Programs\Python\Launcher\py.exe" set "PATH=%LocalAppData%\Programs\Python\Launcher;%PATH%"
 
-if "%FORVEN_HOME%"=="" set "FORVEN_HOME=%USERPROFILE%\.forven"
-if "%FORVEN_ENABLE_REGIME_LAB%"=="" set "FORVEN_ENABLE_REGIME_LAB=0"
-if "%VITE_ENABLE_REGIME_LAB%"=="" set "VITE_ENABLE_REGIME_LAB=%FORVEN_ENABLE_REGIME_LAB%"
+if "%AXIOM_HOME%"=="" set "AXIOM_HOME=%USERPROFILE%\.axiom"
+if "%AXIOM_ENABLE_REGIME_LAB%"=="" set "AXIOM_ENABLE_REGIME_LAB=0"
+if "%VITE_ENABLE_REGIME_LAB%"=="" set "VITE_ENABLE_REGIME_LAB=%AXIOM_ENABLE_REGIME_LAB%"
 if "%START_BOT%"=="" set "START_BOT=0"
 if "%START_LAB_WORKER%"=="" set "START_LAB_WORKER=0"
 if "%START_DAEMON%"=="" set "START_DAEMON=1"
@@ -17,8 +17,8 @@ if "%SHOW_CHILD_WINDOWS%"=="" set "SHOW_CHILD_WINDOWS=0"
 if "%FORCE_RESTART%"=="" set "FORCE_RESTART=1"
 
 echo [start_all.bat] Repo: %CD%
-echo [start_all.bat] FORVEN_HOME=%FORVEN_HOME%
-echo [start_all.bat] FORVEN_ENABLE_REGIME_LAB=%FORVEN_ENABLE_REGIME_LAB%
+echo [start_all.bat] AXIOM_HOME=%AXIOM_HOME%
+echo [start_all.bat] AXIOM_ENABLE_REGIME_LAB=%AXIOM_ENABLE_REGIME_LAB%
 echo [start_all.bat] START_BOT=%START_BOT%
 echo [start_all.bat] START_LAB_WORKER=%START_LAB_WORKER%
 echo [start_all.bat] START_DAEMON=%START_DAEMON%

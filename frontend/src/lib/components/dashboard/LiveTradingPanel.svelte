@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { createRealtimeRefresh, type RealtimeRefreshController } from '$lib/utils/realtime';
-	import { getForvenDashboard, getForvenEquityHistory, getForvenRecentTrades, getForvenOpenTrades, getForvenScannerState } from '$lib/api';
-	import type { ForvenDashboardResponse, ForvenEquityHistory, ForvenScannerState, ForvenTrade } from '$lib/api';
+	import { getAxiomDashboard, getAxiomEquityHistory, getAxiomRecentTrades, getAxiomOpenTrades, getAxiomScannerState } from '$lib/api';
+	import type { AxiomDashboardResponse, AxiomEquityHistory, AxiomScannerState, AxiomTrade } from '$lib/api';
 	import EquityChart from '$lib/components/EquityChart.svelte';
 
-	let dashboard: ForvenDashboardResponse | null = null;
-	let equityData: ForvenEquityHistory = { base: 0, curve: [] };
-	let recentTrades: ForvenTrade[] = [];
-	let openTrades: ForvenTrade[] = [];
-	let scannerState: ForvenScannerState | null = null;
+	let dashboard: AxiomDashboardResponse | null = null;
+	let equityData: AxiomEquityHistory = { base: 0, curve: [] };
+	let recentTrades: AxiomTrade[] = [];
+	let openTrades: AxiomTrade[] = [];
+	let scannerState: AxiomScannerState | null = null;
 	let loading = true;
 	let dashboardError = '';
 	let realtime: RealtimeRefreshController | null = null;
@@ -21,19 +21,19 @@
 		return value as Record<string, unknown>;
 	}
 
-	function normalizeTradesPayload(payload: unknown): ForvenTrade[] {
-		if (Array.isArray(payload)) return payload as ForvenTrade[];
+	function normalizeTradesPayload(payload: unknown): AxiomTrade[] {
+		if (Array.isArray(payload)) return payload as AxiomTrade[];
 		const record = asRecord(payload);
 		if (!record) return [];
-		if (Array.isArray(record.trades)) return record.trades as ForvenTrade[];
-		if (Array.isArray(record.open_trades)) return record.open_trades as ForvenTrade[];
-		if (Array.isArray(record.recent_trades)) return record.recent_trades as ForvenTrade[];
-		if (Array.isArray(record.items)) return record.items as ForvenTrade[];
+		if (Array.isArray(record.trades)) return record.trades as AxiomTrade[];
+		if (Array.isArray(record.open_trades)) return record.open_trades as AxiomTrade[];
+		if (Array.isArray(record.recent_trades)) return record.recent_trades as AxiomTrade[];
+		if (Array.isArray(record.items)) return record.items as AxiomTrade[];
 		return [];
 	}
 
-	function normalizeEquityPayload(payload: unknown): ForvenEquityHistory {
-		const fallback: ForvenEquityHistory = { base: 0, curve: [] };
+	function normalizeEquityPayload(payload: unknown): AxiomEquityHistory {
+		const fallback: AxiomEquityHistory = { base: 0, curve: [] };
 		const record = asRecord(payload);
 		if (!record) return fallback;
 		const nestedCurve = asRecord(record.equity_curve);
@@ -44,23 +44,23 @@
 				: [];
 		return {
 			base: Number(record.base ?? 0),
-			curve: curve as ForvenEquityHistory['curve'],
+			curve: curve as AxiomEquityHistory['curve'],
 		};
 	}
 
 	async function runFetchData() {
 		try {
 			const [dash, equity, recent, open, scanner] = await Promise.allSettled([
-				getForvenDashboard(),
-				getForvenEquityHistory(),
-				getForvenRecentTrades(10),
-				getForvenOpenTrades(),
-				getForvenScannerState(),
+				getAxiomDashboard(),
+				getAxiomEquityHistory(),
+				getAxiomRecentTrades(10),
+				getAxiomOpenTrades(),
+				getAxiomScannerState(),
 			]);
 
 			if (dash.status === 'fulfilled') {
 				const normalizedDashboard = asRecord(dash.value);
-				dashboard = normalizedDashboard ? (dash.value as ForvenDashboardResponse) : null;
+				dashboard = normalizedDashboard ? (dash.value as AxiomDashboardResponse) : null;
 				dashboardError = '';
 			} else {
 				dashboard = null;
@@ -73,7 +73,7 @@
 			if (open.status === 'fulfilled') openTrades = normalizeTradesPayload(open.value).slice(0, 40);
 			if (scanner.status === 'fulfilled') {
 				const normalizedScanner = asRecord(scanner.value);
-				scannerState = normalizedScanner ? (scanner.value as ForvenScannerState) : null;
+				scannerState = normalizedScanner ? (scanner.value as AxiomScannerState) : null;
 			}
 		} catch (err) {
 			console.error('Failed to fetch live trading data', err);
@@ -167,15 +167,15 @@
 		return `$${parsed.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 	}
 
-	function tradeDirection(trade: ForvenTrade): string {
+	function tradeDirection(trade: AxiomTrade): string {
 		return String(trade.direction ?? '').trim().toLowerCase() || 'long';
 	}
 
-	function tradeStatus(trade: ForvenTrade): string {
+	function tradeStatus(trade: AxiomTrade): string {
 		return String(trade.status ?? '').trim().toUpperCase() || 'UNKNOWN';
 	}
 
-	function tradeStrategyLabel(trade: ForvenTrade): string {
+	function tradeStrategyLabel(trade: AxiomTrade): string {
 		// The open/recent-trades API can omit the `strategy` label (older backends
 		// only selected strategy_id), which showed '--'. Fall back to name/id.
 		const t = trade as Record<string, unknown>;
@@ -188,11 +188,11 @@
 		className: string;
 	};
 
-	function tradeSignalDataRecord(trade: ForvenTrade): Record<string, unknown> {
+	function tradeSignalDataRecord(trade: AxiomTrade): Record<string, unknown> {
 		return asRecord(trade.signal_data) ?? {};
 	}
 
-	function tradeBadges(trade: ForvenTrade): TradeBadge[] {
+	function tradeBadges(trade: AxiomTrade): TradeBadge[] {
 		const signalData = tradeSignalDataRecord(trade);
 		const badges: TradeBadge[] = [];
 		const source = String(trade.source ?? '').trim().toLowerCase();
@@ -231,7 +231,7 @@
 		return badges;
 	}
 
-	function isExchangeBackedTrade(trade: ForvenTrade): boolean {
+	function isExchangeBackedTrade(trade: AxiomTrade): boolean {
 		const src = String((trade as any).source ?? '').toLowerCase();
 		if (src === 'exchange' || src === 'exchange_sync' || src === 'exchange_recovered') return true;
 		let sd: any = (trade as any).signal_data;
@@ -246,7 +246,7 @@
 		return false;
 	}
 
-	function computeLivePnlUsd(trade: ForvenTrade): number | null {
+	function computeLivePnlUsd(trade: AxiomTrade): number | null {
 		const fallback = toNumber(trade.pnl_usd);
 		// FE-LIVE-1: for exchange-backed / recovered positions the exchange-reported
 		// pnl_usd is authoritative. Recomputing size*move off possibly-stale dashboard
@@ -270,7 +270,7 @@
 		return size * move;
 	}
 
-	function tradeDisplayPnl(trade: ForvenTrade): number | null {
+	function tradeDisplayPnl(trade: AxiomTrade): number | null {
 		return String(trade.status ?? '').toUpperCase() === 'OPEN'
 			? computeLivePnlUsd(trade)
 			: toNumber(trade.pnl_usd);
@@ -293,7 +293,7 @@
 	})();
 	$: recentRows = recentTrades.slice(0, 8);
 
-	function tradeElapsed(trade: ForvenTrade): string {
+	function tradeElapsed(trade: AxiomTrade): string {
 		const opened = trade.opened_at;
 		if (!opened) return '--';
 		const ms = Date.now() - new Date(opened).getTime();
@@ -306,7 +306,7 @@
 		return `${days}d ${hrs % 24}h`;
 	}
 
-	function tradeCurrentPrice(trade: ForvenTrade): string {
+	function tradeCurrentPrice(trade: AxiomTrade): string {
 		const asset = typeof trade.asset === 'string' ? trade.asset : '';
 		const cp = toNumber(prices?.[asset]);
 		return cp !== null ? formatPrice(cp) : '--';

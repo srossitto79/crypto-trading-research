@@ -1,4 +1,4 @@
-"""Tests for AI Drop Zone session scoping.
+﻿"""Tests for AI Drop Zone session scoping.
 
 Covers:
   * Session CRUD (create/list/get_detail/close) and id auto-increment
@@ -9,7 +9,7 @@ Covers:
     (covers re-runs of strategies from outside the session)
 
 The fixtures follow the same pattern as tests/test_ai_dropzone_intake.py —
-we rewrite forven.strategies.custom.__path__ into tmp_path so the intake
+we rewrite Axiom.strategies.custom.__path__ into tmp_path so the intake
 module picks up a test-local strategy file.
 """
 
@@ -19,7 +19,7 @@ import importlib
 import json
 import sys
 
-from forven.ai_dropzone_sessions import (
+from axiom.ai_dropzone_sessions import (
     close_session,
     create_session,
     get_session,
@@ -27,10 +27,10 @@ from forven.ai_dropzone_sessions import (
     list_sessions,
     session_exists,
 )
-from forven.db import get_db
-from forven.strategies import custom as custom_pkg
-from forven.strategies import intake as intake_mod
-from forven.strategies import registry
+from axiom.db import get_db
+from axiom.strategies import custom as custom_pkg
+from axiom.strategies import intake as intake_mod
+from axiom.strategies import registry
 
 
 def _write_custom_strategy(path, *, type_name: str = "ai_dropzone_wave_test") -> None:
@@ -38,7 +38,7 @@ def _write_custom_strategy(path, *, type_name: str = "ai_dropzone_wave_test") ->
         "\n".join(
             [
                 "import pandas as pd",
-                "from forven.strategies.base import BaseStrategy, Signal",
+                "from axiom.strategies.base import BaseStrategy, Signal",
                 "",
                 "class AIDropzoneWave(BaseStrategy):",
                 "    @property",
@@ -60,7 +60,7 @@ def _write_custom_strategy(path, *, type_name: str = "ai_dropzone_wave_test") ->
     )
 
 
-def test_create_session_assigns_sequential_ids(forven_db):
+def test_create_session_assigns_sequential_ids(AXIOM_db):
     first = create_session(label="iter-1", actor="claude-desktop", objective="RSI mean reversion")
     second = create_session(label="iter-2", actor="codex")
 
@@ -78,7 +78,7 @@ def test_create_session_assigns_sequential_ids(forven_db):
     assert "ADZ-0003" in blank["label"]
 
 
-def test_list_sessions_includes_strategy_counts(forven_db):
+def test_list_sessions_includes_strategy_counts(AXIOM_db):
     a = create_session(label="alpha")
     _b = create_session(label="beta")
 
@@ -100,7 +100,7 @@ def test_list_sessions_includes_strategy_counts(forven_db):
     assert by_id[_b["id"]]["strategy_count"] == 0
 
 
-def test_close_session_marks_closed_and_stamps_ended_at(forven_db):
+def test_close_session_marks_closed_and_stamps_ended_at(AXIOM_db):
     created = create_session(label="closer")
     closed = close_session(created["id"])
     assert closed is not None
@@ -112,7 +112,7 @@ def test_close_session_marks_closed_and_stamps_ended_at(forven_db):
     assert again["ended_at"] == closed["ended_at"]
 
 
-def test_get_session_and_session_exists(forven_db):
+def test_get_session_and_session_exists(AXIOM_db):
     created = create_session(label="fetch-me")
     assert session_exists(created["id"]) is True
     assert session_exists("ADZ-9999") is False
@@ -120,7 +120,7 @@ def test_get_session_and_session_exists(forven_db):
     assert get_session("ADZ-9999") is None
 
 
-def test_register_custom_strategy_file_tags_session(forven_db, monkeypatch, tmp_path):
+def test_register_custom_strategy_file_tags_session(AXIOM_db, monkeypatch, tmp_path):
     sess = create_session(label="intake-session")
 
     temp_custom_dir = tmp_path / "custom"
@@ -133,7 +133,7 @@ def test_register_custom_strategy_file_tags_session(forven_db, monkeypatch, tmp_
 
     registry.reset()
     importlib.invalidate_caches()
-    sys.modules.pop("forven.strategies.custom.btc_ai_dropzone_wave_test", None)
+    sys.modules.pop("axiom.strategies.custom.btc_ai_dropzone_wave_test", None)
 
     result = intake_mod.register_custom_strategy_file(
         file_path=str(strategy_file), session_id=sess["id"]
@@ -154,7 +154,7 @@ def test_register_custom_strategy_file_tags_session(forven_db, monkeypatch, tmp_
     assert detail["strategies"][0]["id"] == result["strategy_id"]
 
 
-def test_register_custom_strategy_file_rejects_unknown_session(forven_db, monkeypatch, tmp_path):
+def test_register_custom_strategy_file_rejects_unknown_session(AXIOM_db, monkeypatch, tmp_path):
     temp_custom_dir = tmp_path / "custom"
     temp_custom_dir.mkdir()
     strategy_file = temp_custom_dir / "btc_ai_dropzone_wave_test.py"
@@ -165,7 +165,7 @@ def test_register_custom_strategy_file_rejects_unknown_session(forven_db, monkey
 
     registry.reset()
     importlib.invalidate_caches()
-    sys.modules.pop("forven.strategies.custom.btc_ai_dropzone_wave_test", None)
+    sys.modules.pop("axiom.strategies.custom.btc_ai_dropzone_wave_test", None)
 
     try:
         intake_mod.register_custom_strategy_file(
@@ -177,7 +177,7 @@ def test_register_custom_strategy_file_rejects_unknown_session(forven_db, monkey
         raise AssertionError("Expected ValueError for unknown session_id")
 
 
-def test_get_session_detail_surfaces_runs_via_config_json(forven_db):
+def test_get_session_detail_surfaces_runs_via_config_json(AXIOM_db):
     sess = create_session(label="run-tagged")
     # An untagged strategy — its backtest run carries the session_id in
     # config_json only. get_session_detail should still surface the run.

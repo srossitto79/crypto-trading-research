@@ -1,4 +1,4 @@
-"""Phase 1 (P1-T09) — recall_similar_situation tests.
+﻿"""Phase 1 (P1-T09) — recall_similar_situation tests.
 
 Covers:
 - FTS5 candidates returned in the right shape.
@@ -14,9 +14,9 @@ import json
 
 import pytest
 
-import forven.model_routing as model_routing
-from forven import recall as recall_mod
-from forven.db import get_db
+import axiom.model_routing as model_routing
+from axiom import recall as recall_mod
+from axiom.db import get_db
 
 
 @pytest.fixture(autouse=True)
@@ -51,14 +51,14 @@ def _seed_agent_task(title: str, description: str) -> int:
         return int(cur.lastrowid)
 
 
-def test_recall_empty_query_returns_empty(forven_db):
+def test_recall_empty_query_returns_empty(AXIOM_db):
     result = recall_mod.recall_similar_situation("")
     assert result["hits"] == []
     assert result["summary"] == ""
     assert result["latency_ms"] == 0
 
 
-def test_recall_fts_only_returns_hits_when_aux_disabled(forven_db, monkeypatch):
+def test_recall_fts_only_returns_hits_when_aux_disabled(AXIOM_db, monkeypatch):
     # Block all LLM calls — the call must still succeed via FTS5 fallback.
     def boom(*_a, **_kw):
         raise RuntimeError("aux disabled in test")
@@ -77,7 +77,7 @@ def test_recall_fts_only_returns_hits_when_aux_disabled(forven_db, monkeypatch):
     assert h["deep_link_url"] == f"/brain/decisions/{decision_id}"
 
 
-def test_recall_rerank_uses_llm_scores(forven_db, monkeypatch):
+def test_recall_rerank_uses_llm_scores(AXIOM_db, monkeypatch):
     a = _seed_decision("ZARFZIPZAR market opened with low volume")
     b = _seed_decision("ZARFZIPZAR market printed a clean breakout pattern")
     c = _seed_decision("ZARFZIPZAR market chopped sideways for 3 hours")
@@ -110,7 +110,7 @@ def test_recall_rerank_uses_llm_scores(forven_db, monkeypatch):
     assert result["aux_model"] is not None
 
 
-def test_recall_summary_failure_yields_empty_summary_with_hits(forven_db, monkeypatch):
+def test_recall_summary_failure_yields_empty_summary_with_hits(AXIOM_db, monkeypatch):
     _seed_decision("ZARFZIPZAR oil pump pattern observed")
 
     rerank_payload = json.dumps({"scores": [{"i": 0, "s": 1.0}]})
@@ -128,7 +128,7 @@ def test_recall_summary_failure_yields_empty_summary_with_hits(forven_db, monkey
     assert len(result["hits"]) >= 1
 
 
-def test_recall_scope_decisions_excludes_tasks(forven_db, monkeypatch):
+def test_recall_scope_decisions_excludes_tasks(AXIOM_db, monkeypatch):
     monkeypatch.setattr(recall_mod, "_call_aux_llm", lambda *_a, **_kw: "")
     _seed_decision("ZARFZIPZAR a unique decision")
     _seed_agent_task("ZARFZIPZAR a unique task", "task description")
@@ -138,7 +138,7 @@ def test_recall_scope_decisions_excludes_tasks(forven_db, monkeypatch):
     assert sources == {"brain_decisions"}
 
 
-def test_recall_scope_tasks_excludes_decisions(forven_db, monkeypatch):
+def test_recall_scope_tasks_excludes_decisions(AXIOM_db, monkeypatch):
     monkeypatch.setattr(recall_mod, "_call_aux_llm", lambda *_a, **_kw: "")
     _seed_decision("ZARFZIPZAR a unique decision")
     task_id = _seed_agent_task("ZARFZIPZAR a unique task title", "task description")
@@ -150,7 +150,7 @@ def test_recall_scope_tasks_excludes_decisions(forven_db, monkeypatch):
     assert result["hits"][0]["deep_link_url"] == f"/brain/tasks/{task_id}"
 
 
-def test_recall_scope_all_returns_both_sources(forven_db, monkeypatch):
+def test_recall_scope_all_returns_both_sources(AXIOM_db, monkeypatch):
     monkeypatch.setattr(recall_mod, "_call_aux_llm", lambda *_a, **_kw: "")
     _seed_decision("ZARFZIPZAR decision body")
     _seed_agent_task("ZARFZIPZAR task title", "task body")
@@ -160,7 +160,7 @@ def test_recall_scope_all_returns_both_sources(forven_db, monkeypatch):
     assert sources == {"brain_decisions", "agent_tasks"}
 
 
-def test_recall_writes_cost_row_to_agent_tasks(forven_db, monkeypatch):
+def test_recall_writes_cost_row_to_agent_tasks(AXIOM_db, monkeypatch):
     monkeypatch.setattr(recall_mod, "_call_aux_llm", lambda *_a, **_kw: "")
     _seed_decision("ZARFZIPZAR cost-tracking probe")
 
@@ -189,7 +189,7 @@ def test_recall_writes_cost_row_to_agent_tasks(forven_db, monkeypatch):
     assert rows["model_id"] == "openai/gpt-4o-mini"
 
 
-def test_recall_query_with_quote_does_not_crash_fts(forven_db, monkeypatch):
+def test_recall_query_with_quote_does_not_crash_fts(AXIOM_db, monkeypatch):
     """FTS5 MATCH chokes on raw quotes — token sanitizer must defang them."""
     monkeypatch.setattr(recall_mod, "_call_aux_llm", lambda *_a, **_kw: "")
     _seed_decision("ZARFZIPZAR breakout candidate")
@@ -200,7 +200,7 @@ def test_recall_query_with_quote_does_not_crash_fts(forven_db, monkeypatch):
     assert any("ZARFZIPZAR" in h["situation"] for h in result["hits"])
 
 
-def test_recall_limit_respected(forven_db, monkeypatch):
+def test_recall_limit_respected(AXIOM_db, monkeypatch):
     monkeypatch.setattr(recall_mod, "_call_aux_llm", lambda *_a, **_kw: "")
     for i in range(20):
         _seed_decision(f"ZARFZIPZAR candidate row {i}")
@@ -209,14 +209,14 @@ def test_recall_limit_respected(forven_db, monkeypatch):
     assert len(result["hits"]) == 4
 
 
-def test_recall_aux_model_label_is_provider_colon_model(forven_db, monkeypatch):
+def test_recall_aux_model_label_is_provider_colon_model(AXIOM_db, monkeypatch):
     monkeypatch.setattr(recall_mod, "_call_aux_llm", lambda *_a, **_kw: "")
     _seed_decision("ZARFZIPZAR aux label probe")
     result = recall_mod.recall_similar_situation("ZARFZIPZAR", scope="decisions", limit=1)
     assert result["aux_model"] == "openrouter:openai/gpt-4o-mini"
 
 
-def test_recall_latency_recorded(forven_db, monkeypatch):
+def test_recall_latency_recorded(AXIOM_db, monkeypatch):
     monkeypatch.setattr(recall_mod, "_call_aux_llm", lambda *_a, **_kw: "")
     _seed_decision("ZARFZIPZAR latency probe")
     result = recall_mod.recall_similar_situation("ZARFZIPZAR", scope="decisions", limit=1)

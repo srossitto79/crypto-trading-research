@@ -13,7 +13,7 @@ export interface NavMetric {
 
 type NavMetricMap = Record<string, NavMetric>;
 
-const STORAGE_KEY = 'forven.nav.seen_v1';
+const STORAGE_KEY = 'axiom.nav.seen_v1';
 const NAV_HREFS = ['/', '/data', '/hypotheses', '/lab', '/risk', '/trading', '/agents', '/memory', '/tasks', '/approval', '/settings'];
 
 function createEmptyMetric(): NavMetric {

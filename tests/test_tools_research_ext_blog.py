@@ -1,8 +1,8 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from unittest.mock import patch
 
-from forven.agents.tools_research import (
+from axiom.agents.tools_research import (
     _tool_discover_blog_articles,
     _tool_inspect_blog_article,
 )
@@ -19,13 +19,13 @@ def _all_pass_contract():
 
 
 def _with_registry(monkeypatch, cfg):
-    monkeypatch.setattr("forven.agents.tools_research._current_research_contract", _all_pass_contract)
-    monkeypatch.setattr("forven.agents.tools_research._resolve_source_registry", lambda t: cfg)
+    monkeypatch.setattr("axiom.agents.tools_research._current_research_contract", _all_pass_contract)
+    monkeypatch.setattr("axiom.agents.tools_research._resolve_source_registry", lambda t: cfg)
 
 
 def test_discover_blocked_when_blog_not_allowed(monkeypatch):
     monkeypatch.setattr(
-        "forven.agents.tools_research._current_research_contract",
+        "axiom.agents.tools_research._current_research_contract",
         lambda: {"lane": "benchmarking", "external_sources_allowed": True, "allowed_external_source_types": ["youtube"]},
     )
     res = json_loads(_tool_discover_blog_articles({"query": "x"}))
@@ -49,7 +49,7 @@ def test_discover_blocked_when_no_feeds(monkeypatch):
 
 def test_discover_happy_path(monkeypatch):
     _with_registry(monkeypatch, {"feeds": ["https://x/feed"], "rate_limit_per_min": 30})
-    with patch("forven.research_sources.blog.search_blog_articles") as m:
+    with patch("axiom.research_sources.blog.search_blog_articles") as m:
         m.return_value = {"ok": True, "source": "blog", "query": "x", "count": 1, "results": [{"title": "a"}]}
         res = json_loads(_tool_discover_blog_articles({"query": "x", "limit": 5}))
     assert res["ok"] is True
@@ -59,17 +59,17 @@ def test_discover_happy_path(monkeypatch):
 
 def test_discover_feeds_override_registry(monkeypatch):
     _with_registry(monkeypatch, {"feeds": ["https://a/feed"], "rate_limit_per_min": 30})
-    with patch("forven.research_sources.blog.search_blog_articles") as m:
+    with patch("axiom.research_sources.blog.search_blog_articles") as m:
         m.return_value = {"ok": True, "source": "blog", "query": "x", "count": 0, "results": []}
         json_loads(_tool_discover_blog_articles({"query": "x", "feeds": ["https://b/feed"]}))
     assert m.call_args.kwargs["feeds"] == ["https://b/feed"]
 
 
 def test_discover_registry_error(monkeypatch):
-    from forven.research_sources._registry import RegistryError
-    monkeypatch.setattr("forven.agents.tools_research._current_research_contract", _all_pass_contract)
+    from axiom.research_sources._registry import RegistryError
+    monkeypatch.setattr("axiom.agents.tools_research._current_research_contract", _all_pass_contract)
     def _raise(_t): raise RegistryError("feeds must be list[str]")
-    monkeypatch.setattr("forven.agents.tools_research._resolve_source_registry", _raise)
+    monkeypatch.setattr("axiom.agents.tools_research._resolve_source_registry", _raise)
     res = json_loads(_tool_discover_blog_articles({"query": "x"}))
     assert res["ok"] is False
     assert "blog registry error" in res["error"]
@@ -77,7 +77,7 @@ def test_discover_registry_error(monkeypatch):
 
 def test_inspect_happy_path(monkeypatch):
     _with_registry(monkeypatch, {"feeds": ["https://x/feed"], "rate_limit_per_min": 30})
-    with patch("forven.research_sources.blog.inspect_blog_article") as m:
+    with patch("axiom.research_sources.blog.inspect_blog_article") as m:
         m.return_value = {"ok": True, "source": "blog", "url": "u", "title": "T", "content": "body"}
         res = json_loads(_tool_inspect_blog_article({"url": "https://example.com/a"}))
     assert res["ok"] is True
@@ -86,7 +86,7 @@ def test_inspect_happy_path(monkeypatch):
 
 def test_inspect_blocked_when_not_benchmarking(monkeypatch):
     monkeypatch.setattr(
-        "forven.agents.tools_research._current_research_contract",
+        "axiom.agents.tools_research._current_research_contract",
         lambda: {"lane": "exploration", "external_sources_allowed": True, "allowed_external_source_types": ["blog"]},
     )
     res = json_loads(_tool_inspect_blog_article({"url": "https://x"}))

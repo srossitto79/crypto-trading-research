@@ -1,7 +1,7 @@
-
+﻿
 import json
 import pandas as pd
-from forven.data import load_parquet
+from axiom.data import load_parquet
 
 def check():
     df = load_parquet("BTC-USDT", "1h")

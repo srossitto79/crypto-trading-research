@@ -1,14 +1,14 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 from types import SimpleNamespace
 
-from forven.control_plane import ops as control_plane_ops
-from forven.db import get_db, kv_get, kv_set
-from forven.exchange.risk import is_trading_allowed
+from axiom.control_plane import ops as control_plane_ops
+from axiom.db import get_db, kv_get, kv_set
+from axiom.exchange.risk import is_trading_allowed
 
 
-def test_stop_system_sets_pause_state_and_start_system_clears_it(forven_db):
+def test_stop_system_sets_pause_state_and_start_system_clears_it(AXIOM_db):
     stopped = control_plane_ops.stop_system()
     paused_state = kv_get("system_state", {})
     paused_legacy = kv_get("system_paused", False)
@@ -33,12 +33,12 @@ def test_stop_system_sets_pause_state_and_start_system_clears_it(forven_db):
     assert resumed_reason == "OK"
 
 
-def test_pause_strategy_generation_does_not_toggle_trading_pause(forven_db):
+def test_pause_strategy_generation_does_not_toggle_trading_pause(AXIOM_db):
     # A fresh DB resolves to manual mode, where resume-generation deliberately
     # refuses (B-28: no silent manual->auto escalation; covered in
     # test_system_mode_semi). This test is about generation pause not touching
     # the TRADING pause, so run it in an explicit autonomous mode.
-    from forven.system_pause import set_system_mode
+    from axiom.system_pause import set_system_mode
 
     set_system_mode("auto")
 
@@ -69,7 +69,7 @@ def test_pause_strategy_generation_does_not_toggle_trading_pause(forven_db):
     assert reason_after_resume == "OK"
 
 
-def test_trading_halt_reset_clears_pause_and_risk_gates(forven_db):
+def test_trading_halt_reset_clears_pause_and_risk_gates(AXIOM_db):
     kv_set(
         "system_state",
         {
@@ -119,7 +119,7 @@ def test_trading_halt_reset_clears_pause_and_risk_gates(forven_db):
     assert ops_state["trading_reset"]["status"] == "ok"
 
 
-def test_trading_halt_reset_reports_when_recovery_still_blocks_entries(forven_db):
+def test_trading_halt_reset_reports_when_recovery_still_blocks_entries(AXIOM_db):
     kv_set(
         "system_state",
         {
@@ -160,7 +160,7 @@ def test_trading_halt_reset_reports_when_recovery_still_blocks_entries(forven_db
     assert ops_state["trading_reset"]["status"] == "warn"
 
 
-def test_manual_exchange_reconcile_updates_daemon_and_operator_recovery_state(forven_db, monkeypatch):
+def test_manual_exchange_reconcile_updates_daemon_and_operator_recovery_state(AXIOM_db, monkeypatch):
     kv_set(
         "daemon_state",
         {
@@ -178,7 +178,7 @@ def test_manual_exchange_reconcile_updates_daemon_and_operator_recovery_state(fo
     reconcile_calls: list[dict[str, object]] = []
 
     monkeypatch.setattr(control_plane_ops, "uuid4", lambda: SimpleNamespace(hex="abc123def4567890"))
-    monkeypatch.setattr("forven.exchange.risk.sync_from_trades", lambda: sync_calls.append("sync") or 1)
+    monkeypatch.setattr("axiom.exchange.risk.sync_from_trades", lambda: sync_calls.append("sync") or 1)
 
     def _fake_reconcile_all_books(testnet=True, **kwargs):
         reconcile_calls.append(dict(kwargs))
@@ -192,7 +192,7 @@ def test_manual_exchange_reconcile_updates_daemon_and_operator_recovery_state(fo
             "resolved_actions": [],
         }
 
-    monkeypatch.setattr("forven.exchange.risk.reconcile_all_books", _fake_reconcile_all_books)
+    monkeypatch.setattr("axiom.exchange.risk.reconcile_all_books", _fake_reconcile_all_books)
 
     payload = control_plane_ops._run_manual_exchange_reconcile()
 
@@ -219,7 +219,7 @@ def test_manual_exchange_reconcile_updates_daemon_and_operator_recovery_state(fo
     assert ops_state["exchange_reconcile"]["details"]["adopted_count"] == 1
 
 
-def test_recovery_batch_rollback_pauses_and_rebuilds_positions(forven_db):
+def test_recovery_batch_rollback_pauses_and_rebuilds_positions(AXIOM_db):
     kv_set(
         "daemon_state",
         {

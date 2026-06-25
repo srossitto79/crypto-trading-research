@@ -1,13 +1,13 @@
-"""Trigger one paper trading scanner cycle to generate signals for new paper strategies."""
+﻿"""Trigger one paper trading scanner cycle to generate signals for new paper strategies."""
 import sys, json
 sys.path.insert(0, '.')
 
 
 if __name__ == '__main__':
     import sqlite3
-    from forven.config import FORVEN_DB
+    from axiom.config import AXIOM_DB
 
-    conn = sqlite3.connect(FORVEN_DB)
+    conn = sqlite3.connect(AXIOM_DB)
     conn.row_factory = sqlite3.Row
 
     # Check paper strategies
@@ -23,7 +23,7 @@ if __name__ == '__main__':
     # Trigger scanner
     print("\nTriggering paper scanner scan...")
     try:
-        from forven.api_domains.paper import _run_scanner_once
+        from axiom.api_domains.paper import _run_scanner_once
         ok, err = _run_scanner_once(execute_positions=True)
         print(f"Scanner result: ok={ok} err={err}")
     except Exception as e:
@@ -32,7 +32,7 @@ if __name__ == '__main__':
         traceback.print_exc()
 
     # Check for new trades
-    conn2 = sqlite3.connect(FORVEN_DB)
+    conn2 = sqlite3.connect(AXIOM_DB)
     conn2.row_factory = sqlite3.Row
     rows = conn2.execute("""
         SELECT strategy_id, symbol, direction, pnl, status, execution_type, created_at

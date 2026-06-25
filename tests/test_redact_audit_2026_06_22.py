@@ -1,8 +1,8 @@
-"""Audit 2026-06-22 (L2): redaction now covers the Hyperliquid wallet private
+﻿"""Audit 2026-06-22 (L2): redaction now covers the Hyperliquid wallet private
 key and Discord secrets, without scrubbing the (non-secret) 40-hex address."""
 from __future__ import annotations
 
-from forven.redact import REDACTED_MARKER, redact
+from axiom.redact import REDACTED_MARKER, redact
 
 
 def test_hyperliquid_private_key_redacted():
@@ -21,7 +21,7 @@ def test_evm_public_address_not_redacted():
 
 def test_private_key_in_json_value_redacted():
     key = "0x" + "f3" * 32
-    out, _ = redact('{"FORVEN_HL_API_SECRET": "%s"}' % key)
+    out, _ = redact('{"AXIOM_HL_API_SECRET": "%s"}' % key)
     assert key not in out
 
 

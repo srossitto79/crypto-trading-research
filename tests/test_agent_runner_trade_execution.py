@@ -1,14 +1,14 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 import json
 from datetime import datetime, timezone
 
-from forven.agents import runner
-from forven.db import get_db
+from axiom.agents import runner
+from axiom.db import get_db
 
 
-def test_run_agent_task_executes_trade_execution_deterministically(forven_db, monkeypatch):
+def test_run_agent_task_executes_trade_execution_deterministically(AXIOM_db, monkeypatch):
     now = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
         conn.execute(
@@ -53,7 +53,7 @@ def test_run_agent_task_executes_trade_execution_deterministically(forven_db, mo
     async def _unexpected_ai_call(*args, **kwargs):
         raise AssertionError("trade_execution tasks should bypass the AI tool loop")
 
-    monkeypatch.setattr("forven.scanner.execute_trade_intent", _fake_execute_trade_intent)
+    monkeypatch.setattr("axiom.scanner.execute_trade_intent", _fake_execute_trade_intent)
     monkeypatch.setattr(runner, "_call_with_tools", _unexpected_ai_call)
 
     output = asyncio.run(

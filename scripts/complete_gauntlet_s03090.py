@@ -1,12 +1,12 @@
-"""Complete gauntlet run for S03090 (zscore_reversion ETH/USDT 1h, no adx_max override)."""
+﻿"""Complete gauntlet run for S03090 (zscore_reversion ETH/USDT 1h, no adx_max override)."""
 import sys, json, time
 sys.path.insert(0, '.')
 
 
 if __name__ == '__main__':
     import sqlite3
-    from forven.config import FORVEN_DB
-    from forven.strategies.backtest import walk_forward, backtest_strategy
+    from axiom.config import AXIOM_DB
+    from axiom.strategies.backtest import walk_forward, backtest_strategy
 
     SID = 'S03090'
     ASSET = 'ETH/USDT'
@@ -15,7 +15,7 @@ if __name__ == '__main__':
     PARAMS = {'period': 20, 'entry_threshold': 1.8, 'exit_threshold': 0.3}
     TF = '1h'
 
-    conn = sqlite3.connect(FORVEN_DB)
+    conn = sqlite3.connect(AXIOM_DB)
     conn.row_factory = sqlite3.Row
 
     # Restore to gauntlet
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     if result_id:
         print("\nRunning Param Jitter...")
         try:
-            from forven.routers.robustness import _run_param_jitter_analysis, ParamJitterBody
+            from axiom.routers.robustness import _run_param_jitter_analysis, ParamJitterBody
             pj_body = ParamJitterBody(strategy_id=SID, result_id=result_id, symbol=ASSET, timeframe=TF, n_iterations=30, jitter_pct=10.0)
             pj = _run_param_jitter_analysis(pj_body)
             pj_verdict = pj.get('verdict', 'PASS')
@@ -130,7 +130,7 @@ if __name__ == '__main__':
 
     # Check gate
     print("\nChecking gauntlet gate...")
-    from forven.policy import load_pipeline_config, _evaluate_gauntlet_gate
+    from axiom.policy import load_pipeline_config, _evaluate_gauntlet_gate
     config = load_pipeline_config()
     ok, reason = _evaluate_gauntlet_gate(SID, config)
     print(f"Gate: {'PASS' if ok else 'FAIL'} - {reason}")

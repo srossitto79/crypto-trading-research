@@ -1,4 +1,4 @@
-"""Dashboard account-equity fallback behavior."""
+﻿"""Dashboard account-equity fallback behavior."""
 
 from __future__ import annotations
 
@@ -14,8 +14,8 @@ _skip_no_hl = pytest.mark.skipif(not _HAS_HYPERLIQUID, reason="hyperliquid packa
 
 
 @_skip_no_hl
-def test_get_dashboard_defaults_to_initial_capital_in_paper_mode(forven_db, monkeypatch):
-    from forven.control_plane import status as control_plane_status
+def test_get_dashboard_defaults_to_initial_capital_in_paper_mode(AXIOM_db, monkeypatch):
+    from axiom.control_plane import status as control_plane_status
 
     kv_payloads = {
         "daemon_state": {},
@@ -34,7 +34,7 @@ def test_get_dashboard_defaults_to_initial_capital_in_paper_mode(forven_db, monk
     def _raise_exchange_error(*_args, **_kwargs):
         raise RuntimeError("exchange unavailable")
 
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_account_value", _raise_exchange_error)
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_account_value", _raise_exchange_error)
 
     payload = control_plane_status.get_dashboard()
     assert payload["execution_mode"] == "paper"
@@ -43,8 +43,8 @@ def test_get_dashboard_defaults_to_initial_capital_in_paper_mode(forven_db, monk
 
 
 @_skip_no_hl
-def test_get_dashboard_strict_raises_when_hyperliquid_unavailable(forven_db, monkeypatch):
-    from forven.control_plane import status as control_plane_status
+def test_get_dashboard_strict_raises_when_hyperliquid_unavailable(AXIOM_db, monkeypatch):
+    from axiom.control_plane import status as control_plane_status
 
     kv_payloads = {
         "daemon_state": {"account_equity": 10000.0},
@@ -63,7 +63,7 @@ def test_get_dashboard_strict_raises_when_hyperliquid_unavailable(forven_db, mon
     def _raise_exchange_error(*_args, **_kwargs):
         raise RuntimeError("auth failed")
 
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_account_value", _raise_exchange_error)
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_account_value", _raise_exchange_error)
 
     with pytest.raises(control_plane_status.HTTPException) as exc:
         control_plane_status.get_dashboard(require_account_connection=True)

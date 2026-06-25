@@ -1,9 +1,9 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """READ-ONLY backfill harness: how many existing strategies would pass the
 promotion gates under each pipeline stance preset (relaxed / default / strict).
 
 This script does NOT write to the DB, promote anything, or mutate KV. It only
-*reads* strategies and *re-evaluates* the gate functions from forven.policy
+*reads* strategies and *re-evaluates* the gate functions from axiom.policy
 against three resolved preset configs, then prints a summary table.
 
 For every strategy it runs the gate relevant to its CURRENT stage:
@@ -16,7 +16,7 @@ strategy regardless of stage — that is the headline "how many can reach paper"
 number — and _evaluate_paper_gate across every strategy for the "how many can
 reach live" number.
 
-Run from the repo root so the `forven` package imports:
+Run from the repo root so the `Axiom` package imports:
     .venv\\Scripts\\python.exe scripts\\backfill_gate_passrates.py   (Windows)
     .venv/bin/python scripts/backfill_gate_passrates.py             (POSIX)
 """
@@ -37,7 +37,7 @@ if _REPO_ROOT not in sys.path:
 PRESETS = ["relaxed", "default", "strict"]
 
 # How the per-stage gate is chosen. Stages are the canonical values produced by
-# forven.util.normalize_stage (get_strategies already normalizes s["stage"]).
+# Axiom.util.normalize_stage (get_strategies already normalizes s["stage"]).
 STAGE_TO_GATE = {
     "quick_screen": "quick_screen",
     "gauntlet": "gauntlet",
@@ -62,18 +62,18 @@ def main() -> int:
     # Imports are inside main() so an import failure is reported cleanly rather
     # than crashing at module load with a bare traceback.
     try:
-        from forven.db import get_strategies
-        from forven.policy import (
+        from axiom.db import get_strategies
+        from axiom.policy import (
             _evaluate_gauntlet_gate,
             _evaluate_paper_gate,
             _evaluate_quick_screen_gate,
             _normalize_pipeline_config,
         )
     except Exception:
-        print("FATAL: failed to import forven backend modules.", file=sys.stderr)
+        print("FATAL: failed to import axiom backend modules.", file=sys.stderr)
         print(
             "Run this from the repo root with the project's python so the "
-            "`forven` package is importable, e.g.:",
+            "`Axiom` package is importable, e.g.:",
             file=sys.stderr,
         )
         print(r"  .venv\Scripts\python.exe scripts\backfill_gate_passrates.py", file=sys.stderr)
@@ -195,7 +195,7 @@ def main() -> int:
 
     # ---------------------------------------------------------------- output
     print("=" * 88)
-    print("FORVEN GATE PASS-RATE BACKFILL  (READ-ONLY - no DB/KV writes, no promotions)")
+    print("Axiom GATE PASS-RATE BACKFILL  (READ-ONLY - no DB/KV writes, no promotions)")
     print("=" * 88)
     print(f"Total strategies enumerated: {total_strategies}")
     if total_strategies:

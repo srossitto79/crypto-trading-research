@@ -1,11 +1,11 @@
-"""Tests for `forven strategies triage-stale` — bulk-archives stale quick_screen strategies."""
+﻿"""Tests for `Axiom strategies triage-stale` — bulk-archives stale quick_screen strategies."""
 from __future__ import annotations
 
 import datetime as dt
 from click.testing import CliRunner
 
-from forven.cli import cli
-from forven.db import get_db, init_db
+from axiom.cli import cli
+from axiom.db import get_db, init_db
 
 
 def _seed(conn, sid: str, stage: str, stage_changed_offset_days: int) -> None:

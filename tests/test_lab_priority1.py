@@ -1,4 +1,4 @@
-"""Tests for Priority 1: Regime Lab completion — PID lock, feature flag, stale recovery, approval gate."""
+﻿"""Tests for Priority 1: Regime Lab completion — PID lock, feature flag, stale recovery, approval gate."""
 
 from __future__ import annotations
 
@@ -11,8 +11,8 @@ import pytest
 
 def test_pid_lock_acquire_and_release(tmp_path, monkeypatch):
     """PID file singleton prevents duplicate workers and cleans up on release."""
-    monkeypatch.setattr("forven.lab_worker_service.FORVEN_HOME", tmp_path)
-    from forven.lab_worker_service import acquire_pid_lock, release_pid_lock, _pid_file_path
+    monkeypatch.setattr("axiom.lab_worker_service.AXIOM_HOME", tmp_path)
+    from axiom.lab_worker_service import acquire_pid_lock, release_pid_lock, _pid_file_path
 
     pid_path = _pid_file_path()
 
@@ -31,8 +31,8 @@ def test_pid_lock_acquire_and_release(tmp_path, monkeypatch):
 
 def test_pid_lock_stale_pid_reclaimed(tmp_path, monkeypatch):
     """A stale PID file (dead process) should be overwritten."""
-    monkeypatch.setattr("forven.lab_worker_service.FORVEN_HOME", tmp_path)
-    from forven.lab_worker_service import acquire_pid_lock, _pid_file_path
+    monkeypatch.setattr("axiom.lab_worker_service.AXIOM_HOME", tmp_path)
+    from axiom.lab_worker_service import acquire_pid_lock, _pid_file_path
 
     pid_path = _pid_file_path()
     pid_path.parent.mkdir(parents=True, exist_ok=True)
@@ -45,79 +45,79 @@ def test_pid_lock_stale_pid_reclaimed(tmp_path, monkeypatch):
 
 def test_pid_lock_reclaims_exited_windows_process_handle(tmp_path, monkeypatch):
     """Windows should reclaim stale PID files even if the old process object lingers."""
-    monkeypatch.setattr("forven.lab_worker_service.FORVEN_HOME", tmp_path)
-    from forven.lab_worker_service import acquire_pid_lock, _pid_file_path
+    monkeypatch.setattr("axiom.lab_worker_service.AXIOM_HOME", tmp_path)
+    from axiom.lab_worker_service import acquire_pid_lock, _pid_file_path
 
     pid_path = _pid_file_path()
     pid_path.parent.mkdir(parents=True, exist_ok=True)
     pid_path.write_text("227248")
 
-    monkeypatch.setattr("forven.lab_worker_service.os.name", "nt")
-    monkeypatch.setattr("forven.lab_worker_service.psutil.Process", lambda _pid: (_ for _ in ()).throw(__import__("psutil").NoSuchProcess(_pid)))
+    monkeypatch.setattr("axiom.lab_worker_service.os.name", "nt")
+    monkeypatch.setattr("axiom.lab_worker_service.psutil.Process", lambda _pid: (_ for _ in ()).throw(__import__("psutil").NoSuchProcess(_pid)))
 
     assert acquire_pid_lock() is True
     assert int(pid_path.read_text().strip()) == os.getpid()
 
 
 def test_feature_flag_regime_lab():
-    """Feature flag reads FORVEN_ENABLE_REGIME_LAB correctly."""
-    from forven.lab_features import regime_lab_enabled
+    """Feature flag reads AXIOM_ENABLE_REGIME_LAB correctly."""
+    from axiom.lab_features import regime_lab_enabled
 
-    original = os.environ.get("FORVEN_ENABLE_REGIME_LAB")
+    original = os.environ.get("AXIOM_ENABLE_REGIME_LAB")
     try:
-        os.environ["FORVEN_ENABLE_REGIME_LAB"] = "1"
+        os.environ["AXIOM_ENABLE_REGIME_LAB"] = "1"
         assert regime_lab_enabled() is True
 
-        os.environ["FORVEN_ENABLE_REGIME_LAB"] = "true"
+        os.environ["AXIOM_ENABLE_REGIME_LAB"] = "true"
         assert regime_lab_enabled() is True
 
-        os.environ["FORVEN_ENABLE_REGIME_LAB"] = "0"
+        os.environ["AXIOM_ENABLE_REGIME_LAB"] = "0"
         assert regime_lab_enabled() is False
 
-        os.environ["FORVEN_ENABLE_REGIME_LAB"] = ""
+        os.environ["AXIOM_ENABLE_REGIME_LAB"] = ""
         assert regime_lab_enabled() is False
 
-        del os.environ["FORVEN_ENABLE_REGIME_LAB"]
+        del os.environ["AXIOM_ENABLE_REGIME_LAB"]
         assert regime_lab_enabled() is False
     finally:
         if original is not None:
-            os.environ["FORVEN_ENABLE_REGIME_LAB"] = original
-        elif "FORVEN_ENABLE_REGIME_LAB" in os.environ:
-            del os.environ["FORVEN_ENABLE_REGIME_LAB"]
+            os.environ["AXIOM_ENABLE_REGIME_LAB"] = original
+        elif "AXIOM_ENABLE_REGIME_LAB" in os.environ:
+            del os.environ["AXIOM_ENABLE_REGIME_LAB"]
 
 
 def test_feature_flag_no_longer_falls_back_to_orchestrator_db(monkeypatch):
     """Unset env must keep Regime Lab dormant even if DB config says enabled."""
-    from forven.lab_db import set_lab_meta
-    from forven.lab_features import regime_lab_enabled
-    from forven.lab_orchestrator import ORCHESTRATOR_CONFIG_META_KEY
+    from axiom.lab_db import set_lab_meta
+    from axiom.lab_features import regime_lab_enabled
+    from axiom.lab_orchestrator import ORCHESTRATOR_CONFIG_META_KEY
 
-    original = os.environ.get("FORVEN_ENABLE_REGIME_LAB")
+    original = os.environ.get("AXIOM_ENABLE_REGIME_LAB")
     try:
-        if "FORVEN_ENABLE_REGIME_LAB" in os.environ:
-            del os.environ["FORVEN_ENABLE_REGIME_LAB"]
+        if "AXIOM_ENABLE_REGIME_LAB" in os.environ:
+            del os.environ["AXIOM_ENABLE_REGIME_LAB"]
         set_lab_meta(ORCHESTRATOR_CONFIG_META_KEY, {"enabled": True, "auto_start_worker": True})
 
         assert regime_lab_enabled() is False
     finally:
         if original is not None:
-            os.environ["FORVEN_ENABLE_REGIME_LAB"] = original
-        elif "FORVEN_ENABLE_REGIME_LAB" in os.environ:
-            del os.environ["FORVEN_ENABLE_REGIME_LAB"]
+            os.environ["AXIOM_ENABLE_REGIME_LAB"] = original
+        elif "AXIOM_ENABLE_REGIME_LAB" in os.environ:
+            del os.environ["AXIOM_ENABLE_REGIME_LAB"]
 
 
 def test_quiesce_regime_lab_disables_orchestrator_and_fails_active_jobs(monkeypatch):
     """Dormancy should pause orchestrator state and fail queued/running jobs."""
-    from forven.lab_db import (
+    from axiom.lab_db import (
         claim_next_lab_job,
         enqueue_lab_job,
         get_lab_job,
         get_lab_meta,
         set_lab_meta,
     )
-    from forven.lab_dormancy import quiesce_regime_lab
-    from forven.lab_models import LabJobState
-    from forven.lab_orchestrator import ORCHESTRATOR_CONFIG_META_KEY, ORCHESTRATOR_STATUS_META_KEY
+    from axiom.lab_dormancy import quiesce_regime_lab
+    from axiom.lab_models import LabJobState
+    from axiom.lab_orchestrator import ORCHESTRATOR_CONFIG_META_KEY, ORCHESTRATOR_STATUS_META_KEY
 
     queued_job = enqueue_lab_job(job_type="continuous_cycle", payload={"program_id": "lrp_test"})
     running_job = enqueue_lab_job(job_type="model_rebuild", payload={"program_id": "lrp_test"})
@@ -179,9 +179,9 @@ def test_quiesce_regime_lab_disables_orchestrator_and_fails_active_jobs(monkeypa
 
 def test_lab_worker_start_refuses_when_feature_is_dormant(monkeypatch):
     """Worker startup should refuse while Regime Lab is dormant."""
-    monkeypatch.setenv("FORVEN_ENABLE_REGIME_LAB", "0")
+    monkeypatch.setenv("AXIOM_ENABLE_REGIME_LAB", "0")
 
-    from forven.lab_worker_service import start_lab_worker_process
+    from axiom.lab_worker_service import start_lab_worker_process
 
     with pytest.raises(RuntimeError, match="Regime Lab is dormant"):
         start_lab_worker_process()
@@ -189,15 +189,15 @@ def test_lab_worker_start_refuses_when_feature_is_dormant(monkeypatch):
 
 def test_recover_stale_lab_jobs():
     """Stale jobs (lease expired) are recovered back to queued."""
-    from forven.lab_db import (
+    from axiom.lab_db import (
         claim_next_lab_job,
         create_lab_experiment,
         enqueue_lab_job,
         get_lab_job,
         recover_stale_lab_jobs,
     )
-    from forven.lab_models import LabJobState
-    from forven.lab_regime_engine import MODEL_REBUILD_JOB_TYPE
+    from axiom.lab_models import LabJobState
+    from axiom.lab_regime_engine import MODEL_REBUILD_JOB_TYPE
 
     experiment = create_lab_experiment(
         experiment_id=f"exp_stale_{uuid4().hex[:8]}",
@@ -235,7 +235,7 @@ def test_recover_stale_lab_jobs():
 
 def test_detect_champion_changes_identifies_new_champion():
     """_detect_champion_changes detects when a champion has changed."""
-    from forven.lab_matrix_engine import _detect_champion_changes
+    from axiom.lab_matrix_engine import _detect_champion_changes
 
     # No existing containers — any champion is a change
     changes = _detect_champion_changes(
@@ -256,12 +256,12 @@ def test_detect_champion_changes_identifies_new_champion():
 
 def test_detect_champion_changes_no_change_when_same():
     """No changes reported when champion strategy_id is the same."""
-    from forven.lab_db import (
+    from axiom.lab_db import (
         create_lab_experiment,
         create_or_update_model_version,
         replace_regime_containers,
     )
-    from forven.lab_matrix_engine import _detect_champion_changes
+    from axiom.lab_matrix_engine import _detect_champion_changes
 
     exp_id = f"exp_champ_{uuid4().hex[:8]}"
     create_lab_experiment(experiment_id=exp_id, symbol="BTC/USDT", timeframe="1h", status="ready")

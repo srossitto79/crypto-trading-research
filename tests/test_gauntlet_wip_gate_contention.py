@@ -1,4 +1,4 @@
-"""run_quick_screen_gate must treat a gauntlet-WIP-cap wait as gate_contention.
+﻿"""run_quick_screen_gate must treat a gauntlet-WIP-cap wait as gate_contention.
 
 A strategy blocked at quick_screen->gauntlet by the 50-slot WIP cap is admissible
 and merely WAITING for a free slot -- it must NOT be drained to failed_gate (which
@@ -14,8 +14,8 @@ import json
 
 
 def _patch_gate(monkeypatch, transition):
-    from forven.gauntlet import tasks
-    import forven.brain as brain
+    from axiom.gauntlet import tasks
+    import axiom.brain as brain
 
     monkeypatch.setattr(tasks, "_workflow_settings", lambda wf: {})
     monkeypatch.setattr(tasks, "_detail_for_workflow", lambda wid: {})
@@ -36,7 +36,7 @@ def test_wip_cap_block_is_gate_contention(monkeypatch):
     assert out["reason_code"] == "gate_contention"
 
     # Contract: the engine reads this as gate_contention and exempts it from drain.
-    from forven.gauntlet.engine import _step_block_reason_code, _NO_DRAIN_REASON_CODES
+    from axiom.gauntlet.engine import _step_block_reason_code, _NO_DRAIN_REASON_CODES
     assert _step_block_reason_code(json.dumps(out)) == "gate_contention"
     assert "gate_contention" in _NO_DRAIN_REASON_CODES
 
@@ -46,7 +46,7 @@ def test_other_transient_block_stays_bounded(monkeypatch):
     out = tasks.run_quick_screen_gate({"id": "wf1", "strategy_id": "S1"}, {})
     assert out["status"] == "blocked_runtime"
     assert out.get("reason_code") != "gate_contention"  # not exempt -> bounded budget
-    from forven.gauntlet.engine import _step_block_reason_code
+    from axiom.gauntlet.engine import _step_block_reason_code
     assert _step_block_reason_code(json.dumps(out)) == "canonical_backtest_required"
 
 

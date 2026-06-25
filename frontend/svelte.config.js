@@ -2,7 +2,7 @@ import adapterAuto from '@sveltejs/adapter-auto';
 import adapterStatic from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
-const usePackaged = process.env.FORVEN_PACKAGE_BUILD === '1';
+const usePackaged = process.env.AXIOM_PACKAGE_BUILD === '1';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
@@ -14,7 +14,7 @@ const config = {
 			: adapterAuto(),
 		prerender: {
 			handleUnseenRoutes: 'warn',
-			// During static builds (FORVEN_PACKAGE_BUILD=1), some routes may
+			// During static builds (AXIOM_PACKAGE_BUILD=1), some routes may
 			// reference docs/markdown files that exist on disk but aren't
 			// served by the API during prerender.  Ignore 404s for /docs/*
 			// and let the fallback index.html handle them at runtime.

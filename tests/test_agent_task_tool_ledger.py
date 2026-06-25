@@ -1,4 +1,4 @@
-"""Tool-execution ledger prepended to agent task outputs.
+﻿"""Tool-execution ledger prepended to agent task outputs.
 
 Guards against false success reports: the LLM occasionally claims it created
 a strategy or hypothesis when the underlying tool errored. The ledger queries
@@ -7,23 +7,23 @@ narrative so operators can cross-check claims.
 """
 from __future__ import annotations
 
-from forven.agents.runner import _build_tool_ledger
-from forven.db import log_tool_call
+from axiom.agents.runner import _build_tool_ledger
+from axiom.db import log_tool_call
 
 
-def test_ledger_empty_for_unknown_task(forven_db):
+def test_ledger_empty_for_unknown_task(AXIOM_db):
     text, trace = _build_tool_ledger("T99999")
     assert text == ""
     assert trace == []
 
 
-def test_ledger_empty_for_blank_task_id(forven_db):
+def test_ledger_empty_for_blank_task_id(AXIOM_db):
     text, trace = _build_tool_ledger("")
     assert text == ""
     assert trace == []
 
 
-def test_ledger_marks_artifact_tool_failure(forven_db):
+def test_ledger_marks_artifact_tool_failure(AXIOM_db):
     task_id = "T00123"
     # Simulate a create_strategy that errored (no "ok":true in output).
     log_tool_call(
@@ -44,7 +44,7 @@ def test_ledger_marks_artifact_tool_failure(forven_db):
     assert trace[0]["ok"] is False
 
 
-def test_ledger_marks_artifact_tool_success(forven_db):
+def test_ledger_marks_artifact_tool_success(AXIOM_db):
     task_id = "T00124"
     log_tool_call(
         task_id,
@@ -62,7 +62,7 @@ def test_ledger_marks_artifact_tool_success(forven_db):
     assert trace[0]["ok"] is True
 
 
-def test_ledger_warns_when_no_artifact_tools_ran(forven_db):
+def test_ledger_warns_when_no_artifact_tools_ran(AXIOM_db):
     """Read-only tools only => ledger flags unverified narrative claims."""
     task_id = "T00125"
     log_tool_call(
@@ -92,7 +92,7 @@ def test_ledger_warns_when_no_artifact_tools_ran(forven_db):
     assert names == ["read_file", "search_memory"]
 
 
-def test_ledger_separates_artifact_from_auxiliary(forven_db):
+def test_ledger_separates_artifact_from_auxiliary(AXIOM_db):
     task_id = "T00126"
     log_tool_call(task_id, "r", "read_file", {}, "ok", 1)
     log_tool_call(task_id, "r", "create_strategy", {},

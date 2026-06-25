@@ -1,12 +1,12 @@
-# Forven Architecture
+# Axiom Architecture
 
 ## Overview
 
-Forven is a local-first trading operations framework with three main layers:
+Axiom is a local-first trading operations framework with three main layers:
 
 1. A SvelteKit frontend for operator workflows
 2. A FastAPI backend for APIs, orchestration, and compatibility routes
-3. Local persistence and workspace state centered on SQLite and `FORVEN_HOME`
+3. Local persistence and workspace state centered on SQLite and `AXIOM_HOME`
 
 ```mermaid
 graph TD
@@ -17,7 +17,7 @@ graph TD
     API --> DOM["api_domains and service modules"]
     API --> DB[("SQLite")]
     API --> MEM[("ChromaDB")]
-    API --> WORK["workspace files under FORVEN_HOME"]
+    API --> WORK["workspace files under AXIOM_HOME"]
     API --> EXT["AI providers, data sources, Discord, exchanges"]
 ```
 
@@ -69,14 +69,14 @@ The dashboard also supports `/?view=quant_factory` and `/?view=beta`.
 
 ## Backend
 
-The FastAPI app is assembled in `forven/api.py`.
+The FastAPI app is assembled in `axiom/api.py`.
 
 Key app responsibilities:
 
 - Register routers
 - Apply CORS
-- Apply `ForvenV1CompatMiddleware`
-- Run startup initialization through `forven.api_core._on_startup`
+- Apply `AxiomV1CompatMiddleware`
+- Run startup initialization through `axiom.api_core._on_startup`
 - Expose the health endpoints and websocket routes used by the frontend
 
 ### Router surface
@@ -112,15 +112,15 @@ The registered router set currently includes:
 
 The repo uses several layers instead of a single monolith:
 
-- `forven/routers/`: HTTP and websocket route definitions
-- `forven/control_plane/`: operator-facing runtime behavior such as status, ops, approvals, and notifications
-- `forven/api_domains/`: extracted API-facing domain logic and compatibility helpers
-- `forven/strategies/`: strategy base classes, registry, optimization, and backtesting helpers
-- `forven/api_core.py`: shared compatibility, startup, and legacy behavior that has not yet been fully extracted
+- `axiom/routers/`: HTTP and websocket route definitions
+- `axiom/control_plane/`: operator-facing runtime behavior such as status, ops, approvals, and notifications
+- `axiom/api_domains/`: extracted API-facing domain logic and compatibility helpers
+- `axiom/strategies/`: strategy base classes, registry, optimization, and backtesting helpers
+- `axiom/api_core.py`: shared compatibility, startup, and legacy behavior that has not yet been fully extracted
 
 ### Compatibility layer
 
-`ForvenV1CompatMiddleware` and the legacy routes keep older `/api/forven/*` clients working while the current frontend and newer APIs use the newer route layout.
+`AxiomV1CompatMiddleware` and the legacy routes keep older `/api/axiom/*` clients working while the current frontend and newer APIs use the newer route layout.
 
 ## Persistence and Local State
 
@@ -137,13 +137,13 @@ SQLite is the main system of record for:
 - trades and positions
 - settings and KV runtime state
 
-The core implementation lives in `forven/db.py`.
+The core implementation lives in `axiom/db.py`.
 
 ### Workspace and auth state
 
-Runtime state defaults to `~/.forven` unless `FORVEN_HOME` is set. Important files and directories include:
+Runtime state defaults to `~/.axiom` unless `AXIOM_HOME` is set. Important files and directories include:
 
-- `forven.db`
+- `axiom.db`
 - `auth.json`
 - `config.json`
 - `workspace/`
@@ -181,5 +181,5 @@ ChromaDB is used for memory and retrieval-style workflows. The frontend exposes 
 - Use absolute Python imports
 - Keep backend routers thin
 - Add frontend API wrappers instead of raw component fetches
-- Treat `forven/exchange/` as sensitive integration code
+- Treat `axiom/exchange/` as sensitive integration code
 - Update docs when route surfaces, startup flows, or operator behavior change

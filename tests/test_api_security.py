@@ -1,9 +1,9 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
-from forven.api_security import ApiKeyMiddleware, get_allowed_cors_origins, require_operator_access
+from axiom.api_security import ApiKeyMiddleware, get_allowed_cors_origins, require_operator_access
 
 
 def _build_test_app() -> FastAPI:
@@ -30,7 +30,7 @@ def _build_test_app() -> FastAPI:
 
 
 def test_api_key_middleware_exempts_health(monkeypatch):
-    monkeypatch.setenv("FORVEN_API_KEY", "api-key-123")
+    monkeypatch.setenv("AXIOM_API_KEY", "api-key-123")
     client = TestClient(_build_test_app())
 
     response = client.get("/api/health")
@@ -40,7 +40,7 @@ def test_api_key_middleware_exempts_health(monkeypatch):
 
 
 def test_api_key_middleware_requires_api_key(monkeypatch):
-    monkeypatch.setenv("FORVEN_API_KEY", "api-key-123")
+    monkeypatch.setenv("AXIOM_API_KEY", "api-key-123")
     client = TestClient(_build_test_app())
 
     missing = client.get("/api/ping")
@@ -53,8 +53,8 @@ def test_api_key_middleware_requires_api_key(monkeypatch):
 
 
 def test_operator_routes_require_operator_key_when_configured(monkeypatch):
-    monkeypatch.setenv("FORVEN_API_KEY", "api-key-123")
-    monkeypatch.setenv("FORVEN_OPERATOR_KEY", "operator-key-456")
+    monkeypatch.setenv("AXIOM_API_KEY", "api-key-123")
+    monkeypatch.setenv("AXIOM_OPERATOR_KEY", "operator-key-456")
     client = TestClient(_build_test_app())
 
     missing = client.post("/api/operator", headers={"X-API-Key": "api-key-123"})
@@ -75,7 +75,7 @@ def test_operator_routes_require_operator_key_when_configured(monkeypatch):
 def test_api_key_middleware_exempts_shutdown(monkeypatch):
     """A local launcher POSTs /api/shutdown on close without the per-launch key;
     the route has its own 127.0.0.1-only check so skipping auth is safe."""
-    monkeypatch.setenv("FORVEN_API_KEY", "api-key-123")
+    monkeypatch.setenv("AXIOM_API_KEY", "api-key-123")
     client = TestClient(_build_test_app())
 
     response = client.post("/api/shutdown")
@@ -85,9 +85,9 @@ def test_api_key_middleware_exempts_shutdown(monkeypatch):
 
 
 def test_allowed_cors_origins_default_to_explicit_local_hosts(monkeypatch):
-    monkeypatch.delenv("FORVEN_CORS_ORIGINS", raising=False)
+    monkeypatch.delenv("AXIOM_CORS_ORIGINS", raising=False)
     monkeypatch.setenv("FRONTEND_PORT", "4173")
-    monkeypatch.setenv("FORVEN_PORT", "9003")
+    monkeypatch.setenv("AXIOM_PORT", "9003")
 
     origins = get_allowed_cors_origins()
 

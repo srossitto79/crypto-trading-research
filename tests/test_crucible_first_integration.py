@@ -1,8 +1,8 @@
-import json
+﻿import json
 
-from forven.crucibles import get_crucible, mark_crucible_viable
-from forven.db import get_approval, get_db
-from forven.hypotheses import archive_hypothesis, create_hypothesis
+from axiom.crucibles import get_crucible, mark_crucible_viable
+from axiom.db import get_approval, get_db
+from axiom.hypotheses import archive_hypothesis, create_hypothesis
 
 
 def _make_crucible(
@@ -34,8 +34,8 @@ def _make_crucible(
     return crucible
 
 
-def test_researching_crucible_planner_cycle_creates_one_candidate_task(forven_db):
-    from forven.crucible_planner import run_crucible_planner_cycle
+def test_researching_crucible_planner_cycle_creates_one_candidate_task(AXIOM_db):
+    from axiom.crucible_planner import run_crucible_planner_cycle
 
     crucible = _make_crucible("researching")
 
@@ -61,7 +61,7 @@ def test_researching_crucible_planner_cycle_creates_one_candidate_task(forven_db
     assert payload["crucible_id"] == crucible["id"]
 
 
-def test_protected_viable_crucible_archive_request_creates_contested_approval(forven_db):
+def test_protected_viable_crucible_archive_request_creates_contested_approval(AXIOM_db):
     crucible = _make_crucible("researching")
     mark_crucible_viable(
         crucible["id"],

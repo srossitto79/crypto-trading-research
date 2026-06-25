@@ -1,11 +1,11 @@
-"""Cerebras / Mistral / xAI / Together / OpenCode provider wiring (OpenAI-compatible)."""
+﻿"""Cerebras / Mistral / xAI / Together / OpenCode provider wiring (OpenAI-compatible)."""
 
 from __future__ import annotations
 
-import forven.ai as ai
-from forven import api_core as ac
-from forven import model_routing as mr
-from forven.agents.providers import (
+import axiom.ai as ai
+from axiom import api_core as ac
+from axiom import model_routing as mr
+from axiom.agents.providers import (
     CerebrasProvider,
     MistralProvider,
     OpenAIProvider,

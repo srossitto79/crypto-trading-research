@@ -34,7 +34,7 @@ if exchange not in supported_exchanges:
 
 ## Files Updated
 
-### 1. **forven/api_core.py** (Main Changes)
+### 1. **axiom/api_core.py** (Main Changes)
 
 #### Added Default Settings for Each Exchange
 ```python
@@ -175,8 +175,8 @@ Status: Connected ✓
 ```
 
 ### Step 6: Backend Validates & Stores
-- Credentials saved to `forven:settings:secrets`
-- Configuration saved to `forven:settings`
+- Credentials saved to `axiom:settings:secrets`
+- Configuration saved to `axiom:settings`
 - Status indicators updated
 - Code automatically uses new exchange
 
@@ -203,13 +203,13 @@ BINANCE_TESTNET=true
 
 Then restart:
 ```bash
-python -m forven api
+python -m axiom api
 ```
 
 ### Via Code (Advanced)
 ```python
-from forven.exchange.hyperliquid import set_exchange
-from forven.exchange.ccxt_adapter import CCXTExchange
+from axiom.exchange.hyperliquid import set_exchange
+from axiom.exchange.ccxt_adapter import CCXTExchange
 
 exchange = CCXTExchange(
     exchange_id='binance',
@@ -239,7 +239,7 @@ set_exchange(exchange)
 
 | File | Lines Changed | Type | Details |
 |------|---|---|---|
-| forven/api_core.py | ~250 | Code | Added exchange support, settings handlers |
+| axiom/api_core.py | ~250 | Code | Added exchange support, settings handlers |
 | docs/SETUP_WIZARD_GUIDE.md | 300+ | Docs | Complete setup guide |
 | SETUP_WIZARD_UPDATED.md | N/A | Docs | This file |
 
@@ -291,7 +291,7 @@ All changes have been verified:
 2. **Choose your exchange** - Binance (most liquid), Kraken (US-friendly), or OKX (advanced)
 3. **Get API keys** - Follow exchange-specific instructions in guide
 4. **Configure in Settings UI** - Select exchange, enter credentials, toggle testnet
-5. **Verify with `python -m forven soak`** - Check connection
+5. **Verify with `python -m axiom soak`** - Check connection
 6. **Start trading** - Testnet first, then live with small positions
 
 ---
@@ -302,7 +302,7 @@ All changes have been verified:
 A: Not simultaneously, but you can store credentials for multiple and switch between them.
 
 **Q: Is my API key stored securely?**  
-A: Yes, stored in `forven:settings:secrets` (encrypted at rest). Never logged or displayed.
+A: Yes, stored in `axiom:settings:secrets` (encrypted at rest). Never logged or displayed.
 
 **Q: Do I need Hyperliquid?**  
 A: No! Hyperliquid is still the default, but you can choose any other exchange.
@@ -385,4 +385,4 @@ Users can now:
 
 ---
 
-**The setup wizard is no longer a bottleneck!** Users now have the flexibility to use any major exchange with Forven.
+**The setup wizard is no longer a bottleneck!** Users now have the flexibility to use any major exchange with Axiom.

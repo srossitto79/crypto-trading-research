@@ -1,21 +1,21 @@
-import tempfile, pathlib, importlib
+﻿import tempfile, pathlib, importlib
 from fastapi.testclient import TestClient
 
 def test_frontend_served_from_env_path(monkeypatch):
     tmp = tempfile.mkdtemp()
-    pathlib.Path(tmp, "index.html").write_text("<h1>forven static</h1>")
-    monkeypatch.setenv("FORVEN_FRONTEND_DIR", tmp)
-    import forven.api as api
+    pathlib.Path(tmp, "index.html").write_text("<h1>Axiom static</h1>")
+    monkeypatch.setenv("AXIOM_FRONTEND_DIR", tmp)
+    import axiom.api as api
     importlib.reload(api)
     client = TestClient(api.app)
     r = client.get("/")
     assert r.status_code == 200
-    assert "forven static" in r.text
+    assert "axiom static" in r.text
 
 def test_no_mount_when_env_unset(monkeypatch):
-    monkeypatch.delenv("FORVEN_FRONTEND_DIR", raising=False)
-    import forven.api as api
+    monkeypatch.delenv("AXIOM_FRONTEND_DIR", raising=False)
+    import axiom.api as api
     importlib.reload(api)
     client = TestClient(api.app)
     r = client.get("/")
-    assert "forven static" not in r.text
+    assert "axiom static" not in r.text

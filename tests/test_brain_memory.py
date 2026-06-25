@@ -1,4 +1,4 @@
-"""Phase 1 brain_memory module tests (P1-T02).
+﻿"""Phase 1 brain_memory module tests (P1-T02).
 
 Covers cap enforcement, history excerpts, missing-needle no-ops, history
 ordering, and concurrent add_memory safety.
@@ -10,25 +10,25 @@ import threading
 
 import pytest
 
-from forven import brain_memory as bm
-from forven import db as forven_db
+from axiom import brain_memory as bm
+from axiom import db as AXIOM_db
 
 
 @pytest.fixture
 def fresh_home(monkeypatch):
-    """Route FORVEN_HOME at a tmpdir and reset cached DB module state."""
+    """Route AXIOM_HOME at a tmpdir and reset cached DB module state."""
     with tempfile.TemporaryDirectory() as td:
-        monkeypatch.setenv("FORVEN_HOME", td)
-        if hasattr(forven_db, "_DB_PATH"):
-            forven_db._DB_PATH = None  # type: ignore[attr-defined]
-        if hasattr(forven_db, "_init_db_done"):
-            forven_db._init_db_done = False  # type: ignore[attr-defined]
-        forven_db.init_db()
+        monkeypatch.setenv("AXIOM_HOME", td)
+        if hasattr(AXIOM_db, "_DB_PATH"):
+            AXIOM_db._DB_PATH = None  # type: ignore[attr-defined]
+        if hasattr(AXIOM_db, "_init_db_done"):
+            AXIOM_db._init_db_done = False  # type: ignore[attr-defined]
+        AXIOM_db.init_db()
         yield td
 
 
 def _history_count() -> int:
-    with forven_db.get_db() as conn:
+    with AXIOM_db.get_db() as conn:
         return conn.execute("SELECT COUNT(*) FROM brain_memory_history").fetchone()[0]
 
 

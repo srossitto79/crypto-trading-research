@@ -1,7 +1,7 @@
-import json
+﻿import json
 import pytest
 
-from forven.db import get_db, init_db
+from axiom.db import get_db, init_db
 
 
 def _seed_strategy(sid="S77001", asset="BTC", tf="1h", stype="rsi", params=None):
@@ -16,8 +16,8 @@ def _seed_strategy(sid="S77001", asset="BTC", tf="1h", stype="rsi", params=None)
     return sid
 
 
-def test_run_backtest_pulls_strategy_id_from_context_and_calls_backtest(forven_db, monkeypatch):
-    from forven.agents import tools_deepdive
+def test_run_backtest_pulls_strategy_id_from_context_and_calls_backtest(AXIOM_db, monkeypatch):
+    from axiom.agents import tools_deepdive
     sid = _seed_strategy()
     tools_deepdive.set_deepdive_strategy(sid)
 
@@ -34,7 +34,7 @@ def test_run_backtest_pulls_strategy_id_from_context_and_calls_backtest(forven_d
                              "total_return_pct": 0.12, "total_trades": 42,
                              "max_drawdown_pct": 0.08, "avg_bars_held": 7}}
 
-    monkeypatch.setattr("forven.strategies.backtest.backtest_strategy", fake_backtest)
+    monkeypatch.setattr("axiom.strategies.backtest.backtest_strategy", fake_backtest)
 
     out = tools_deepdive._run_backtest(timeframe=None, bars=None)
     assert captured["sid"] == sid
@@ -47,8 +47,8 @@ def test_run_backtest_pulls_strategy_id_from_context_and_calls_backtest(forven_d
     tools_deepdive.clear_deepdive_strategy()
 
 
-def test_run_backtest_uses_runtime_type_over_type(forven_db, monkeypatch):
-    from forven.agents import tools_deepdive
+def test_run_backtest_uses_runtime_type_over_type(AXIOM_db, monkeypatch):
+    from axiom.agents import tools_deepdive
     sid = _seed_strategy(stype="legacy_type")
     with get_db() as conn:
         conn.execute("UPDATE strategies SET runtime_type = ? WHERE id = ?", ("modern_rt", sid))
@@ -59,26 +59,26 @@ def test_run_backtest_uses_runtime_type_over_type(forven_db, monkeypatch):
     def fake_backtest(strategy_id, asset, strategy_type, params, **kwargs):
         captured["strategy_type"] = strategy_type
         return {"metrics": {}}
-    monkeypatch.setattr("forven.strategies.backtest.backtest_strategy", fake_backtest)
+    monkeypatch.setattr("axiom.strategies.backtest.backtest_strategy", fake_backtest)
 
     tools_deepdive._run_backtest(timeframe=None, bars=None)
     assert captured["strategy_type"] == "modern_rt"
     tools_deepdive.clear_deepdive_strategy()
 
 
-def test_run_backtest_without_session_raises(forven_db):
-    from forven.agents import tools_deepdive
+def test_run_backtest_without_session_raises(AXIOM_db):
+    from axiom.agents import tools_deepdive
     tools_deepdive.clear_deepdive_strategy()
     with pytest.raises(RuntimeError, match="no Deepdive strategy"):
         tools_deepdive._run_backtest(timeframe=None, bars=None)
 
 
-def test_run_backtest_propagates_backtest_error(forven_db, monkeypatch):
-    from forven.agents import tools_deepdive
+def test_run_backtest_propagates_backtest_error(AXIOM_db, monkeypatch):
+    from axiom.agents import tools_deepdive
     sid = _seed_strategy()
     tools_deepdive.set_deepdive_strategy(sid)
     monkeypatch.setattr(
-        "forven.strategies.backtest.backtest_strategy",
+        "axiom.strategies.backtest.backtest_strategy",
         lambda **kw: {"error": "no data for BTC 1h"},
     )
     out = tools_deepdive._run_backtest(timeframe=None, bars=None)

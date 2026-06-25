@@ -1,11 +1,11 @@
-"""Tests for forven.sandbox.shell_guard (P2-T07)."""
+﻿"""Tests for Axiom.sandbox.shell_guard (P2-T07)."""
 from __future__ import annotations
 
 from unittest.mock import patch
 
 import pytest
 
-from forven.sandbox.shell_guard import (
+from axiom.sandbox.shell_guard import (
     ShellFinding,
     ShellReport,
     evaluate_for_run_shell,
@@ -123,7 +123,7 @@ def test_list_form_command():
 def test_evaluate_strict_mode_upgrades_high(monkeypatch):
     """In strict mode, ANY finding (even sudo) should fail-closed."""
     monkeypatch.setattr(
-        "forven.sandbox.shell_guard.is_strict_mode_enabled", lambda: True
+        "axiom.sandbox.shell_guard.is_strict_mode_enabled", lambda: True
     )
     allowed, report = evaluate_for_run_shell("sudo apt update")
     assert allowed is False
@@ -156,7 +156,7 @@ def test_scanner_failure_fails_open():
             raise RuntimeError("regex boom")
 
     with patch(
-        "forven.sandbox.shell_guard._PATTERNS",
+        "axiom.sandbox.shell_guard._PATTERNS",
         [("critical", _BoomPattern(), "test")],
     ):
         report = scan_command("rm -rf /")

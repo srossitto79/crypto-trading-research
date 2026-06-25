@@ -1,6 +1,6 @@
 # Code of Conduct
 
-Forven's community spaces (GitHub issues, Discord, Reddit) are meant to be
+Axiom's community spaces (GitHub issues, Discord, Reddit) are meant to be
 welcoming, respectful, and harassment-free for everyone, regardless of
 background or experience level.
 
@@ -18,6 +18,6 @@ The full text is available at
 ## Reporting
 
 If you experience or witness unacceptable behavior, please contact the maintainer
-privately at **judder@forven.app**, or reach out via the
+privately at **srossitto79@gmail.com**, or reach out via the
 [Discord](https://discord.gg/vzSQTneq6a) moderators. Reports will be handled
 confidentially and in good faith.

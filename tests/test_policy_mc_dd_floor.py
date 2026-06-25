@@ -1,4 +1,4 @@
-"""H-2 regression: the Monte-Carlo 95th-pct drawdown safety floor must not
+﻿"""H-2 regression: the Monte-Carlo 95th-pct drawdown safety floor must not
 reject on an invented sentinel when the payload carries no measured drawdown.
 
 Before the fix, ``mc_payload.get("max_dd_p95", ...999)`` turned a display-proxy
@@ -9,7 +9,7 @@ re-evaluation at the gauntlet->paper gate.
 """
 from __future__ import annotations
 
-from forven.policy import _mc_dd_floor_reject
+from axiom.policy import _mc_dd_floor_reject
 
 
 def test_absent_dd_key_does_not_reject():

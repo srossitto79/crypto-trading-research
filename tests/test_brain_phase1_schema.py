@@ -1,4 +1,4 @@
-"""Phase 1 schema migration tests — brain_memory, brain_decisions, FTS5.
+﻿"""Phase 1 schema migration tests — brain_memory, brain_decisions, FTS5.
 
 Asserts the Phase 1 (P1-T01) DDL applies cleanly on a fresh DB and is a
 no-op on a re-run, and that the single-row CHECK on brain_memory holds.
@@ -10,21 +10,21 @@ import tempfile
 
 import pytest
 
-from forven import db as forven_db
+from axiom import db as AXIOM_db
 
 
 @pytest.fixture
 def fresh_db(monkeypatch):
-    """Build a one-off DB by routing FORVEN_HOME at a tmpdir."""
+    """Build a one-off DB by routing AXIOM_HOME at a tmpdir."""
     with tempfile.TemporaryDirectory() as td:
-        monkeypatch.setenv("FORVEN_HOME", td)
-        # forven.db caches paths via module-level globals; reach in to reset.
-        if hasattr(forven_db, "_DB_PATH"):
-            forven_db._DB_PATH = None  # type: ignore[attr-defined]
-        if hasattr(forven_db, "_init_db_done"):
-            forven_db._init_db_done = False  # type: ignore[attr-defined]
-        forven_db.init_db()
-        with forven_db.get_db() as conn:
+        monkeypatch.setenv("AXIOM_HOME", td)
+        # axiom.db caches paths via module-level globals; reach in to reset.
+        if hasattr(AXIOM_db, "_DB_PATH"):
+            AXIOM_db._DB_PATH = None  # type: ignore[attr-defined]
+        if hasattr(AXIOM_db, "_init_db_done"):
+            AXIOM_db._init_db_done = False  # type: ignore[attr-defined]
+        AXIOM_db.init_db()
+        with AXIOM_db.get_db() as conn:
             yield conn
 
 
@@ -151,8 +151,8 @@ def test_schema_version_is_at_least_24(fresh_db):
 
 def test_migration_idempotent(fresh_db):
     """Re-running init_db on an already-migrated DB must not raise."""
-    if hasattr(forven_db, "_init_db_done"):
-        forven_db._init_db_done = False  # type: ignore[attr-defined]
-    forven_db.init_db()
+    if hasattr(AXIOM_db, "_init_db_done"):
+        AXIOM_db._init_db_done = False  # type: ignore[attr-defined]
+    AXIOM_db.init_db()
     row = fresh_db.execute("SELECT MAX(version) AS v FROM schema_version").fetchone()
     assert row["v"] >= 24

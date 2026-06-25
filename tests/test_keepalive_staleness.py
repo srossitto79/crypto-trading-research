@@ -1,4 +1,4 @@
-"""OHLCV keep-alive picks the stalest pairs first, not a blind round-robin.
+﻿"""OHLCV keep-alive picks the stalest pairs first, not a blind round-robin.
 
 Previously a cursor refreshed N fixed pairs/run, so with max_pairs_per_run=1 and
 many pairs each one only refreshed every N runs (hours stale while green).
@@ -9,7 +9,7 @@ import os
 
 
 def _dm():
-    from forven.data_manager import get_data_manager
+    from axiom.data_manager import get_data_manager
 
     return get_data_manager()
 
@@ -22,7 +22,7 @@ def test_no_cap_returns_all_pairs():
 
 
 def test_selects_least_recently_written_first(monkeypatch, tmp_path):
-    import forven.data as data_mod
+    import axiom.data as data_mod
 
     dm = _dm()
     pairs = [("BTC-USDT", "1h"), ("ETH-USDT", "1h"), ("SOL-USDT", "1h")]
@@ -40,7 +40,7 @@ def test_selects_least_recently_written_first(monkeypatch, tmp_path):
 
 
 def test_never_written_pair_ranks_most_stale(monkeypatch, tmp_path):
-    import forven.data as data_mod
+    import axiom.data as data_mod
 
     dm = _dm()
     fresh = tmp_path / "fresh.parquet"

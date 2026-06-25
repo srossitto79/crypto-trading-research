@@ -1,4 +1,4 @@
-"""H-D3: versioned migration system."""
+﻿"""H-D3: versioned migration system."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ import sqlite3
 
 import pytest
 
-from forven.db import SCHEMA_VERSION, init_db, get_db
-from forven import migrations as mig
+from axiom.db import SCHEMA_VERSION, init_db, get_db
+from axiom import migrations as mig
 
 
 @pytest.fixture(autouse=True)
@@ -159,12 +159,12 @@ def test_live_max_concurrent_default_bump(in_memory_conn):
 
     # Legacy default of 1 -> bumped to 5; other keys preserved.
     in_memory_conn.execute(
-        "INSERT INTO kv (key, value) VALUES ('forven:settings', ?)",
+        "INSERT INTO kv (key, value) VALUES ('Axiom:settings', ?)",
         (json.dumps({"max_concurrent_positions": 1, "foo": "bar"}),),
     )
     mig._m_2026_06_live_max_concurrent_default_bump(in_memory_conn)
     settings = json.loads(
-        in_memory_conn.execute("SELECT value FROM kv WHERE key='forven:settings'").fetchone()["value"]
+        in_memory_conn.execute("SELECT value FROM kv WHERE key='Axiom:settings'").fetchone()["value"]
     )
     assert settings["max_concurrent_positions"] == 5
     assert settings["foo"] == "bar"
@@ -175,19 +175,19 @@ def test_live_max_concurrent_default_bump_preserves_deliberate_value(in_memory_c
 
     in_memory_conn.execute("CREATE TABLE kv (key TEXT PRIMARY KEY, value JSON, updated_at TEXT)")
     in_memory_conn.execute(
-        "INSERT INTO kv (key, value) VALUES ('forven:settings', ?)",
+        "INSERT INTO kv (key, value) VALUES ('Axiom:settings', ?)",
         (json.dumps({"max_concurrent_positions": 3}),),
     )
     mig._m_2026_06_live_max_concurrent_default_bump(in_memory_conn)
     settings = json.loads(
-        in_memory_conn.execute("SELECT value FROM kv WHERE key='forven:settings'").fetchone()["value"]
+        in_memory_conn.execute("SELECT value FROM kv WHERE key='Axiom:settings'").fetchone()["value"]
     )
     assert settings["max_concurrent_positions"] == 3
 
 
 def test_live_max_concurrent_default_bump_no_settings_row(in_memory_conn):
     in_memory_conn.execute("CREATE TABLE kv (key TEXT PRIMARY KEY, value JSON, updated_at TEXT)")
-    # No forven:settings row (fresh install) — must be a no-op, not an error.
+    # No Axiom:settings row (fresh install) — must be a no-op, not an error.
     mig._m_2026_06_live_max_concurrent_default_bump(in_memory_conn)
     assert in_memory_conn.execute("SELECT COUNT(*) AS c FROM kv").fetchone()["c"] == 0
 

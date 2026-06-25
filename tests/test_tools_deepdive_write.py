@@ -1,13 +1,13 @@
-import pytest
-from forven.db import get_db
+﻿import pytest
+from axiom.db import get_db
 
 
 @pytest.fixture
-def tmp_strategy(forven_db, tmp_path, monkeypatch):
+def tmp_strategy(AXIOM_db, tmp_path, monkeypatch):
     custom_dir = tmp_path / "custom"
     custom_dir.mkdir()
     (custom_dir / "S88001.py").write_text("class Foo: pass\n")
-    monkeypatch.setenv("FORVEN_STRATEGIES_CUSTOM_DIR", str(custom_dir))
+    monkeypatch.setenv("AXIOM_STRATEGIES_CUSTOM_DIR", str(custom_dir))
     with get_db() as conn:
         conn.execute(
             "INSERT OR IGNORE INTO strategies (id, name) VALUES (?, ?)",
@@ -19,7 +19,7 @@ def tmp_strategy(forven_db, tmp_path, monkeypatch):
 
 def test_write_valid_python_persists(tmp_strategy):
     sid, d = tmp_strategy
-    from forven.agents.tools_deepdive import _write_strategy_code, set_deepdive_strategy
+    from axiom.agents.tools_deepdive import _write_strategy_code, set_deepdive_strategy
     set_deepdive_strategy(sid)
     new_src = "class Bar:\n    pass\n"
     result = _write_strategy_code(new_source=new_src, rationale="rename Foo->Bar", thread_id="dd_test")
@@ -29,7 +29,7 @@ def test_write_valid_python_persists(tmp_strategy):
 
 def test_write_invalid_syntax_rejects(tmp_strategy):
     sid, d = tmp_strategy
-    from forven.agents.tools_deepdive import _write_strategy_code, set_deepdive_strategy
+    from axiom.agents.tools_deepdive import _write_strategy_code, set_deepdive_strategy
     set_deepdive_strategy(sid)
     with pytest.raises(SyntaxError):
         _write_strategy_code(new_source="def broken(:\n", rationale="oops", thread_id="dd_test")
@@ -39,7 +39,7 @@ def test_write_invalid_syntax_rejects(tmp_strategy):
 
 def test_write_logs_to_activity(tmp_strategy):
     sid, _d = tmp_strategy
-    from forven.agents.tools_deepdive import _write_strategy_code, set_deepdive_strategy
+    from axiom.agents.tools_deepdive import _write_strategy_code, set_deepdive_strategy
     set_deepdive_strategy(sid)
     _write_strategy_code(new_source="class Baz: pass\n", rationale="r", thread_id="dd_test")
     with get_db() as conn:

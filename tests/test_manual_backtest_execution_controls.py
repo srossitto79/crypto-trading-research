@@ -1,4 +1,4 @@
-"""Engine-level tests for the manual-backtest execution model.
+﻿"""Engine-level tests for the manual-backtest execution model.
 
 Covers the opt-in stops + position-sizing path added to
 ``_run_directional_signal_series`` and asserts the legacy (no-controls) path is
@@ -10,8 +10,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from forven.strategies.base import DirectionalSignals
-from forven.strategies import backtest as bt
+from axiom.strategies.base import DirectionalSignals
+from axiom.strategies import backtest as bt
 
 
 def _frame(closes, *, highs=None, lows=None, opens=None) -> pd.DataFrame:

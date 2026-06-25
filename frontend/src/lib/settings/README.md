@@ -17,7 +17,7 @@ Append a new `SettingsEntry` object to `SETTINGS_MANIFEST`. Required fields:
   backendSection: 'risk',              // routes the PUT to /api/settings/risk
   backendPath: 'max_daily_loss',       // dot-path inside the PUT payload
   description: 'Stop trading once realized losses for the day reach this dollar amount.',
-  usedBy: ['forven.api_core', 'forven.risk'], // backend modules that consume the value
+  usedBy: ['axiom.api_core', 'axiom.risk'], // backend modules that consume the value
   unit: '$',                           // optional: unit suffix
   options: [...],                      // required for type: 'select'
   deepLinkTo: '/risk-monitor',         // optional: a related dashboard route
@@ -60,7 +60,7 @@ If any invariant fails, the manifest test breaks the build — fix the entry, do
 ## Removing a setting
 
 1. Delete the entry from `SETTINGS_MANIFEST`.
-2. Remove the field from `_default_settings_payload()` in `forven/api_core.py`.
+2. Remove the field from `_default_settings_payload()` in `axiom/api_core.py`.
 3. Remove backend reads (`settings.<key>` / `settings.get('<key>')`) and any `setattr(settings, '<key>', ...)` writes.
 4. If the field shipped to users, add a CHANGELOG note: `Removed setting <id> (<date>, <reason>)`.
 

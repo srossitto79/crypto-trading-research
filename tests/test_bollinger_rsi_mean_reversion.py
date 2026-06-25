@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import time
 
@@ -6,12 +6,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from forven.strategies.base import DirectionalSignals
+from axiom.strategies.base import DirectionalSignals
 
-# forven/strategies/custom/ is gitignored and AI-rewritten at runtime: the
+# Axiom/strategies/custom/ is gitignored and AI-rewritten at runtime: the
 # module may be absent OR define a different class. Guard BOTH, otherwise a
 # collection-time AttributeError aborts the entire pytest session (audit M-4).
-_mod = pytest.importorskip("forven.strategies.custom.bollinger_rsi_mean_reversion")
+_mod = pytest.importorskip("axiom.strategies.custom.bollinger_rsi_mean_reversion")
 BollingerRSIMeanReversion = getattr(_mod, "BollingerRSIMeanReversion", None)
 if BollingerRSIMeanReversion is None:
     pytest.skip(

@@ -1,6 +1,6 @@
-"""Regression tests for the daemon-loop hot-restart log-spam defect.
+﻿"""Regression tests for the daemon-loop hot-restart log-spam defect.
 
-When a standalone ``forven daemon start`` process already owns the singleton
+When a standalone ``Axiom daemon start`` process already owns the singleton
 daemon lock, the API-hosted ``run_in_loop()`` intentionally declines to start a
 second data/risk loop. Previously it returned a bare ``None``, which the generic
 ``_supervise_background_loop`` could not distinguish from an unexpected exit, so
@@ -20,7 +20,7 @@ import asyncio
 def test_run_in_loop_declines_with_stop_sentinel_when_lock_held(monkeypatch):
     """Lock held by another instance -> run_in_loop returns a stop-supervision
     sentinel and never enters the market loop."""
-    from forven import daemon
+    from axiom import daemon
 
     # Another instance owns the lock.
     monkeypatch.setattr(daemon, "_acquire_daemon_lock", lambda: False)
@@ -43,7 +43,7 @@ def test_run_in_loop_declines_with_stop_sentinel_when_lock_held(monkeypatch):
 def test_supervisor_stops_when_factory_declines(monkeypatch):
     """A factory that returns a stop-supervision sentinel must NOT be restarted:
     the supervisor returns after exactly one call."""
-    from forven import api
+    from axiom import api
 
     calls = {"n": 0}
 
@@ -73,7 +73,7 @@ def test_supervisor_still_restarts_on_plain_exit(monkeypatch):
     """A factory that returns plain None (unexpected exit) must still restart;
     once it later declines, the supervisor stops. Proves no regression to the
     existing restart-on-exit behaviour."""
-    from forven import api
+    from axiom import api
 
     calls = {"n": 0}
 

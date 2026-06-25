@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import time
 
@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 
 OBVDivergenceMRStrategy = pytest.importorskip(
-    "forven.strategies.custom.obv_divergence_mr"
+    "axiom.strategies.custom.obv_divergence_mr"
 ).OBVDivergenceMRStrategy
 
 

@@ -1,13 +1,13 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
 
-from forven.api import app
-from forven.api_core import get_pipeline_motion_log
-from forven.db import get_db
+from axiom.api import app
+from axiom.api_core import get_pipeline_motion_log
+from axiom.db import get_db
 
 
 def _insert_strategy(strategy_id: str, stage: str = "backtesting") -> None:
@@ -37,7 +37,7 @@ def _insert_strategy(strategy_id: str, stage: str = "backtesting") -> None:
         )
 
 
-def test_pipeline_motion_log_includes_promotion_and_demotion_with_context(forven_db):
+def test_pipeline_motion_log_includes_promotion_and_demotion_with_context(AXIOM_db):
     strategy_id = "S12345"
     _insert_strategy(strategy_id)
     now = datetime.now(timezone.utc)
@@ -125,7 +125,7 @@ def test_pipeline_motion_log_includes_promotion_and_demotion_with_context(forven
     assert "demoted" in str(demotion.get("layman_reason")).lower()
 
 
-def test_pipeline_motion_log_ignores_no_change_events(forven_db):
+def test_pipeline_motion_log_ignores_no_change_events(AXIOM_db):
     strategy_id = "S54321"
     _insert_strategy(strategy_id, stage="researching")
     now = datetime.now(timezone.utc).isoformat()
@@ -161,14 +161,14 @@ def test_pipeline_motion_log_ignores_no_change_events(forven_db):
     )
 
 
-def test_pipeline_motion_log_route_returns_list(forven_db):
+def test_pipeline_motion_log_route_returns_list(AXIOM_db):
     client = TestClient(app)
     response = client.get("/api/pipeline/motion-log?limit=5")
     assert response.status_code == 200
     assert isinstance(response.json(), list)
 
 
-def test_pipeline_motion_log_excludes_non_paper_live_motions(forven_db):
+def test_pipeline_motion_log_excludes_non_paper_live_motions(AXIOM_db):
     strategy_id = "S11111"
     _insert_strategy(strategy_id, stage="developing")
     now = datetime.now(timezone.utc).isoformat()

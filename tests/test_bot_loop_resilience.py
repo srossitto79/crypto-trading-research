@@ -1,4 +1,4 @@
-"""Regression: every bot tasks.loop that drives a queue must survive a Discord
+﻿"""Regression: every bot tasks.loop that drives a queue must survive a Discord
 gateway-induced asyncio.CancelledError and must auto-restart on crash.
 
 The 2026-04-26 overnight stall happened because ``agent_runner_loop`` was
@@ -8,7 +8,7 @@ the API headless fallback (``run_headless_agent_loop``) refuse to take over.
 Tasks accumulated as ``pending`` and the scheduler reaper expired them after
 two hours.
 
-This test inspects the source of forven.bot to assert the invariant. It is
+This test inspects the source of Axiom.bot to assert the invariant. It is
 intentionally an AST-level check rather than a behavioural one because
 reproducing a Discord gateway reconnect in unit tests is not worth the
 fixture cost — the structural guarantee is what we care about.
@@ -19,7 +19,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-import forven.bot as bot_module
+import axiom.bot as bot_module
 
 
 # Loops that pull work off a shared queue. If any of these dies silently the
@@ -75,7 +75,7 @@ def test_queue_draining_loops_have_error_handlers():
     tree = _load_bot_ast()
     loops, error_handlers = _collect_loops_and_error_handlers(tree)
     missing = sorted(name for name in _QUEUE_DRAINING_LOOPS if name not in loops)
-    assert not missing, f"expected tasks.loop methods missing from forven.bot: {missing}"
+    assert not missing, f"expected tasks.loop methods missing from axiom.bot: {missing}"
     no_handler = sorted(name for name in _QUEUE_DRAINING_LOOPS if name not in error_handlers)
     assert not no_handler, (
         "queue-draining loops must register an `@<loop>.error` handler so the "
@@ -102,8 +102,8 @@ def test_queue_draining_loops_swallow_cancelled_error():
 
 
 def test_bot_runtime_loops_are_api_owned_by_default(monkeypatch):
-    monkeypatch.delenv("FORVEN_BOT_OWNS_RUNTIME", raising=False)
+    monkeypatch.delenv("AXIOM_BOT_OWNS_RUNTIME", raising=False)
     assert bot_module._bot_owns_runtime_loops() is False
 
-    monkeypatch.setenv("FORVEN_BOT_OWNS_RUNTIME", "1")
+    monkeypatch.setenv("AXIOM_BOT_OWNS_RUNTIME", "1")
     assert bot_module._bot_owns_runtime_loops() is True

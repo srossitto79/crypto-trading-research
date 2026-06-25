@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { getHealthStatus } from '$lib/api/forven';
+	import { getHealthStatus } from '$lib/api/axiom';
 	import type { HealthStatusResponse, ComponentStatus, HealthDataCheck } from '$lib/api/types';
 
 	let healthData: HealthStatusResponse | null = null;

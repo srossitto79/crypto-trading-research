@@ -1,10 +1,10 @@
 # Backups & Rollback (Git-first)
 
-Forven's source and project state live in a local git repo on this machine. Trading data and secrets are **not** committed.
+Axiom's source and project state live in a local git repo on this machine. Trading data and secrets are **not** committed.
 
 ## What is covered
 - Source code and project state tracked in git.
-- Secrets excluded via `.gitignore` (`.env`, keys, certs, `*.db`, the `.forven_home/` workspace).
+- Secrets excluded via `.gitignore` (`.env`, keys, certs, `*.db`, the `.axiom_home/` workspace).
 
 ## Daily flow
 ```powershell
@@ -31,6 +31,6 @@ git push -u origin main --tags
 ```
 
 ## Safety checks
-- Never commit `.env`, `*.db`, auth tokens, or anything under `.forven_home/`.
+- Never commit `.env`, `*.db`, auth tokens, or anything under `.axiom_home/`.
 - Rotate keys immediately if a secret is ever committed.
 - Keep any remote private.

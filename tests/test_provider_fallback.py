@@ -1,4 +1,4 @@
-"""AI-provider resilience: credential classification, configured-backup fallback,
+﻿"""AI-provider resilience: credential classification, configured-backup fallback,
 and the routine auto-pause + alert on credential failure.
 
 This is the regression guard for the incident where the Brain was pinned to a
@@ -14,14 +14,14 @@ from __future__ import annotations
 # fresh-install failure).
 # --------------------------------------------------------------------------- #
 def test_first_configured_provider_prefers_credentialed(monkeypatch):
-    from forven.agents import runner
+    from axiom.agents import runner
 
     monkeypatch.setattr(runner, "_provider_has_credentials", lambda p: p == "minimax")
     assert runner._first_configured_provider() == ("minimax", "MiniMax-M2.5")
 
 
 def test_first_configured_provider_none_when_nothing_configured(monkeypatch):
-    from forven.agents import runner
+    from axiom.agents import runner
 
     monkeypatch.setattr(runner, "_provider_has_credentials", lambda p: False)
     assert runner._first_configured_provider() is None
@@ -31,7 +31,7 @@ def test_first_configured_provider_none_when_nothing_configured(monkeypatch):
 # credential_status: missing vs opaque vs ok
 # --------------------------------------------------------------------------- #
 def test_credential_status_missing(monkeypatch):
-    from forven.auth import store
+    from axiom.auth import store
 
     monkeypatch.setattr(store, "_env_profile", lambda p: {})
     monkeypatch.setattr(store, "load_auth", lambda: {"profiles": {}})
@@ -39,7 +39,7 @@ def test_credential_status_missing(monkeypatch):
 
 
 def test_credential_status_opaque(monkeypatch):
-    from forven.auth import store
+    from axiom.auth import store
 
     monkeypatch.setattr(store, "_env_profile", lambda p: {})
     monkeypatch.setattr(store, "load_auth", lambda: {"profiles": {"minimax:default": {"x": 1}}})
@@ -48,7 +48,7 @@ def test_credential_status_opaque(monkeypatch):
 
 
 def test_credential_status_ok(monkeypatch):
-    from forven.auth import store
+    from axiom.auth import store
 
     monkeypatch.setattr(store, "_env_profile", lambda p: {})
     monkeypatch.setattr(store, "load_auth", lambda: {"profiles": {"minimax:default": {"access": "tok"}}})
@@ -58,7 +58,7 @@ def test_credential_status_ok(monkeypatch):
 
 
 def test_credential_status_empty_token_is_missing(monkeypatch):
-    from forven.auth import store
+    from axiom.auth import store
 
     monkeypatch.setattr(store, "_env_profile", lambda p: {})
     monkeypatch.setattr(store, "is_profile_opaque", lambda prof: False)
@@ -72,7 +72,7 @@ def test_credential_status_empty_token_is_missing(monkeypatch):
 
 
 def test_credential_error_messages():
-    from forven.auth.store import CredentialError
+    from axiom.auth.store import CredentialError
 
     assert "no API credentials configured" in str(CredentialError("minimax", "missing"))
     assert "could not be decrypted" in str(CredentialError("minimax", "opaque"))
@@ -86,9 +86,9 @@ def test_credential_error_messages():
 # backup-provider setting read
 # --------------------------------------------------------------------------- #
 def test_get_backup_ai_provider_precedence(monkeypatch):
-    import forven.config as config
+    import axiom.config as config
 
-    monkeypatch.delenv("FORVEN_BACKUP_AI_PROVIDER", raising=False)
+    monkeypatch.delenv("AXIOM_BACKUP_AI_PROVIDER", raising=False)
     monkeypatch.setattr(config, "_settings_blob_value", lambda k: None)
     monkeypatch.setattr(config, "load_config", lambda: {})
     assert config.get_backup_ai_provider() == "none"  # default
@@ -96,7 +96,7 @@ def test_get_backup_ai_provider_precedence(monkeypatch):
     monkeypatch.setattr(config, "_settings_blob_value", lambda k: "OpenAI")
     assert config.get_backup_ai_provider() == "openai"  # blob, normalized
 
-    monkeypatch.setenv("FORVEN_BACKUP_AI_PROVIDER", "  MiniMax ")
+    monkeypatch.setenv("AXIOM_BACKUP_AI_PROVIDER", "  MiniMax ")
     assert config.get_backup_ai_provider() == "minimax"  # env wins, normalized
 
 
@@ -104,9 +104,9 @@ def test_get_backup_ai_provider_precedence(monkeypatch):
 # _resolve_backup_provider: only a usable, distinct, configured backup
 # --------------------------------------------------------------------------- #
 def test_resolve_backup_provider(monkeypatch):
-    from forven.agents import runner
-    import forven.config as config
-    import forven.model_routing as mr
+    from axiom.agents import runner
+    import axiom.config as config
+    import axiom.model_routing as mr
 
     monkeypatch.setattr(runner, "_provider_has_credentials", lambda p: p == "openai")
     monkeypatch.setattr(mr, "get_default_model_for_provider", lambda p: "gpt-5.2")
@@ -137,8 +137,8 @@ def test_resolve_backup_provider(monkeypatch):
 # --------------------------------------------------------------------------- #
 # api_core "agents" settings section validates the provider
 # --------------------------------------------------------------------------- #
-def test_agents_settings_validates_backup_provider(forven_db):
-    from forven import api_core
+def test_agents_settings_validates_backup_provider(AXIOM_db):
+    from axiom import api_core
 
     out = api_core._apply_settings_section("agents", {"backup_ai_provider": "OpenAI"})
     assert out["backup_ai_provider"] == "openai"  # normalized
@@ -161,8 +161,8 @@ def test_agents_settings_validates_backup_provider(forven_db):
 # routine auto-pause + alert on a credential-class failure
 # --------------------------------------------------------------------------- #
 def test_is_credential_failure():
-    from forven.runtime_worker import _is_credential_failure
-    from forven.auth.store import CredentialError
+    from axiom.runtime_worker import _is_credential_failure
+    from axiom.auth.store import CredentialError
 
     assert _is_credential_failure(CredentialError("x"), "")
     assert _is_credential_failure(ValueError(), "minimax has no API credentials configured")
@@ -172,10 +172,10 @@ def test_is_credential_failure():
 
 
 def test_credential_failure_pauses_routine_and_alerts(monkeypatch):
-    from forven import runtime_worker as rw
-    from forven.auth.store import CredentialError
-    import forven.control_plane.routines as routines
-    import forven.notifications as notifications
+    from axiom import runtime_worker as rw
+    from axiom.auth.store import CredentialError
+    import axiom.control_plane.routines as routines
+    import axiom.notifications as notifications
 
     paused: list = []
     alerts: list = []
@@ -214,7 +214,7 @@ def test_call_single_openrouter_hits_openrouter_endpoint():
     import asyncio
     from unittest.mock import AsyncMock, MagicMock, patch
 
-    from forven.ai import _call_single
+    from axiom.ai import _call_single
 
     mock_response = MagicMock()
     mock_response.status_code = 200
@@ -232,8 +232,8 @@ def test_call_single_openrouter_hits_openrouter_endpoint():
         return mock_response
 
     async def _run():
-        with patch("forven.ai.get_token", return_value="sk-or-key"):
-            with patch("forven.ai.httpx.AsyncClient") as MockClient:
+        with patch("axiom.ai.get_token", return_value="sk-or-key"):
+            with patch("axiom.ai.httpx.AsyncClient") as MockClient:
                 mock_client = MagicMock()
                 mock_client.__aenter__ = AsyncMock(return_value=mock_client)
                 mock_client.__aexit__ = AsyncMock(return_value=False)
@@ -261,9 +261,9 @@ def test_call_single_still_rejects_truly_unknown_provider():
     import pytest
     from unittest.mock import patch
 
-    from forven.ai import _call_single
+    from axiom.ai import _call_single
 
-    with patch("forven.ai.get_token", return_value="tok"):
+    with patch("axiom.ai.get_token", return_value="tok"):
         with pytest.raises(ValueError, match="Unknown provider"):
             asyncio.run(_call_single("fakeco", "x1", [{"role": "user", "content": "hi"}], 8, 0.0, None))
 
@@ -297,10 +297,10 @@ class _ScriptedProvider:
 
 def _setup_tool_loop(monkeypatch, impls: dict, executed: list):
     """Wire the runner tool loop to fake providers/tools with full credentials."""
-    import forven.agents.providers as providers_mod
-    import forven.auth.store as auth_store
-    import forven.billing_guard as billing_guard
-    from forven.agents import runner
+    import axiom.agents.providers as providers_mod
+    import axiom.auth.store as auth_store
+    import axiom.billing_guard as billing_guard
+    from axiom.agents import runner
 
     async def _fake_execute(name, args):
         executed.append((name, args))
@@ -336,7 +336,7 @@ def test_tool_call_fallback_does_not_replay_after_tool_executed(monkeypatch):
 
     import pytest
 
-    from forven.agents.providers import ProviderResponse, ToolCall
+    from axiom.agents.providers import ProviderResponse, ToolCall
 
     executed: list = []
     # Primary: round 1 executes a side-effecting tool, round 2 dies mid-loop.
@@ -360,7 +360,7 @@ def test_tool_call_fallback_does_not_replay_after_tool_executed(monkeypatch):
 def test_tool_call_fallback_still_works_before_any_tool_executed(monkeypatch):
     import asyncio
 
-    from forven.agents.providers import ProviderResponse, ToolCall
+    from axiom.agents.providers import ProviderResponse, ToolCall
 
     executed: list = []
     # Primary fails on its FIRST call — no tools have run, fallback is safe.

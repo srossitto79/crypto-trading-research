@@ -32,8 +32,8 @@ describe('API Client', () => {
 		});
 
 		it('should include api/operator keys from local storage when configured', async () => {
-			window.localStorage.setItem('forven_api_key', 'api-key-123');
-			window.localStorage.setItem('forven_operator_key', 'op-key-456');
+			window.localStorage.setItem('axiom_api_key', 'api-key-123');
+			window.localStorage.setItem('axiom_operator_key', 'op-key-456');
 			mockFetch.mockResolvedValueOnce({
 				ok: true,
 				json: () => Promise.resolve(['BTC/USDT'])
@@ -622,7 +622,7 @@ describe('API Client', () => {
 		});
 	});
 
-	describe('Forven API Contracts', () => {
+	describe('Axiom API Contracts', () => {
 		it('should submit brain chat as async task', async () => {
 			mockFetch.mockResolvedValueOnce({
 				ok: true,
@@ -757,7 +757,7 @@ describe('API Client', () => {
 				json: () => Promise.resolve({ detail: 'Agent not found' })
 			});
 
-			await expect(api.getForvenAgentTerminal('missing-agent')).rejects.toMatchObject({
+			await expect(api.getAxiomAgentTerminal('missing-agent')).rejects.toMatchObject({
 				name: 'ApiError',
 				status: 404,
 				message: 'Agent not found'

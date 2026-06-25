@@ -1,4 +1,4 @@
-"""Crucible oversaturation remediation (2026-06-05).
+﻿"""Crucible oversaturation remediation (2026-06-05).
 
 Covers the coupled fixes that stop the active pool from pinning at its cap full of
 un-started crucibles that never generate strategies:
@@ -14,8 +14,8 @@ from __future__ import annotations
 import importlib
 import json
 
-from forven.db import get_db, kv_set
-from forven.hypotheses import create_hypothesis
+from axiom.db import get_db, kv_set
+from axiom.hypotheses import create_hypothesis
 
 
 def _crucible(status: str = "proposed", *, protection_status: str = "unprotected") -> dict:
@@ -59,8 +59,8 @@ def _age(crucible_id: str, iso: str = "2020-01-01T00:00:00+00:00") -> None:
 
 
 # 1. Eviction picker counts only LIVE strategies ----------------------------------
-def test_eviction_picker_ignores_dead_strategies(forven_db):
-    from forven.hypotheses import _pick_weakest_active_hypothesis
+def test_eviction_picker_ignores_dead_strategies(AXIOM_db):
+    from axiom.hypotheses import _pick_weakest_active_hypothesis
 
     live = _crucible("researching")
     _strategy(live["id"], "S-LIVE", stage="quick_screen")
@@ -77,9 +77,9 @@ def test_eviction_picker_ignores_dead_strategies(forven_db):
 
 
 # 2. refine_crucible reserved in-flight budget ------------------------------------
-def test_refine_gets_reserved_budget_when_develop_budget_is_saturated(forven_db):
-    from forven.crucible_planner import run_crucible_planner_cycle
-    from forven.hypothesis_promotion import MAX_IN_FLIGHT_DEFAULT
+def test_refine_gets_reserved_budget_when_develop_budget_is_saturated(AXIOM_db):
+    from axiom.crucible_planner import run_crucible_planner_cycle
+    from axiom.hypothesis_promotion import MAX_IN_FLIGHT_DEFAULT
 
     # A proposed crucible -> refine action; a researching/0-strategy crucible -> develop.
     proposed = _crucible("proposed")
@@ -115,9 +115,9 @@ def test_refine_gets_reserved_budget_when_develop_budget_is_saturated(forven_db)
 
 
 # 3. Unstarted age-out drain ------------------------------------------------------
-def test_unstarted_ageout_archives_only_idle_never_started_proposals(forven_db):
-    from forven.crucibles import get_crucible
-    from forven.hypothesis_cleanup import run_unstarted_ageout_pass
+def test_unstarted_ageout_archives_only_idle_never_started_proposals(AXIOM_db):
+    from axiom.crucibles import get_crucible
+    from axiom.hypothesis_cleanup import run_unstarted_ageout_pass
 
     stale = _crucible("proposed"); _age(stale["id"])
     recent = _crucible("proposed")  # young -> kept
@@ -142,9 +142,9 @@ def test_unstarted_ageout_archives_only_idle_never_started_proposals(forven_db):
         assert get_crucible(keep["id"])["manager_state"] == "active"
 
 
-def test_unstarted_ageout_dry_run_makes_no_changes(forven_db):
-    from forven.crucibles import get_crucible
-    from forven.hypothesis_cleanup import run_unstarted_ageout_pass
+def test_unstarted_ageout_dry_run_makes_no_changes(AXIOM_db):
+    from axiom.crucibles import get_crucible
+    from axiom.hypothesis_cleanup import run_unstarted_ageout_pass
 
     stale = _crucible("proposed"); _age(stale["id"])
     result = run_unstarted_ageout_pass(dry_run=True)
@@ -154,8 +154,8 @@ def test_unstarted_ageout_dry_run_makes_no_changes(forven_db):
 
 
 # 4. count_unstarted_active_hypotheses --------------------------------------------
-def test_count_unstarted_active_only_counts_proposed_zero_live(forven_db):
-    from forven.hypotheses import count_unstarted_active_hypotheses
+def test_count_unstarted_active_only_counts_proposed_zero_live(AXIOM_db):
+    from axiom.hypotheses import count_unstarted_active_hypotheses
 
     _crucible("proposed")
     _crucible("proposed")
@@ -166,9 +166,9 @@ def test_count_unstarted_active_only_counts_proposed_zero_live(forven_db):
 
 
 # 5. archive_reason is never silently NULL ----------------------------------------
-def test_archive_without_reason_records_sentinel(forven_db):
-    from forven.crucibles import get_crucible
-    from forven.hypotheses import archive_hypothesis
+def test_archive_without_reason_records_sentinel(AXIOM_db):
+    from axiom.crucibles import get_crucible
+    from axiom.hypotheses import archive_hypothesis
 
     c = _crucible("proposed")
     archive_hypothesis(c["id"])  # no reason supplied
@@ -178,9 +178,9 @@ def test_archive_without_reason_records_sentinel(forven_db):
 # 6. create_hypothesis agent tool throttle ----------------------------------------
 def _as_strategy_developer(monkeypatch):
     """Make the create_hypothesis tool callable as an autonomous strategy-developer."""
-    from forven.system_pause import set_system_mode
+    from axiom.system_pause import set_system_mode
 
-    tools_research = importlib.import_module("forven.agents.tools_research")
+    tools_research = importlib.import_module("axiom.agents.tools_research")
     set_system_mode("auto")
     monkeypatch.setattr(
         tools_research,
@@ -203,9 +203,9 @@ def _mint(tools_research, title: str, **extra) -> dict:
     )
 
 
-def test_create_hypothesis_tool_throttles_when_backlog_saturated(forven_db, monkeypatch):
+def test_create_hypothesis_tool_throttles_when_backlog_saturated(AXIOM_db, monkeypatch):
     tools_research = _as_strategy_developer(monkeypatch)
-    kv_set("forven:settings", {"research_settings": {"hypothesis_discipline": {"max_unrefined_active": 1}}})
+    kv_set("axiom:settings", {"research_settings": {"hypothesis_discipline": {"max_unrefined_active": 1}}})
 
     _crucible("proposed")  # un-started backlog now == 1 >= max_unrefined_active
 
@@ -219,7 +219,7 @@ def test_create_hypothesis_tool_throttles_when_backlog_saturated(forven_db, monk
 # Production showed a groundhog-day churn loop: the same thesis minted, disproven,
 # archived, and re-minted the next cycle — because no mint path deduped against the
 # active pool or recently-disproven crucibles.
-def test_create_hypothesis_tool_rejects_exact_title_dup_of_active(forven_db, monkeypatch):
+def test_create_hypothesis_tool_rejects_exact_title_dup_of_active(AXIOM_db, monkeypatch):
     tools_research = _as_strategy_developer(monkeypatch)
     existing = _crucible("researching")  # title "researching thesis"
 
@@ -231,7 +231,7 @@ def test_create_hypothesis_tool_rejects_exact_title_dup_of_active(forven_db, mon
     assert out["duplicate_of"]["match"] == "exact_title"
 
 
-def test_create_hypothesis_tool_rejects_remint_of_recently_disproven(forven_db, monkeypatch):
+def test_create_hypothesis_tool_rejects_remint_of_recently_disproven(AXIOM_db, monkeypatch):
     tools_research = _as_strategy_developer(monkeypatch)
     existing = _crucible("disproven")  # title "disproven thesis"
     with get_db() as conn:
@@ -247,7 +247,7 @@ def test_create_hypothesis_tool_rejects_remint_of_recently_disproven(forven_db, 
     assert out["duplicate_of"]["id"] == existing["id"]
 
 
-def test_create_hypothesis_tool_allows_remint_after_disproven_lookback(forven_db, monkeypatch):
+def test_create_hypothesis_tool_allows_remint_after_disproven_lookback(AXIOM_db, monkeypatch):
     tools_research = _as_strategy_developer(monkeypatch)
     existing = _crucible("disproven")
     with get_db() as conn:
@@ -268,7 +268,7 @@ def test_create_hypothesis_tool_allows_remint_after_disproven_lookback(forven_db
     assert out["hypothesis"]["id"] != existing["id"]
 
 
-def test_create_hypothesis_tool_rejects_near_duplicate_title(forven_db, monkeypatch):
+def test_create_hypothesis_tool_rejects_near_duplicate_title(AXIOM_db, monkeypatch):
     tools_research = _as_strategy_developer(monkeypatch)
     create_hypothesis(
         title="Funding Rate Mean Reversion BTC",
@@ -288,7 +288,7 @@ def test_create_hypothesis_tool_rejects_near_duplicate_title(forven_db, monkeypa
     assert out["duplicate_of"]["match"] == "similar_title"
 
 
-def test_create_hypothesis_tool_allows_novel_title(forven_db, monkeypatch):
+def test_create_hypothesis_tool_allows_novel_title(AXIOM_db, monkeypatch):
     tools_research = _as_strategy_developer(monkeypatch)
     _crucible("researching")
 
@@ -297,7 +297,7 @@ def test_create_hypothesis_tool_allows_novel_title(forven_db, monkeypatch):
     assert out["ok"] is True, out
 
 
-def test_create_hypothesis_tool_dedup_exempts_derived_creates(forven_db, monkeypatch):
+def test_create_hypothesis_tool_dedup_exempts_derived_creates(AXIOM_db, monkeypatch):
     tools_research = _as_strategy_developer(monkeypatch)
     existing = _crucible("researching")
 

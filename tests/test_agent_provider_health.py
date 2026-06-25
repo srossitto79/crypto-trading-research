@@ -1,4 +1,4 @@
-"""Agents seeded on a credential-less provider are surfaced and repaired.
+﻿"""Agents seeded on a credential-less provider are surfaced and repaired.
 
 Regression guard for the fresh-install failure where the wizard connected only
 MiniMax but every agent stayed pinned to the seed default ``openai`` and failed
@@ -6,8 +6,8 @@ every task.
 """
 from __future__ import annotations
 
-from forven.agents import provider_health
-from forven.db import get_db
+from axiom.agents import provider_health
+from axiom.db import get_db
 
 
 def _insert_agent(agent_id: str, provider: str = "openai") -> None:
@@ -19,7 +19,7 @@ def _insert_agent(agent_id: str, provider: str = "openai") -> None:
         )
 
 
-def test_warnings_and_reconcile_repoint_to_configured_provider(forven_db, monkeypatch):
+def test_warnings_and_reconcile_repoint_to_configured_provider(AXIOM_db, monkeypatch):
     _insert_agent("sd-test-1", "openai")
     _insert_agent("risk-test-1", "openai")
 
@@ -45,7 +45,7 @@ def test_warnings_and_reconcile_repoint_to_configured_provider(forven_db, monkey
     assert "risk-test-1" not in flagged_after
 
 
-def test_reconcile_noop_when_nothing_configured(forven_db, monkeypatch):
+def test_reconcile_noop_when_nothing_configured(AXIOM_db, monkeypatch):
     _insert_agent("sd-test-2", "openai")
     monkeypatch.setattr(provider_health, "_provider_has_credentials", lambda p: False)
     monkeypatch.setattr(provider_health, "_first_configured_provider", lambda: None)

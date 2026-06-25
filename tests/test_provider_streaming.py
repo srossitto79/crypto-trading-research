@@ -1,9 +1,9 @@
-"""SSE parsing tests for the provider streaming helpers (OpenAI + Anthropic)."""
+﻿"""SSE parsing tests for the provider streaming helpers (OpenAI + Anthropic)."""
 from __future__ import annotations
 
 import asyncio
 
-import forven.agents.providers as providers
+import axiom.agents.providers as providers
 
 
 class _FakeResp:

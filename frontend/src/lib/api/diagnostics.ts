@@ -2,8 +2,8 @@
  * Diagnostics API client (T11) — backs the /diagnostics page (T12) and
  * the LaunchBanner (T15).
  *
- * Contract is fixed by ``forven/diagnostics.py::snapshot()`` and
- * ``forven/routers/diagnostics.py``. If the backend payload shape
+ * Contract is fixed by ``axiom/diagnostics.py::snapshot()`` and
+ * ``axiom/routers/diagnostics.py``. If the backend payload shape
  * changes, update the interfaces here in lockstep.
  */
 

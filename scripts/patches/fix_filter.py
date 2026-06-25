@@ -1,6 +1,6 @@
-# Apply fix to backtest.py - add field aliasing for global filters
+﻿# Apply fix to backtest.py - add field aliasing for global filters
 
-with open('C:/Forven/forven/strategies/backtest.py', 'r') as f:
+with open('C:/Axiom/Axiom/strategies/backtest.py', 'r') as f:
     lines = f.readlines()
 
 # Find the line numbers we need to modify
@@ -50,13 +50,13 @@ while i < len(lines):
     
     i += 1
 
-with open('C:/Forven/forven/strategies/backtest.py', 'w') as f:
+with open('C:/Axiom/Axiom/strategies/backtest.py', 'w') as f:
     f.writelines(new_lines)
 
 print('Fix applied successfully')
 # Apply fix to backtest.py - add field aliasing for global filters
 
-with open('C:/Forven/forven/strategies/backtest.py', 'r') as f:
+with open('C:/Axiom/Axiom/strategies/backtest.py', 'r') as f:
     lines = f.readlines()
 
 # Find the line numbers we need to modify
@@ -106,7 +106,7 @@ while i < len(lines):
     
     i += 1
 
-with open('C:/Forven/forven/strategies/backtest.py', 'w') as f:
+with open('C:/Axiom/Axiom/strategies/backtest.py', 'w') as f:
     f.writelines(new_lines)
 
 print('Fix applied successfully')

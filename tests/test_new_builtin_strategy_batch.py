@@ -1,16 +1,16 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import numpy as np
 import pandas as pd
 
-from forven.strategies.backtest import backtest_strategy
-from forven.strategies.builtin.adx_trend_pulse import ADXTrendPulseStrategy
-from forven.strategies.builtin.atr_volume_breakout import ATRVolumeBreakoutStrategy
-from forven.strategies.builtin.ema_rsi_pullback import EMARSIPullbackStrategy
-from forven.strategies.builtin.williams_ema_reclaim import WilliamsEMAReclaimStrategy
-from forven.strategies.builtin.zscore_mean_reclaim import ZScoreMeanReclaimStrategy
-from forven.strategies.registry import discover, get_all, reset
-from forven.db import init_db
+from axiom.strategies.backtest import backtest_strategy
+from axiom.strategies.builtin.adx_trend_pulse import ADXTrendPulseStrategy
+from axiom.strategies.builtin.atr_volume_breakout import ATRVolumeBreakoutStrategy
+from axiom.strategies.builtin.ema_rsi_pullback import EMARSIPullbackStrategy
+from axiom.strategies.builtin.williams_ema_reclaim import WilliamsEMAReclaimStrategy
+from axiom.strategies.builtin.zscore_mean_reclaim import ZScoreMeanReclaimStrategy
+from axiom.strategies.registry import discover, get_all, reset
+from axiom.db import init_db
 
 
 def _market_frame(periods: int = 360, *, freq: str = "1h") -> pd.DataFrame:

@@ -1,10 +1,10 @@
-"""Math regression for the Deflated Sharpe Ratio guard (gauntlet/deflated_sharpe.py)."""
+﻿"""Math regression for the Deflated Sharpe Ratio guard (gauntlet/deflated_sharpe.py)."""
 
 from __future__ import annotations
 
 import math
 
-from forven.gauntlet.deflated_sharpe import (
+from axiom.gauntlet.deflated_sharpe import (
     deflated_sharpe_ratio,
     expected_max_sharpe,
     probabilistic_sharpe_ratio,
@@ -89,7 +89,7 @@ def test_dsr_scale_invariant():
 
 def test_dsr_gate_defaults_observe_first():
     # Gate ships OFF (observe-first); threshold present and sane.
-    from forven.policy import DEFAULT_PIPELINE_CONFIG
+    from axiom.policy import DEFAULT_PIPELINE_CONFIG
 
     rob = DEFAULT_PIPELINE_CONFIG["robustness_thresholds"]
     assert rob["deflated_sharpe_gate_enabled"] is False
@@ -97,8 +97,8 @@ def test_dsr_gate_defaults_observe_first():
     assert int(rob["deflated_sharpe_default_trials"]) >= 1
 
 
-def test_compute_strategy_dsr_best_effort(forven_db):
+def test_compute_strategy_dsr_best_effort(AXIOM_db):
     # Unknown strategy must never raise — DSR is advisory.
-    from forven.gauntlet.deflated_sharpe import compute_strategy_dsr
+    from axiom.gauntlet.deflated_sharpe import compute_strategy_dsr
 
     assert compute_strategy_dsr("does-not-exist") is None

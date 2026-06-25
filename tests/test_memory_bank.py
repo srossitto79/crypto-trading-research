@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timedelta, timezone
@@ -8,8 +8,8 @@ from urllib.parse import quote
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from forven.api_domains import memory as memory_domain
-from forven.routers.memory import router as memory_router
+from axiom.api_domains import memory as memory_domain
+from axiom.routers.memory import router as memory_router
 
 
 def _pin_workspace(monkeypatch) -> Path:
@@ -21,7 +21,7 @@ def _pin_workspace(monkeypatch) -> Path:
 NARRATIVES_SOURCE = memory_domain.NARRATIVES_SOURCE
 
 
-def test_workspace_memory_items_are_sectioned_and_deterministic(forven_db, monkeypatch):
+def test_workspace_memory_items_are_sectioned_and_deterministic(AXIOM_db, monkeypatch):
     workspace_dir = _pin_workspace(monkeypatch)
     (workspace_dir / "memory").mkdir(parents=True, exist_ok=True)
     (workspace_dir / "agents" / "brain" / "memory").mkdir(parents=True, exist_ok=True)
@@ -48,7 +48,7 @@ def test_workspace_memory_items_are_sectioned_and_deterministic(forven_db, monke
     assert brain_item["title"] == "brain Daily Log 2026-03-10"
 
 
-def test_daily_agent_logs_are_compacted_with_capped_signal_sections(forven_db, monkeypatch):
+def test_daily_agent_logs_are_compacted_with_capped_signal_sections(AXIOM_db, monkeypatch):
     workspace_dir = _pin_workspace(monkeypatch)
     daily_dir = workspace_dir / "agents" / "strategy-developer" / "memory"
     daily_dir.mkdir(parents=True, exist_ok=True)
@@ -109,7 +109,7 @@ def test_annotation_overlay_precedence():
     assert set(applied["tags"]) == {"risk", "daily", "canon"}
 
 
-def test_search_memory_records_handles_chroma_degraded(forven_db, monkeypatch):
+def test_search_memory_records_handles_chroma_degraded(AXIOM_db, monkeypatch):
     workspace_dir = _pin_workspace(monkeypatch)
     (workspace_dir / "memory").mkdir(parents=True, exist_ok=True)
     (workspace_dir / "memory" / "drawdown_notes.md").write_text(
@@ -135,7 +135,7 @@ def test_search_memory_records_handles_chroma_degraded(forven_db, monkeypatch):
     assert chroma_health["status"] == "degraded"
 
 
-def test_memory_overview_reports_narrative_browse_mode(forven_db, monkeypatch):
+def test_memory_overview_reports_narrative_browse_mode(AXIOM_db, monkeypatch):
     workspace_dir = _pin_workspace(monkeypatch)
     (workspace_dir / "memory").mkdir(parents=True, exist_ok=True)
     (workspace_dir / "memory" / "MEMORY.md").write_text(
@@ -153,7 +153,7 @@ def test_memory_overview_reports_narrative_browse_mode(forven_db, monkeypatch):
     assert narrative_health["count"] == 0
 
 
-def test_memory_overview_drops_chroma_rows_when_vector_layer_disabled(forven_db, monkeypatch):
+def test_memory_overview_drops_chroma_rows_when_vector_layer_disabled(AXIOM_db, monkeypatch):
     """2026-06-13 declutter: when in-process ChromaDB is disabled, the dead
     chroma + narratives source rows must be dropped from the overview (they were
     misleadingly shown as 'active / no records yet')."""
@@ -162,7 +162,7 @@ def test_memory_overview_drops_chroma_rows_when_vector_layer_disabled(forven_db,
     (workspace_dir / "memory" / "MEMORY.md").write_text(
         "# Operator Notes\nWorkspace memory still loads.\n", encoding="utf-8"
     )
-    monkeypatch.setenv("FORVEN_DISABLE_CHROMA_IN_PROCESS", "1")
+    monkeypatch.setenv("AXIOM_DISABLE_CHROMA_IN_PROCESS", "1")
 
     payload = memory_domain.get_memory_overview()
     sources = {entry["source"] for entry in payload["source_health"]}
@@ -172,10 +172,10 @@ def test_memory_overview_drops_chroma_rows_when_vector_layer_disabled(forven_db,
     assert NARRATIVES_SOURCE not in sources
 
 
-def test_memory_overview_keeps_chroma_row_when_vector_layer_enabled(forven_db, monkeypatch):
+def test_memory_overview_keeps_chroma_row_when_vector_layer_enabled(AXIOM_db, monkeypatch):
     workspace_dir = _pin_workspace(monkeypatch)
     (workspace_dir / "memory").mkdir(parents=True, exist_ok=True)
-    monkeypatch.delenv("FORVEN_DISABLE_CHROMA_IN_PROCESS", raising=False)
+    monkeypatch.delenv("AXIOM_DISABLE_CHROMA_IN_PROCESS", raising=False)
     monkeypatch.setattr(memory_domain, "_run_chroma_subprocess", lambda payload, timeout=60: {"ok": True, "collections": {}})
     monkeypatch.setattr(memory_domain, "_browse_narrative_items_sync", lambda limit: [])
 
@@ -184,7 +184,7 @@ def test_memory_overview_keeps_chroma_row_when_vector_layer_enabled(forven_db, m
     assert {"workspace", "chroma", NARRATIVES_SOURCE}.issubset(sources)
 
 
-def test_memory_overview_browses_live_narratives_by_default(forven_db, monkeypatch):
+def test_memory_overview_browses_live_narratives_by_default(AXIOM_db, monkeypatch):
     workspace_dir = _pin_workspace(monkeypatch)
     (workspace_dir / "memory").mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr(memory_domain, "_run_chroma_subprocess", lambda payload, timeout=60: {"ok": True, "collections": {}})
@@ -213,7 +213,7 @@ def test_memory_overview_browses_live_narratives_by_default(forven_db, monkeypat
     assert "staggered sizing" in detail["item"]["content_preview"]
 
 
-def test_search_memory_records_reports_live_narrative_matches(forven_db, monkeypatch):
+def test_search_memory_records_reports_live_narrative_matches(AXIOM_db, monkeypatch):
     workspace_dir = _pin_workspace(monkeypatch)
     (workspace_dir / "memory").mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr(memory_domain, "_run_chroma_subprocess", lambda payload, timeout=60: {"ok": True, "collections": {}})
@@ -245,7 +245,7 @@ def test_search_memory_records_reports_live_narrative_matches(forven_db, monkeyp
     assert "drawdown clusters" in detail["item"]["content_preview"]
 
 
-def test_apply_memory_action_hide_toggles_narrative(forven_db, monkeypatch):
+def test_apply_memory_action_hide_toggles_narrative(AXIOM_db, monkeypatch):
     detail = memory_domain.update_memory_annotation(
         NARRATIVES_SOURCE,
         "narr-hide-1",
@@ -282,7 +282,7 @@ def test_apply_memory_action_hide_toggles_narrative(forven_db, monkeypatch):
     assert response["item"]["hidden"] is True
 
 
-def test_memory_maintenance_preview_reports_old_daily_logs(forven_db, monkeypatch):
+def test_memory_maintenance_preview_reports_old_daily_logs(AXIOM_db, monkeypatch):
     workspace_dir = _pin_workspace(monkeypatch)
     daily_dir = workspace_dir / "agents" / "strategy-developer" / "memory"
     daily_dir.mkdir(parents=True, exist_ok=True)
@@ -312,7 +312,7 @@ def test_memory_maintenance_preview_reports_old_daily_logs(forven_db, monkeypatc
     assert candidates[0]["source_id"] == f"agents/strategy-developer/memory/{old_name}"
 
 
-def test_memory_maintenance_preview_skips_annotated_daily_logs(forven_db, monkeypatch):
+def test_memory_maintenance_preview_skips_annotated_daily_logs(AXIOM_db, monkeypatch):
     workspace_dir = _pin_workspace(monkeypatch)
     daily_dir = workspace_dir / "agents" / "brain" / "memory"
     daily_dir.mkdir(parents=True, exist_ok=True)
@@ -337,7 +337,7 @@ def test_memory_maintenance_preview_skips_annotated_daily_logs(forven_db, monkey
     assert payload["summary"]["protected_daily_items"] == 1
 
 
-def test_memory_maintenance_run_writes_summary_and_hides_raw_daily_log(forven_db, monkeypatch):
+def test_memory_maintenance_run_writes_summary_and_hides_raw_daily_log(AXIOM_db, monkeypatch):
     workspace_dir = _pin_workspace(monkeypatch)
     daily_dir = workspace_dir / "agents" / "strategy-developer" / "memory"
     daily_dir.mkdir(parents=True, exist_ok=True)
@@ -374,7 +374,7 @@ def test_memory_maintenance_run_writes_summary_and_hides_raw_daily_log(forven_db
     assert signal_detail["item"]["hidden"] is False
 
 
-def test_memory_router_search_and_annotation_round_trip(forven_db, monkeypatch):
+def test_memory_router_search_and_annotation_round_trip(AXIOM_db, monkeypatch):
     workspace_dir = _pin_workspace(monkeypatch)
     (workspace_dir / "memory").mkdir(parents=True, exist_ok=True)
     (workspace_dir / "memory" / "MEMORY.md").write_text(
@@ -417,7 +417,7 @@ def test_memory_router_search_and_annotation_round_trip(forven_db, monkeypatch):
     assert item["tier"] == "canon"
 
 
-def test_memory_router_maintenance_preview_and_dry_run(forven_db, monkeypatch):
+def test_memory_router_maintenance_preview_and_dry_run(AXIOM_db, monkeypatch):
     workspace_dir = _pin_workspace(monkeypatch)
     daily_dir = workspace_dir / "agents" / "brain" / "memory"
     daily_dir.mkdir(parents=True, exist_ok=True)

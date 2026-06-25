@@ -1,4 +1,4 @@
-"""Phase 4 / P4-T02 — AnthropicProvider unit tests.
+﻿"""Phase 4 / P4-T02 — AnthropicProvider unit tests.
 
 Confirms the direct Anthropic Messages API round-trip:
 - request shape matches the API contract (x-api-key, anthropic-version,
@@ -15,7 +15,7 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 
-from forven.agents.providers import (
+from axiom.agents.providers import (
     AnthropicProvider,
     ProviderResponse,
     ToolCall,
@@ -40,13 +40,13 @@ def test_factory_resolves_anthropic() -> None:
 
 
 def test_anthropic_default_base_url() -> None:
-    with patch("forven.agents.providers.get_profile", return_value=None):
+    with patch("axiom.agents.providers.get_profile", return_value=None):
         assert AnthropicProvider._get_base_url() == "https://api.anthropic.com"
 
 
 def test_anthropic_base_url_override() -> None:
     with patch(
-        "forven.agents.providers.get_profile",
+        "axiom.agents.providers.get_profile",
         return_value={"base_url": "https://proxy.example.com/"},
     ):
         assert AnthropicProvider._get_base_url() == "https://proxy.example.com"
@@ -70,8 +70,8 @@ def test_anthropic_call_returns_tool_calls() -> None:
     mock_client.__aexit__ = AsyncMock(return_value=False)
     mock_client.post = AsyncMock(return_value=fake_resp)
 
-    with patch("forven.agents.providers.httpx.AsyncClient", return_value=mock_client), \
-         patch("forven.agents.providers.get_profile", return_value=None):
+    with patch("axiom.agents.providers.httpx.AsyncClient", return_value=mock_client), \
+         patch("axiom.agents.providers.get_profile", return_value=None):
         result = asyncio.run(provider.call(
             model_id="claude-sonnet-4-6",
             messages=[{"role": "user", "content": "list strategies"}],
@@ -111,8 +111,8 @@ def test_anthropic_text_only_response_stops() -> None:
     mock_client.__aexit__ = AsyncMock(return_value=False)
     mock_client.post = AsyncMock(return_value=fake_resp)
 
-    with patch("forven.agents.providers.httpx.AsyncClient", return_value=mock_client), \
-         patch("forven.agents.providers.get_profile", return_value=None):
+    with patch("axiom.agents.providers.httpx.AsyncClient", return_value=mock_client), \
+         patch("axiom.agents.providers.get_profile", return_value=None):
         result = asyncio.run(provider.call(
             model_id="claude-sonnet-4-6",
             messages=[],

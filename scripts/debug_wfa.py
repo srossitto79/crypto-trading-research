@@ -1,9 +1,9 @@
-"""Debug WFA result structure for S03097."""
+﻿"""Debug WFA result structure for S03097."""
 import sys, json
 sys.path.insert(0, '.')
 
 if __name__ == '__main__':
-    from forven.strategies.backtest import walk_forward
+    from axiom.strategies.backtest import walk_forward
 
     print("Running WFA for S03097 (engulfing BTC/4h)...")
     result = walk_forward(

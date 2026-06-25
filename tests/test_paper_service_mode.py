@@ -1,17 +1,17 @@
-"""Paper service high-activity mode safety/restore tests."""
+﻿"""Paper service high-activity mode safety/restore tests."""
 
 from __future__ import annotations
 
-from forven.db import get_db, kv_get
-from forven.api_domains import paper as paper_domain
-from forven.control_plane import ops as control_plane_ops
+from axiom.db import get_db, kv_get
+from axiom.api_domains import paper as paper_domain
+from axiom.control_plane import ops as control_plane_ops
 
 
-def test_start_paper_service_high_activity_enables_test_flags(forven_db, monkeypatch):
-    import forven.api_core as core
+def test_start_paper_service_high_activity_enables_test_flags(AXIOM_db, monkeypatch):
+    import axiom.api_core as core
 
-    monkeypatch.setattr("forven.scheduler.apply_runtime_scheduler_overrides", lambda: 0)
-    monkeypatch.setattr("forven.scanner.run_scan", lambda execute_positions=True: {})
+    monkeypatch.setattr("axiom.scheduler.apply_runtime_scheduler_overrides", lambda: 0)
+    monkeypatch.setattr("axiom.scanner.run_scan", lambda execute_positions=True: {})
 
     control_plane_ops.get_scheduler()
     result = paper_domain.start_paper_service(high_activity_test=True, run_scan_now=False)
@@ -33,18 +33,18 @@ def test_start_paper_service_high_activity_enables_test_flags(forven_db, monkeyp
 
     with get_db() as conn:
         rows = conn.execute(
-            "SELECT id, enabled FROM scheduler_jobs WHERE id IN ('forven-scanner-signal', 'forven-scanner-hourly')"
+            "SELECT id, enabled FROM scheduler_jobs WHERE id IN ('Axiom-scanner-signal', 'Axiom-scanner-hourly')"
         ).fetchall()
     by_id = {row["id"]: int(row["enabled"]) for row in rows}
-    assert by_id.get("forven-scanner-signal") == 1
-    assert by_id.get("forven-scanner-hourly") == 1
+    assert by_id.get("Axiom-scanner-signal") == 1
+    assert by_id.get("Axiom-scanner-hourly") == 1
 
 
-def test_stop_paper_service_restores_settings_and_disables_jobs(forven_db, monkeypatch):
-    import forven.api_core as core
+def test_stop_paper_service_restores_settings_and_disables_jobs(AXIOM_db, monkeypatch):
+    import axiom.api_core as core
 
-    monkeypatch.setattr("forven.scheduler.apply_runtime_scheduler_overrides", lambda: 0)
-    monkeypatch.setattr("forven.scanner.run_scan", lambda execute_positions=True: {})
+    monkeypatch.setattr("axiom.scheduler.apply_runtime_scheduler_overrides", lambda: 0)
+    monkeypatch.setattr("axiom.scanner.run_scan", lambda execute_positions=True: {})
 
     control_plane_ops.get_scheduler()
     baseline = core.get_settings()
@@ -65,8 +65,8 @@ def test_stop_paper_service_restores_settings_and_disables_jobs(forven_db, monke
 
     with get_db() as conn:
         rows = conn.execute(
-            "SELECT id, enabled FROM scheduler_jobs WHERE id IN ('forven-scanner-signal', 'forven-scanner-hourly')"
+            "SELECT id, enabled FROM scheduler_jobs WHERE id IN ('Axiom-scanner-signal', 'Axiom-scanner-hourly')"
         ).fetchall()
     by_id = {row["id"]: int(row["enabled"]) for row in rows}
-    assert by_id.get("forven-scanner-signal") == 0
-    assert by_id.get("forven-scanner-hourly") == 0
+    assert by_id.get("Axiom-scanner-signal") == 0
+    assert by_id.get("Axiom-scanner-hourly") == 0

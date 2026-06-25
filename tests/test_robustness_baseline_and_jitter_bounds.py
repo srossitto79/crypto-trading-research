@@ -1,4 +1,4 @@
-"""Robustness baseline + param-jitter compute bounds (2026-06-13).
+﻿"""Robustness baseline + param-jitter compute bounds (2026-06-13).
 
 1. The robustness baseline resolves from the strategy's ACTIVE container backtest
    (operator-pinned) when present, not whatever backtest ran most recently. Falls
@@ -10,8 +10,8 @@
 
 from datetime import datetime, timedelta, timezone
 
-from forven.db import get_db
-from forven.gauntlet.tasks import _baseline_backtest_result, _latest_backtest_result
+from axiom.db import get_db
+from axiom.gauntlet.tasks import _baseline_backtest_result, _latest_backtest_result
 
 
 def _insert_strategy(conn, sid, *, pinned=None):
@@ -37,7 +37,7 @@ def _insert_backtest(conn, rid, sid, *, symbol, created_offset_min, deleted=Fals
     conn.commit()
 
 
-def test_baseline_prefers_pinned_over_latest(forven_db):
+def test_baseline_prefers_pinned_over_latest(AXIOM_db):
     # NEWER unpinned backtest + an OLDER pinned one. The baseline must be the pin.
     with get_db() as conn:
         _insert_strategy(conn, "bt-pin", pinned="r-old-pinned")
@@ -53,7 +53,7 @@ def test_baseline_prefers_pinned_over_latest(forven_db):
     assert _latest_backtest_result("bt-pin")["result_id"] == "r-new-latest"
 
 
-def test_baseline_falls_back_to_latest_without_pin(forven_db):
+def test_baseline_falls_back_to_latest_without_pin(AXIOM_db):
     with get_db() as conn:
         _insert_strategy(conn, "bt-nopin", pinned=None)
         _insert_backtest(conn, "r-a", "bt-nopin", symbol="ETH/USDT", created_offset_min=0)
@@ -62,7 +62,7 @@ def test_baseline_falls_back_to_latest_without_pin(forven_db):
     assert _baseline_backtest_result("bt-nopin")["result_id"] == "r-b"
 
 
-def test_baseline_falls_back_when_pinned_row_deleted(forven_db):
+def test_baseline_falls_back_when_pinned_row_deleted(AXIOM_db):
     # A dangling pin (soft-deleted row) must not strand the gauntlet — fall back.
     with get_db() as conn:
         _insert_strategy(conn, "bt-dangling", pinned="r-gone")
@@ -73,8 +73,8 @@ def test_baseline_falls_back_when_pinned_row_deleted(forven_db):
 
 
 def test_param_jitter_compute_bounds_are_wired_and_safe():
-    from forven.policy import DEFAULT_PIPELINE_CONFIG
-    from forven.routers.robustness import ParamJitterBody
+    from axiom.policy import DEFAULT_PIPELINE_CONFIG
+    from axiom.routers.robustness import ParamJitterBody
 
     rt = DEFAULT_PIPELINE_CONFIG["robustness_thresholds"]
     # Bounded by default so the sweep can't overrun the step timeout.
@@ -88,7 +88,7 @@ def test_param_jitter_compute_bounds_are_wired_and_safe():
 def test_param_jitter_effective_iterations_are_capped():
     # The effective rerun count is min(requested, max_iterations) — a large
     # request can't blow past the wired cap.
-    from forven.policy import DEFAULT_PIPELINE_CONFIG
+    from axiom.policy import DEFAULT_PIPELINE_CONFIG
 
     cap = int(DEFAULT_PIPELINE_CONFIG["robustness_thresholds"]["param_jitter_max_iterations"])
     requested = 500

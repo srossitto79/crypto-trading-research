@@ -1,4 +1,4 @@
-"""get_funding_for_backtest must not leak the future or fabricate funding.
+﻿"""get_funding_for_backtest must not leak the future or fabricate funding.
 
 Previously it returned records[-1] (the LATEST rate = future relative to an early
 bar) when no exact window matched, then synthesized funding when the cache was
@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 
-from forven.strategies import sentiment
+from axiom.strategies import sentiment
 
 _INTERVAL = 8 * 60 * 60 * 1000  # 8h
 

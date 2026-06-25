@@ -1,4 +1,4 @@
-"""Gap detection: find missing closed bars in a stored series.
+﻿"""Gap detection: find missing closed bars in a stored series.
 
 The shared primitive for the catalog gaps table, the /data UI, and the backfill
 executor. Pure function (no IO) plus a parquet-reading wrapper.
@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from forven.data import detect_series_gaps, scan_ohlcv_gaps
+from axiom.data import detect_series_gaps, scan_ohlcv_gaps
 
 _TF = 3_600_000  # 1h in ms
 
@@ -33,7 +33,7 @@ def test_empty_and_single_safe():
 
 
 def test_scan_ohlcv_gaps_reads_parquet(monkeypatch, tmp_path):
-    from forven import data as d
+    from axiom import data as d
 
     if not d._using_pyarrow():
         import pytest
@@ -73,7 +73,7 @@ def _save_series(d, tmp_path, ts_ms):
 
 
 def test_backfill_fetches_each_detected_gap(monkeypatch, tmp_path):
-    from forven import data as d
+    from axiom import data as d
 
     if not d._using_pyarrow():
         import pytest
@@ -100,7 +100,7 @@ def test_backfill_noop_when_contiguous_and_current(monkeypatch, tmp_path):
     """A contiguous, already-current series needs neither gap-fill nor tail extension."""
     import time
 
-    from forven import data as d
+    from axiom import data as d
 
     if not d._using_pyarrow():
         import pytest
@@ -121,7 +121,7 @@ def test_backfill_noop_when_contiguous_and_current(monkeypatch, tmp_path):
 
 def test_backfill_extends_stale_tail(monkeypatch, tmp_path):
     """A contiguous but STALE series (old last bar, no internal gaps) is extended to now."""
-    from forven import data as d
+    from axiom import data as d
 
     if not d._using_pyarrow():
         import pytest
@@ -149,8 +149,8 @@ def test_backfill_endpoint_validates_and_delegates(monkeypatch):
     import pytest
     from fastapi import HTTPException
 
-    from forven import data as d
-    from forven.api_domains import data as dd
+    from axiom import data as d
+    from axiom.api_domains import data as dd
 
     with pytest.raises(HTTPException):
         dd.post_backfill_gaps("", "1h")
@@ -160,7 +160,7 @@ def test_backfill_endpoint_validates_and_delegates(monkeypatch):
 
 
 def test_reconcile_close_prices_divergence():
-    from forven.data import reconcile_close_prices
+    from axiom.data import reconcile_close_prices
 
     ts = pd.to_datetime([0, _TF, 2 * _TF], unit="ms", utc=True)
     a = pd.DataFrame({"timestamp": ts, "close": [100.0, 200.0, 300.0]})
@@ -177,7 +177,7 @@ def test_reconcile_close_prices_divergence():
 
 
 def test_dataset_ohlcv_reports_real_source(monkeypatch, tmp_path):
-    from forven import data as d
+    from axiom import data as d
 
     if not d._using_pyarrow():
         import pytest

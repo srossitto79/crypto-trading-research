@@ -1,6 +1,6 @@
-import pytest
-from forven.db import get_db
-from forven.hypotheses import (
+﻿import pytest
+from axiom.db import get_db
+from axiom.hypotheses import (
     create_hypothesis,
     update_hypothesis_status,
 )
@@ -17,7 +17,7 @@ def _real_hyp():
     )
 
 
-def test_update_status_transitions_state(forven_db):
+def test_update_status_transitions_state(AXIOM_db):
     hyp = _real_hyp()
     memo = {"verdict": "proven", "rationale": "strong signal"}
     updated = update_hypothesis_status(
@@ -28,7 +28,7 @@ def test_update_status_transitions_state(forven_db):
     assert updated["verdict_memo_by"] == "agent:strategy-developer"
 
 
-def test_update_status_writes_history_row(forven_db):
+def test_update_status_writes_history_row(AXIOM_db):
     hyp = _real_hyp()
     memo = {"verdict": "disproven", "rationale": "too many failures"}
     update_hypothesis_status(hyp["id"], new_status="disproven", memo=memo, by="cleanup_rule:test")
@@ -41,7 +41,7 @@ def test_update_status_writes_history_row(forven_db):
     assert rows[0]["written_by"] == "cleanup_rule:test"
 
 
-def test_update_status_history_accumulates(forven_db):
+def test_update_status_history_accumulates(AXIOM_db):
     hyp = _real_hyp()
     update_hypothesis_status(hyp["id"], new_status="researching", memo={"verdict": "researching"}, by="a")
     update_hypothesis_status(hyp["id"], new_status="disproven", memo={"verdict": "disproven"}, by="b")
@@ -54,12 +54,12 @@ def test_update_status_history_accumulates(forven_db):
     assert n == 3
 
 
-def test_update_status_rejects_invalid_state(forven_db):
+def test_update_status_rejects_invalid_state(AXIOM_db):
     hyp = _real_hyp()
     with pytest.raises(ValueError):
         update_hypothesis_status(hyp["id"], new_status="bogus", memo={}, by="x")
 
 
-def test_update_status_missing_hypothesis_raises(forven_db):
+def test_update_status_missing_hypothesis_raises(AXIOM_db):
     with pytest.raises(ValueError):
         update_hypothesis_status("HYP-none", new_status="researching", memo={}, by="x")

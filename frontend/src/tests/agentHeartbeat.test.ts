@@ -2,8 +2,8 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { mount, unmount } from 'svelte';
 
 vi.mock('$lib/api', () => ({
-	getForvenLogs: vi.fn().mockResolvedValue([]),
-	getForvenAgents: vi.fn().mockResolvedValue([
+	getAxiomLogs: vi.fn().mockResolvedValue([]),
+	getAxiomAgents: vi.fn().mockResolvedValue([
 		{
 			id: 'brain',
 			name: 'Brain',
@@ -21,7 +21,7 @@ vi.mock('$lib/api', () => ({
 			enabled: true,
 		},
 	]),
-	getForvenAgentTasks: vi.fn().mockResolvedValue([
+	getAxiomAgentTasks: vi.fn().mockResolvedValue([
 		{ id: 1, agent_id: 'brain', status: 'running', title: 'Thinking' },
 	]),
 }));
@@ -54,7 +54,7 @@ async function flush(): Promise<void> {
 }
 
 describe('AgentHeartbeat with roster', () => {
-	it('renders the roster pulled from getForvenAgents', async () => {
+	it('renders the roster pulled from getAxiomAgents', async () => {
 		target = document.createElement('div');
 		document.body.appendChild(target);
 		instance = mount(AgentHeartbeat, { target, props: {} });
@@ -67,7 +67,7 @@ describe('AgentHeartbeat with roster', () => {
 
 	it('keeps the roster wrapper rendered even when no agents load', async () => {
 		const api = await import('$lib/api');
-		(api.getForvenAgents as ReturnType<typeof vi.fn>).mockResolvedValueOnce([]);
+		(api.getAxiomAgents as ReturnType<typeof vi.fn>).mockResolvedValueOnce([]);
 		target = document.createElement('div');
 		document.body.appendChild(target);
 		instance = mount(AgentHeartbeat, { target, props: {} });

@@ -1,8 +1,8 @@
-"""Tests for forven.lifecycle — graceful shutdown hook."""
+﻿"""Tests for Axiom.lifecycle — graceful shutdown hook."""
 
-from forven.db import get_db
-from forven.lifecycle import mark_in_flight_tasks_interrupted
-from forven.task_progress import INTERRUPTED_STATUS
+from axiom.db import get_db
+from axiom.lifecycle import mark_in_flight_tasks_interrupted
+from axiom.task_progress import INTERRUPTED_STATUS
 
 
 def _create_task(status: str, *, display_id: str = "T99200") -> int:
@@ -16,7 +16,7 @@ def _create_task(status: str, *, display_id: str = "T99200") -> int:
         return int(cursor.lastrowid)
 
 
-def test_marks_running_tasks_only(forven_db):
+def test_marks_running_tasks_only(AXIOM_db):
     running = _create_task("running", display_id="T99201")
     done = _create_task("done", display_id="T99202")
     pending = _create_task("pending", display_id="T99203")
@@ -37,7 +37,7 @@ def test_marks_running_tasks_only(forven_db):
     assert statuses[pending] == "pending"
 
 
-def test_idempotent_second_call_is_no_op(forven_db):
+def test_idempotent_second_call_is_no_op(AXIOM_db):
     _create_task("running", display_id="T99204")
     first = mark_in_flight_tasks_interrupted()
     assert first == 1
@@ -45,12 +45,12 @@ def test_idempotent_second_call_is_no_op(forven_db):
     assert second == 0
 
 
-def test_no_running_tasks_returns_zero(forven_db):
+def test_no_running_tasks_returns_zero(AXIOM_db):
     _create_task("done", display_id="T99205")
     assert mark_in_flight_tasks_interrupted() == 0
 
 
-def test_does_not_touch_interrupted_tasks(forven_db):
+def test_does_not_touch_interrupted_tasks(AXIOM_db):
     """A task already marked interrupted (from a prior shutdown) should not be re-marked."""
     task_id = _create_task("running", display_id="T99206")
     mark_in_flight_tasks_interrupted()  # → interrupted

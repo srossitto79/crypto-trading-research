@@ -1,13 +1,13 @@
-"""B-34: the decay kill-switch must NOTIFY the operator when it fires —
+﻿"""B-34: the decay kill-switch must NOTIFY the operator when it fires —
 including (especially) the BLOCKED case where the strategy is still live."""
 
 from datetime import datetime, timezone
 from unittest.mock import patch
 
-from forven.db import get_db, init_db
-from forven.monitoring import _emit_kill_switch_notification, run_decay_kill_switch
+from axiom.db import get_db, init_db
+from axiom.monitoring import _emit_kill_switch_notification, run_decay_kill_switch
 
-_EMIT_TARGET = "forven.notifications.emit_notification"
+_EMIT_TARGET = "axiom.notifications.emit_notification"
 
 
 def _seed_breaching_live_strategy(strategy_id: str = "S99001") -> None:
@@ -98,7 +98,7 @@ class TestRunDecayKillSwitchNotifies:
         init_db()
         _seed_breaching_live_strategy("S99001")
         monkeypatch.setattr(
-            "forven.brain.transition_stage",
+            "axiom.brain.transition_stage",
             lambda **kwargs: {"to": "archived"},
         )
 
@@ -116,7 +116,7 @@ class TestRunDecayKillSwitchNotifies:
         init_db()
         _seed_breaching_live_strategy("S99002")
         monkeypatch.setattr(
-            "forven.brain.transition_stage",
+            "axiom.brain.transition_stage",
             lambda **kwargs: {
                 "to": "live_graduated",
                 "blocked_reason": "canonical strategy is protected",

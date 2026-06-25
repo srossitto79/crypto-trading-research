@@ -1,10 +1,10 @@
-"""Podcast connector + detection + registry registration.
+﻿"""Podcast connector + detection + registry registration.
 
 Show-notes-first harvesting; audio transcription is a pluggable hook that is OFF
 by default. All unit-level (no network) via a fake HTTP client + sample RSS.
 """
-from forven.research_sources import podcast
-from forven.research_sources.url_ingest import detect_source_type
+from axiom.research_sources import podcast
+from axiom.research_sources.url_ingest import detect_source_type
 
 SAMPLE_RSS = """<?xml version="1.0"?>
 <rss version="2.0"
@@ -93,7 +93,7 @@ def test_detect_source_type_routes_podcasts():
 
 
 def test_registry_resolves_podcast(monkeypatch):
-    from forven.research_sources import _registry
+    from axiom.research_sources import _registry
 
     monkeypatch.setattr(
         _registry,

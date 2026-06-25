@@ -295,7 +295,7 @@
 		<div class="flex items-center justify-between px-4 py-3 border-b border-[#222]">
 			<div class="flex items-center gap-2 min-w-0">
 				<div class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>
-				<span class="text-sm font-bold text-white uppercase tracking-wider">Forven</span>
+				<span class="text-sm font-bold text-white uppercase tracking-wider">Axiom</span>
 				{#if contextLabel}
 					<span class="text-[10px] text-cyan-300/80 uppercase tracking-wider truncate">· {contextLabel}</span>
 				{/if}
@@ -328,7 +328,7 @@
 				<div class="text-center text-gray-600 text-xs mt-8">Opening…</div>
 			{:else if messages.length === 0}
 				<div class="text-center text-gray-600 text-xs mt-8">
-					<div class="text-2xl mb-2 text-cyan-300">Forven</div>
+					<div class="text-2xl mb-2 text-cyan-300">Axiom</div>
 					<div>Ask anything, or tell me what to do — I can see {contextLabel || 'this page'}.</div>
 					<div class="mt-4 flex flex-wrap justify-center gap-2">
 						{#each suggestions as suggestion}

@@ -1,4 +1,4 @@
-"""Run fresh backtests for seed strategies to get complete metrics."""
+﻿"""Run fresh backtests for seed strategies to get complete metrics."""
 import sys, json
 sys.path.insert(0, '.')
 
@@ -12,10 +12,10 @@ SEEDS = [
 
 if __name__ == '__main__':
     import sqlite3
-    from forven.strategies.backtest import backtest_strategy
-    from forven.config import FORVEN_DB
+    from axiom.strategies.backtest import backtest_strategy
+    from axiom.config import AXIOM_DB
 
-    db = FORVEN_DB
+    db = AXIOM_DB
     conn = sqlite3.connect(db)
     conn.row_factory = sqlite3.Row
 

@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import socket
 import time
@@ -7,7 +7,7 @@ import urllib.request
 import pytest
 from fastapi import HTTPException
 
-from forven import api_core
+from axiom import api_core
 
 
 def test_oauth_status_rejects_non_oauth_provider():
@@ -41,7 +41,7 @@ def test_oauth_cancel_idempotent_when_session_missing(monkeypatch):
 
 
 def test_callback_listener_captures_code(monkeypatch):
-    from forven.auth.callback_listener import LoopbackCallbackListener
+    from axiom.auth.callback_listener import LoopbackCallbackListener
 
     listener = LoopbackCallbackListener(port=1455, ttl_seconds=10)
     listener.start()
@@ -63,7 +63,7 @@ def test_callback_listener_captures_code(monkeypatch):
 
 
 def test_callback_listener_notifies_callback_side_effect():
-    from forven.auth.callback_listener import LoopbackCallbackListener
+    from axiom.auth.callback_listener import LoopbackCallbackListener
 
     captured: dict = {}
     listener = LoopbackCallbackListener(
@@ -89,7 +89,7 @@ def test_callback_listener_notifies_callback_side_effect():
 
 
 def test_callback_listener_shutdown_releases_port():
-    from forven.auth.callback_listener import LoopbackCallbackListener
+    from axiom.auth.callback_listener import LoopbackCallbackListener
 
     listener = LoopbackCallbackListener(port=1455, ttl_seconds=10)
     listener.start()
@@ -103,7 +103,7 @@ def test_callback_listener_shutdown_releases_port():
 
 
 def test_callback_listener_bind_failure_signaled():
-    from forven.auth.callback_listener import LoopbackCallbackListener
+    from axiom.auth.callback_listener import LoopbackCallbackListener
 
     blocker = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     blocker.bind(("127.0.0.1", 1455))
@@ -307,7 +307,7 @@ def test_auth_providers_payload_exposes_last_refresh_error(monkeypatch):
 
 
 def test_refresh_failure_records_last_refresh_error(monkeypatch):
-    from forven.auth import store as auth_store
+    from axiom.auth import store as auth_store
 
     profile = {
         "type": "oauth",

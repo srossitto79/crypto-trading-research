@@ -1,4 +1,4 @@
-"""Lead-2 (part A): every custom-code ingress path must run the AST guard before
+﻿"""Lead-2 (part A): every custom-code ingress path must run the AST guard before
 importing the module in-process. The agent path previously imported on a ruff
 pass alone — asymmetric with the manual authoring path which scans. The guard
 now lives in intake.register_custom_strategy_file, the shared chokepoint.
@@ -10,13 +10,13 @@ import sys
 
 import pytest
 
-from forven.strategies import custom as custom_pkg
-from forven.strategies import intake as intake_mod
-from forven.strategies import registry
+from axiom.strategies import custom as custom_pkg
+from axiom.strategies import intake as intake_mod
+from axiom.strategies import registry
 
 _CLEAN = """\
 import pandas as pd
-from forven.strategies.base import BaseStrategy, Signal
+from axiom.strategies.base import BaseStrategy, Signal
 
 
 class GuardOkStrategy(BaseStrategy):
@@ -64,25 +64,25 @@ def _point_custom_dir(monkeypatch, tmp_path):
     return d
 
 
-def test_malicious_top_level_import_is_rejected_before_import(forven_db, monkeypatch, tmp_path):
+def test_malicious_top_level_import_is_rejected_before_import(AXIOM_db, monkeypatch, tmp_path):
     d = _point_custom_dir(monkeypatch, tmp_path)
     f = d / "btc_guard_evil_test.py"
     f.write_text(_MALICIOUS, encoding="utf-8")
-    sys.modules.pop("forven.strategies.custom.btc_guard_evil_test", None)
+    sys.modules.pop("axiom.strategies.custom.btc_guard_evil_test", None)
 
     with pytest.raises(ValueError) as exc:
         intake_mod.register_custom_strategy_file(file_path=str(f))
     msg = str(exc.value).lower()
     assert "security scan" in msg
     # the module must NOT have been imported in-process
-    assert "forven.strategies.custom.btc_guard_evil_test" not in sys.modules
+    assert "axiom.strategies.custom.btc_guard_evil_test" not in sys.modules
 
 
-def test_clean_strategy_still_registers(forven_db, monkeypatch, tmp_path):
+def test_clean_strategy_still_registers(AXIOM_db, monkeypatch, tmp_path):
     d = _point_custom_dir(monkeypatch, tmp_path)
     f = d / "btc_guard_ok_test.py"
     f.write_text(_CLEAN, encoding="utf-8")
-    sys.modules.pop("forven.strategies.custom.btc_guard_ok_test", None)
+    sys.modules.pop("axiom.strategies.custom.btc_guard_ok_test", None)
 
     result = intake_mod.register_custom_strategy_file(file_path=str(f))
     assert result["strategy_id"]

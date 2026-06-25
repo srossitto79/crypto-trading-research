@@ -1,4 +1,4 @@
-"""Backend enforcement tests for container-first PR3 behavior."""
+﻿"""Backend enforcement tests for container-first PR3 behavior."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 import pytest
 from fastapi import HTTPException
 
-from forven.api_core import (
+from axiom.api_core import (
     BacktestSubmitBody,
     LifecycleCreateBody,
     OptimizationSubmitBody,
@@ -19,7 +19,7 @@ from forven.api_core import (
     post_backtest_submit,
     post_optimization_submit,
 )
-from forven.db import create_strategy_container, get_db
+from axiom.db import create_strategy_container, get_db
 
 
 def _seed_strategy(symbol: str = "BTC", strategy_type: str = "macd", params: dict | None = None) -> str:
@@ -45,7 +45,7 @@ def _seed_strategy(symbol: str = "BTC", strategy_type: str = "macd", params: dic
     return strategy_id
 
 
-def test_create_lifecycle_strategy_resolves_executable_type(forven_db):
+def test_create_lifecycle_strategy_resolves_executable_type(AXIOM_db):
     created = create_lifecycle_strategy(
         LifecycleCreateBody(
             name="RSI Momentum Candidate",
@@ -69,7 +69,7 @@ def test_create_lifecycle_strategy_resolves_executable_type(forven_db):
     assert "-RSI_MOMENTUM-" in str(row["name"])
 
 
-def test_create_lifecycle_strategy_routes_uncertified_payload_to_research_only(forven_db):
+def test_create_lifecycle_strategy_routes_uncertified_payload_to_research_only(AXIOM_db):
     created = create_lifecycle_strategy(
         LifecycleCreateBody(
             name="Rule Blob Candidate",
@@ -99,7 +99,7 @@ def test_create_lifecycle_strategy_routes_uncertified_payload_to_research_only(f
     assert "unsupported rule-blob params" in str(row["notes"])
 
 
-def test_read_strategies_honors_offset_for_paged_graveyard_loads(forven_db):
+def test_read_strategies_honors_offset_for_paged_graveyard_loads(AXIOM_db):
     ids = [_seed_strategy(symbol="BTC", strategy_type="rsi_momentum") for _ in range(3)]
     with get_db() as conn:
         for index, strategy_id in enumerate(ids):
@@ -121,7 +121,7 @@ def test_read_strategies_honors_offset_for_paged_graveyard_loads(forven_db):
     assert [row["id"] for row in second_page] == [ids[0]]
 
 
-def test_backtest_submit_recovers_type_from_task_audit(forven_db, monkeypatch):
+def test_backtest_submit_recovers_type_from_task_audit(AXIOM_db, monkeypatch):
     strategy_id = _seed_strategy(symbol="BTC", strategy_type="scan")
 
     with get_db() as conn:
@@ -181,8 +181,8 @@ def test_backtest_submit_recovers_type_from_task_audit(forven_db, monkeypatch):
     def _fake_store_backtest_result(**_kwargs):
         return None
 
-    import forven.strategies.backtest as bt_mod
-    import forven.vectordb as vectordb_mod
+    import axiom.strategies.backtest as bt_mod
+    import axiom.vectordb as vectordb_mod
 
     monkeypatch.setattr(bt_mod, "backtest_strategy", _fake_backtest_strategy)
     monkeypatch.setattr(vectordb_mod, "store_backtest_result", _fake_store_backtest_result)
@@ -210,7 +210,7 @@ def test_backtest_submit_recovers_type_from_task_audit(forven_db, monkeypatch):
 
 
 def test_backtest_submit_skips_task_audit_lookup_when_strategy_is_already_executable(
-    forven_db, monkeypatch
+    AXIOM_db, monkeypatch
 ):
     strategy_id = _seed_strategy(symbol="ATOM", strategy_type="rsi_momentum")
 
@@ -233,9 +233,9 @@ def test_backtest_submit_skips_task_audit_lookup_when_strategy_is_already_execut
             "trades": [],
         }
 
-    import forven.api_core as api_core_mod
-    import forven.strategies.backtest as bt_mod
-    import forven.vectordb as vectordb_mod
+    import axiom.api_core as api_core_mod
+    import axiom.strategies.backtest as bt_mod
+    import axiom.vectordb as vectordb_mod
 
     monkeypatch.setattr(
         api_core_mod,
@@ -261,7 +261,7 @@ def test_backtest_submit_skips_task_audit_lookup_when_strategy_is_already_execut
 
 
 def test_backtesting_run_now_working_row_uses_valid_simulation_agent(
-    forven_db, monkeypatch
+    AXIOM_db, monkeypatch
 ):
     strategy_id = _seed_strategy(symbol="NEAR", strategy_type="rsi_momentum")
 
@@ -286,8 +286,8 @@ def test_backtesting_run_now_working_row_uses_valid_simulation_agent(
             "trades": [],
         }
 
-    import forven.api_core as api_core_mod
-    import forven.strategies.backtest as bt_mod
+    import axiom.api_core as api_core_mod
+    import axiom.strategies.backtest as bt_mod
 
     monkeypatch.setattr(bt_mod, "backtest_strategy", _fake_backtest_strategy)
     monkeypatch.setattr(
@@ -321,7 +321,7 @@ def test_backtesting_run_now_working_row_uses_valid_simulation_agent(
     assert row["assigned_by"] == "manual"
 
 
-def test_backtest_submit_uses_strategy_leverage_when_request_omits_it(forven_db, monkeypatch):
+def test_backtest_submit_uses_strategy_leverage_when_request_omits_it(AXIOM_db, monkeypatch):
     strategy_id = _seed_strategy(symbol="ETH", strategy_type="rsi_momentum")
 
     with get_db() as conn:
@@ -346,8 +346,8 @@ def test_backtest_submit_uses_strategy_leverage_when_request_omits_it(forven_db,
             "trades": [],
         }
 
-    import forven.strategies.backtest as bt_mod
-    import forven.vectordb as vectordb_mod
+    import axiom.strategies.backtest as bt_mod
+    import axiom.vectordb as vectordb_mod
 
     monkeypatch.setattr(bt_mod, "backtest_strategy", _fake_backtest_strategy)
     monkeypatch.setattr(vectordb_mod, "store_backtest_result", lambda **_kwargs: None)
@@ -367,7 +367,7 @@ def test_backtest_submit_uses_strategy_leverage_when_request_omits_it(forven_db,
 
 
 def test_optimization_submit_skips_task_audit_lookup_when_strategy_is_already_executable(
-    forven_db, monkeypatch
+    AXIOM_db, monkeypatch
 ):
     strategy_id = _seed_strategy(symbol="SOL", strategy_type="rsi_momentum")
 
@@ -381,7 +381,7 @@ def test_optimization_submit_skips_task_audit_lookup_when_strategy_is_already_ex
             submitted.append((fn, args, kwargs))
             return None
 
-    import forven.api_core as api_core_mod
+    import axiom.api_core as api_core_mod
 
     monkeypatch.setattr(
         api_core_mod,
@@ -405,7 +405,7 @@ def test_optimization_submit_skips_task_audit_lookup_when_strategy_is_already_ex
     assert submitted
 
 
-def test_read_strategies_uses_best_backtest_metrics(forven_db):
+def test_read_strategies_uses_best_backtest_metrics(AXIOM_db):
     strategy_id = _seed_strategy(symbol="BTC", strategy_type="rsi_momentum")
     now_iso = datetime.now(timezone.utc).isoformat()
 
@@ -494,7 +494,7 @@ def test_read_strategies_uses_best_backtest_metrics(forven_db):
     assert float(metrics.get("profit_factor", 0.0)) == pytest.approx(1.27)
 
 
-def test_read_strategies_penalizes_legacy_overflow_drawdown(forven_db):
+def test_read_strategies_penalizes_legacy_overflow_drawdown(AXIOM_db):
     strategy_id = _seed_strategy(symbol="BTC", strategy_type="rsi_momentum")
 
     with get_db() as conn:
@@ -559,7 +559,7 @@ def test_read_strategies_penalizes_legacy_overflow_drawdown(forven_db):
     assert float(metrics.get("max_drawdown_pct", 0.0)) == pytest.approx(0.40)
 
 
-def test_read_strategies_uses_archive_era_backtest_for_terminal_rows(forven_db):
+def test_read_strategies_uses_archive_era_backtest_for_terminal_rows(AXIOM_db):
     strategy_id = _seed_strategy(symbol="BTC", strategy_type="rsi_momentum")
 
     with get_db() as conn:
@@ -650,7 +650,7 @@ def test_read_strategies_uses_archive_era_backtest_for_terminal_rows(forven_db):
     assert float(metrics.get("profit_factor", 0.0)) == pytest.approx(0.82)
 
 
-def test_strategy_container_history_caps_legacy_overflow_drawdown(forven_db):
+def test_strategy_container_history_caps_legacy_overflow_drawdown(AXIOM_db):
     strategy_id = _seed_strategy(symbol="BTC", strategy_type="rsi_momentum")
 
     with get_db() as conn:
@@ -688,7 +688,7 @@ def test_strategy_container_history_caps_legacy_overflow_drawdown(forven_db):
     assert float(metrics.get("max_drawdown_pct", 0.0)) == pytest.approx(1.0)
 
 
-def test_submit_backtest_requires_existing_strategy_id(forven_db):
+def test_submit_backtest_requires_existing_strategy_id(AXIOM_db):
     with pytest.raises(HTTPException) as exc:
         post_backtest_submit(BacktestSubmitBody(strategy_name="legacy-name-only"))
     assert int(exc.value.status_code) == 400
@@ -699,7 +699,7 @@ def test_submit_backtest_requires_existing_strategy_id(forven_db):
     assert int(exc.value.status_code) == 404
 
 
-def test_submit_backtest_does_not_warn_for_honored_body_execution_controls(forven_db, monkeypatch):
+def test_submit_backtest_does_not_warn_for_honored_body_execution_controls(AXIOM_db, monkeypatch):
     """Body-level execution controls (stops/sizing) are honored by the engine
     via execution_controls since 4ee6e14, so they must NOT trigger the
     risk-parity warning (warning about controls that work was the audited bug).
@@ -708,7 +708,7 @@ def test_submit_backtest_does_not_warn_for_honored_body_execution_controls(forve
 
     # Stub out backtest_strategy so we don't need real candles
     monkeypatch.setattr(
-        "forven.strategies.backtest.backtest_strategy",
+        "axiom.strategies.backtest.backtest_strategy",
         lambda **_kwargs: {"trades": [], "metrics": {"total_return_pct": 0, "sharpe": 0, "max_drawdown_pct": 0, "total_trades": 0}},
     )
 
@@ -723,7 +723,7 @@ def test_submit_backtest_does_not_warn_for_honored_body_execution_controls(forve
     assert "stop_loss_pct" not in str(result.get("warning", ""))
 
 
-def test_submit_backtest_still_warns_for_strategy_param_risk_fields(forven_db, monkeypatch):
+def test_submit_backtest_still_warns_for_strategy_param_risk_fields(AXIOM_db, monkeypatch):
     """STRATEGY-param risk fields remain genuinely unenforced by the engine,
     so the parity warning must still fire for those."""
     strategy_id = _seed_strategy(
@@ -733,7 +733,7 @@ def test_submit_backtest_still_warns_for_strategy_param_risk_fields(forven_db, m
     )
 
     monkeypatch.setattr(
-        "forven.strategies.backtest.backtest_strategy",
+        "axiom.strategies.backtest.backtest_strategy",
         lambda **_kwargs: {"trades": [], "metrics": {"total_return_pct": 0, "sharpe": 0, "max_drawdown_pct": 0, "total_trades": 0}},
     )
 
@@ -743,7 +743,7 @@ def test_submit_backtest_still_warns_for_strategy_param_risk_fields(forven_db, m
     assert "stop_loss_pct" in str(result.get("warning", ""))
 
 
-def test_submit_backtest_translates_simple_macd_rule_blob_params(forven_db, monkeypatch):
+def test_submit_backtest_translates_simple_macd_rule_blob_params(AXIOM_db, monkeypatch):
     strategy_id = "S-RULE-MACD"
     now_iso = datetime.now(timezone.utc).isoformat()
     definition = {
@@ -799,8 +799,8 @@ def test_submit_backtest_translates_simple_macd_rule_blob_params(forven_db, monk
             "trades": [],
         }
 
-    import forven.strategies.backtest as bt_mod
-    import forven.vectordb as vectordb_mod
+    import axiom.strategies.backtest as bt_mod
+    import axiom.vectordb as vectordb_mod
 
     monkeypatch.setattr(bt_mod, "backtest_strategy", _fake_backtest_strategy)
     monkeypatch.setattr(vectordb_mod, "store_backtest_result", lambda **_kwargs: None)
@@ -821,7 +821,7 @@ def test_submit_backtest_translates_simple_macd_rule_blob_params(forven_db, monk
     assert captured.get("persist_legacy_run") is False
 
 
-def test_submit_optimization_requires_existing_strategy_id(forven_db):
+def test_submit_optimization_requires_existing_strategy_id(AXIOM_db):
     with pytest.raises(HTTPException) as exc:
         post_optimization_submit(OptimizationSubmitBody(strategy_name="legacy-name-only"))
     assert int(exc.value.status_code) == 400
@@ -832,7 +832,7 @@ def test_submit_optimization_requires_existing_strategy_id(forven_db):
     assert int(exc.value.status_code) == 404
 
 
-def test_backtest_submit_persists_sqlite_before_index(forven_db, monkeypatch):
+def test_backtest_submit_persists_sqlite_before_index(AXIOM_db, monkeypatch):
     strategy_id = _seed_strategy(symbol="ETH", strategy_type="rsi_momentum")
 
     def _fake_backtest_strategy(**_kwargs):
@@ -855,8 +855,8 @@ def test_backtest_submit_persists_sqlite_before_index(forven_db, monkeypatch):
     def _fake_store_backtest_result(**_kwargs):
         indexed["count"] += 1
 
-    import forven.strategies.backtest as bt_mod
-    import forven.vectordb as vectordb_mod
+    import axiom.strategies.backtest as bt_mod
+    import axiom.vectordb as vectordb_mod
 
     monkeypatch.setattr(bt_mod, "backtest_strategy", _fake_backtest_strategy)
     monkeypatch.setattr(vectordb_mod, "store_backtest_result", _fake_store_backtest_result)
@@ -885,7 +885,7 @@ def test_backtest_submit_persists_sqlite_before_index(forven_db, monkeypatch):
     assert bool(str(row["result_id"]).strip())
 
 
-def test_manual_gauntlet_preserve_result_keeps_zero_trade_history(forven_db, monkeypatch):
+def test_manual_gauntlet_preserve_result_keeps_zero_trade_history(AXIOM_db, monkeypatch):
     strategy_id = _seed_strategy(symbol="BTC", strategy_type="rsi_momentum")
 
     def _fake_backtest_strategy(**_kwargs):
@@ -903,8 +903,8 @@ def test_manual_gauntlet_preserve_result_keeps_zero_trade_history(forven_db, mon
             "trades": [],
         }
 
-    import forven.strategies.backtest as bt_mod
-    import forven.vectordb as vectordb_mod
+    import axiom.strategies.backtest as bt_mod
+    import axiom.vectordb as vectordb_mod
 
     monkeypatch.setattr(bt_mod, "backtest_strategy", _fake_backtest_strategy)
     monkeypatch.setattr(vectordb_mod, "store_backtest_result", lambda **_kwargs: None)
@@ -933,7 +933,7 @@ def test_manual_gauntlet_preserve_result_keeps_zero_trade_history(forven_db, mon
     assert row["deleted_at"] in (None, "")
 
 
-def test_auto_trash_sweep_keeps_preserved_manual_history_rows(forven_db):
+def test_auto_trash_sweep_keeps_preserved_manual_history_rows(AXIOM_db):
     strategy_id = _seed_strategy(symbol="BTC", strategy_type="rsi_momentum")
     result_id = f"{strategy_id}-manual-zero"
     now_iso = datetime.now(timezone.utc).isoformat()
@@ -954,7 +954,7 @@ def test_auto_trash_sweep_keeps_preserved_manual_history_rows(forven_db):
             ),
         )
 
-    from forven.api_core import _auto_trash_failed_local_backtests
+    from axiom.api_core import _auto_trash_failed_local_backtests
 
     marked = _auto_trash_failed_local_backtests(
         [
@@ -979,7 +979,7 @@ def test_auto_trash_sweep_keeps_preserved_manual_history_rows(forven_db):
     assert result_id in [str(item["result_id"]) for item in payload["history"]["backtests"]]
 
 
-def test_auto_trash_sweep_recovers_preserved_rows_already_in_trash(forven_db):
+def test_auto_trash_sweep_recovers_preserved_rows_already_in_trash(AXIOM_db):
     strategy_id = _seed_strategy(symbol="BTC", strategy_type="rsi_momentum")
     result_id = f"{strategy_id}-manual-recovered"
     now_iso = datetime.now(timezone.utc).isoformat()
@@ -1005,7 +1005,7 @@ def test_auto_trash_sweep_recovers_preserved_rows_already_in_trash(forven_db):
         )
         conn.execute("UPDATE backtest_results SET deleted_at = ? WHERE result_id = ?", (now_iso, result_id))
 
-    from forven.api_core import _auto_trash_failed_local_backtests
+    from axiom.api_core import _auto_trash_failed_local_backtests
 
     marked = _auto_trash_failed_local_backtests(
         [
@@ -1030,7 +1030,7 @@ def test_auto_trash_sweep_recovers_preserved_rows_already_in_trash(forven_db):
     assert result_id in [str(item["result_id"]) for item in payload["history"]["backtests"]]
 
 
-def test_strategy_container_endpoint_returns_unified_payload(forven_db):
+def test_strategy_container_endpoint_returns_unified_payload(AXIOM_db):
     strategy_id = _seed_strategy(symbol="SOL", strategy_type="macd")
     now_iso = datetime.now(timezone.utc).isoformat()
 
@@ -1085,7 +1085,7 @@ def test_strategy_container_endpoint_returns_unified_payload(forven_db):
     assert len(payload["events"]) >= 1
 
 
-def test_strategy_container_prefers_canonical_backtests_over_placeholder_legacy_rows(forven_db):
+def test_strategy_container_prefers_canonical_backtests_over_placeholder_legacy_rows(AXIOM_db):
     strategy_id = _seed_strategy(symbol="BTC", strategy_type="macd")
     placeholder_id = "B99901"
     canonical_id = f"{strategy_id}-btc-1773345025196"

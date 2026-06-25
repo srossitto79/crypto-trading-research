@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `CCXTExchange` adapter connects Forven to 100+ cryptocurrency exchanges supported by the [CCXT library](https://github.com/ccxt/ccxt). This enables:
+The `CCXTExchange` adapter connects Axiom to 100+ cryptocurrency exchanges supported by the [CCXT library](https://github.com/ccxt/ccxt). This enables:
 
 - **Multi-exchange support**: Binance, Kraken, Coinbase, Kucoin, Bybit, OKX, Huobi, Gate.io, and 95+ others
 - **Seamless swapping**: Change exchanges without modifying code
@@ -19,8 +19,8 @@ pip install ccxt
 ### Using Binance Spot Trading
 
 ```python
-from forven.exchange.ccxt_adapter import CCXTExchange
-from forven.exchange.sync_wrapper import SyncExchange
+from axiom.exchange.ccxt_adapter import CCXTExchange
+from axiom.exchange.sync_wrapper import SyncExchange
 
 # Create exchange instance
 exchange = CCXTExchange(
@@ -76,12 +76,12 @@ kucoin = CCXTExchange(
 
 ## Runtime Exchange Swapping
 
-The `forven.exchange.hyperliquid` module provides a singleton pattern for swapping exchanges at runtime:
+The `axiom.exchange.hyperliquid` module provides a singleton pattern for swapping exchanges at runtime:
 
 ```python
-from forven.exchange.hyperliquid import get_exchange, set_exchange
-from forven.exchange.ccxt_adapter import CCXTExchange
-from forven.exchange.mock import MockExchange
+from axiom.exchange.hyperliquid import get_exchange, set_exchange
+from axiom.exchange.ccxt_adapter import CCXTExchange
+from axiom.exchange.mock import MockExchange
 
 # Swap to Binance for live trading
 binance = CCXTExchange(
@@ -125,7 +125,7 @@ For a complete list, see [CCXT Supported Exchanges](https://docs.ccxt.com/manual
 
 ```python
 import os
-from forven.exchange.ccxt_adapter import CCXTExchange
+from axiom.exchange.ccxt_adapter import CCXTExchange
 
 exchange = CCXTExchange(
     exchange_id=os.getenv('EXCHANGE_ID', 'binance'),
@@ -143,7 +143,7 @@ EXCHANGE_API_SECRET=your_secret_here
 
 ### Pattern 2: Settings-Based Configuration
 
-In `forven/config.py`:
+In `axiom/config.py`:
 ```python
 from pydantic import BaseSettings
 
@@ -161,8 +161,8 @@ settings = Settings()
 
 Then in exchange setup:
 ```python
-from forven.config import settings
-from forven.exchange.ccxt_adapter import CCXTExchange
+from axiom.config import settings
+from axiom.exchange.ccxt_adapter import CCXTExchange
 
 exchange = CCXTExchange(
     exchange_id=settings.exchange_id,
@@ -177,8 +177,8 @@ exchange = CCXTExchange(
 In a settings endpoint:
 ```python
 from fastapi import APIRouter, Depends
-from forven.exchange.ccxt_adapter import CCXTExchange
-from forven.exchange.hyperliquid import set_exchange
+from axiom.exchange.ccxt_adapter import CCXTExchange
+from axiom.exchange.hyperliquid import set_exchange
 
 router = APIRouter()
 
@@ -209,7 +209,7 @@ async def configure_exchange(
 Not all exchanges support all features. Here's how to handle gracefully:
 
 ```python
-from forven.exchange.ccxt_adapter import CCXTExchange
+from axiom.exchange.ccxt_adapter import CCXTExchange
 
 exchange = CCXTExchange(exchange_id='kraken', api_key='...', api_secret='...')
 
@@ -236,8 +236,8 @@ profits = await exchange.place_take_profit(...)
 For realistic testing, combine MockExchange with live CCXT price feeds:
 
 ```python
-from forven.exchange.mock import MockExchange
-from forven.exchange.ccxt_adapter import CCXTExchange
+from axiom.exchange.mock import MockExchange
+from axiom.exchange.ccxt_adapter import CCXTExchange
 
 # Create a mock exchange for order execution
 mock = MockExchange()
@@ -250,7 +250,7 @@ mids = await ccxt_exchange.get_all_mids()
 mock.set_mids(mids)
 
 # Now backtest with live prices and mock execution
-from forven.exchange.hyperliquid import set_exchange
+from axiom.exchange.hyperliquid import set_exchange
 set_exchange(mock)
 ```
 
@@ -354,7 +354,7 @@ if result.success:
 The CCXT adapter wraps errors gracefully:
 
 ```python
-from forven.exchange.ccxt_adapter import CCXTExchange
+from axiom.exchange.ccxt_adapter import CCXTExchange
 
 exchange = CCXTExchange(
     exchange_id='binance',
@@ -423,13 +423,13 @@ Exchange kraken does not support fetchPositions
 ```
 **Fix**: Check `exchange.ccxt_exchange.has['featureName']` before calling. Some exchanges don't support spot positions fetching.
 
-## Integration with Forven
+## Integration with Axiom
 
 ### In Backtesters
 
 ```python
-from forven.exchange.ccxt_adapter import CCXTExchange
-from forven.exchange.hyperliquid import set_exchange
+from axiom.exchange.ccxt_adapter import CCXTExchange
+from axiom.exchange.hyperliquid import set_exchange
 
 # Configure for testing
 exchange = CCXTExchange(
@@ -446,8 +446,8 @@ set_exchange(exchange)
 ### In Strategy Execution
 
 ```python
-# In forven/scanner.py or forven/daemon.py
-from forven.exchange.sync_wrapper import get_sync_exchange
+# In axiom/scanner.py or axiom/daemon.py
+from axiom.exchange.sync_wrapper import get_sync_exchange
 
 def execute_strategy():
     exchange = get_sync_exchange()  # Gets current exchange (Hyperliquid, Binance, etc)
@@ -460,7 +460,7 @@ def execute_strategy():
 ## Migration Roadmap
 
 1. **Phase 1** (Done): Create CCXTExchange adapter and connect to ExchangeInterface ✅
-2. **Phase 2**: Add CCXT to Forven's exchange configuration UI
+2. **Phase 2**: Add CCXT to Axiom's exchange configuration UI
 3. **Phase 3**: Support exchange-specific features (margin lending, copy trading, etc)
 4. **Phase 4**: Add WebSocket support for low-latency price feeds
 

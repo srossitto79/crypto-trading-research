@@ -229,7 +229,7 @@ function ensurePolling() {
 				scheduleWsPoll();
 			}
 		};
-		window.addEventListener('forven:event', wsEventHandler);
+		window.addEventListener('axiom:event', wsEventHandler);
 	}
 }
 
@@ -248,7 +248,7 @@ function stopPolling() {
 		wsPollTimer = null;
 	}
 	if (typeof window !== 'undefined' && wsEventHandler) {
-		window.removeEventListener('forven:event', wsEventHandler);
+		window.removeEventListener('axiom:event', wsEventHandler);
 		wsEventHandler = null;
 	}
 }

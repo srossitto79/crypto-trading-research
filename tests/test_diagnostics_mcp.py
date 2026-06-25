@@ -1,10 +1,10 @@
-"""Phase 4 / P4-T08 — diagnostics snapshot includes mcp_servers section."""
+﻿"""Phase 4 / P4-T08 — diagnostics snapshot includes mcp_servers section."""
 
 from __future__ import annotations
 
 
-from forven.db import get_db, init_db
-from forven.diagnostics import snapshot
+from axiom.db import get_db, init_db
+from axiom.diagnostics import snapshot
 
 
 def test_snapshot_has_mcp_servers_key() -> None:

@@ -1,9 +1,9 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 
-def test_assign_research_cycle_delegates_to_crucible_planner(monkeypatch, forven_db):
-    from forven import brain
-    import forven.crucible_planner as crucible_planner_mod
+def test_assign_research_cycle_delegates_to_crucible_planner(monkeypatch, AXIOM_db):
+    from axiom import brain
+    import axiom.crucible_planner as crucible_planner_mod
 
     calls: list[int] = []
 

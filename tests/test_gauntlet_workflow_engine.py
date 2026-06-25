@@ -1,9 +1,9 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from forven.db import create_strategy_container, get_db
-from forven.gauntlet.engine import (
+from axiom.db import create_strategy_container, get_db
+from axiom.gauntlet.engine import (
     block_step,
     cancel_workflow,
     claim_next_step,
@@ -16,8 +16,8 @@ from forven.gauntlet.engine import (
     retry_step,
     tick_active_gauntlet_workflows,
 )
-from forven.gauntlet.settings import build_settings_snapshot
-from forven.gauntlet.store import create_or_get_workflow, get_workflow_detail, update_step_status
+from axiom.gauntlet.settings import build_settings_snapshot
+from axiom.gauntlet.store import create_or_get_workflow, get_workflow_detail, update_step_status
 
 
 def _strategy() -> str:
@@ -34,7 +34,7 @@ def _strategy() -> str:
     return strategy_id
 
 
-def test_claim_next_step_respects_dependencies(forven_db):
+def test_claim_next_step_respects_dependencies(AXIOM_db):
     workflow = create_or_get_workflow(
         strategy_id=_strategy(),
         created_by="pytest",
@@ -52,7 +52,7 @@ def test_claim_next_step_respects_dependencies(forven_db):
     assert second_after_complete["attempt_count"] == 1
 
 
-def test_retry_step_requeues_retryable_block_without_failing_workflow(forven_db):
+def test_retry_step_requeues_retryable_block_without_failing_workflow(AXIOM_db):
     workflow = create_or_get_workflow(
         strategy_id=_strategy(),
         created_by="pytest",
@@ -69,7 +69,7 @@ def test_retry_step_requeues_retryable_block_without_failing_workflow(forven_db)
     assert detail["workflow"]["status"] in {"pending", "running"}
 
 
-def test_cancel_workflow_cancels_open_steps(forven_db):
+def test_cancel_workflow_cancels_open_steps(AXIOM_db):
     workflow = create_or_get_workflow(
         strategy_id=_strategy(),
         created_by="pytest",
@@ -84,7 +84,7 @@ def test_cancel_workflow_cancels_open_steps(forven_db):
     assert all(step["status"] == "cancelled" for step in detail["steps"] if step["status"] != "passed")
 
 
-def test_recover_stale_running_steps_marks_retryable_runtime_block(forven_db):
+def test_recover_stale_running_steps_marks_retryable_runtime_block(AXIOM_db):
     workflow = create_or_get_workflow(
         strategy_id=_strategy(),
         created_by="pytest",
@@ -106,7 +106,7 @@ def test_recover_stale_running_steps_marks_retryable_runtime_block(forven_db):
     assert "restart" in detail["steps"][0]["error_json"].lower()
 
 
-def test_resume_workflow_preserves_running_async_step(forven_db):
+def test_resume_workflow_preserves_running_async_step(AXIOM_db):
     workflow = create_or_get_workflow(
         strategy_id=_strategy(),
         created_by="pytest",
@@ -132,7 +132,7 @@ def test_resume_workflow_preserves_running_async_step(forven_db):
 # forever. The tick function below is what the scheduler now runs every 2 min.
 
 
-def test_list_active_workflow_ids_returns_only_non_terminal(forven_db):
+def test_list_active_workflow_ids_returns_only_non_terminal(AXIOM_db):
     active = create_or_get_workflow(
         strategy_id=_strategy(),
         created_by="pytest",
@@ -151,7 +151,7 @@ def test_list_active_workflow_ids_returns_only_non_terminal(forven_db):
     assert cancelled["id"] not in ids
 
 
-def test_tick_advances_pending_workflow_one_step(forven_db):
+def test_tick_advances_pending_workflow_one_step(AXIOM_db):
     workflow = create_or_get_workflow(
         strategy_id=_strategy(),
         created_by="pytest",
@@ -170,7 +170,7 @@ def test_tick_advances_pending_workflow_one_step(forven_db):
     assert detail["steps"][0]["status"] == "passed"
 
 
-def test_tick_skips_terminal_workflows(forven_db):
+def test_tick_skips_terminal_workflows(AXIOM_db):
     sid = _strategy()
     cancelled = create_or_get_workflow(
         strategy_id=sid,
@@ -198,7 +198,7 @@ def test_tick_skips_terminal_workflows(forven_db):
     assert calls == []
 
 
-def test_tick_isolates_per_workflow_failures(forven_db):
+def test_tick_isolates_per_workflow_failures(AXIOM_db):
     good = create_or_get_workflow(
         strategy_id=_strategy(),
         created_by="pytest",
@@ -254,7 +254,7 @@ def _step_row(step_id: str) -> dict:
     return dict(row)
 
 
-def test_gate_contention_block_is_never_drained_and_requeues_with_reset_attempts(forven_db):
+def test_gate_contention_block_is_never_drained_and_requeues_with_reset_attempts(AXIOM_db):
     workflow = create_or_get_workflow(
         strategy_id=_strategy(),
         created_by="pytest",
@@ -280,7 +280,7 @@ def test_gate_contention_block_is_never_drained_and_requeues_with_reset_attempts
     assert detail["workflow"]["status"] != "failed_gate"
 
 
-def test_gate_contention_reason_code_nested_in_transition_payload_is_recognised(forven_db):
+def test_gate_contention_reason_code_nested_in_transition_payload_is_recognised(AXIOM_db):
     workflow = create_or_get_workflow(
         strategy_id=_strategy(),
         created_by="pytest",
@@ -299,7 +299,7 @@ def test_gate_contention_reason_code_nested_in_transition_payload_is_recognised(
     assert _step_row(step["id"])["status"] == "queued"
 
 
-def test_transient_block_at_legacy_max_attempts_is_retried_not_drained(forven_db):
+def test_transient_block_at_legacy_max_attempts_is_retried_not_drained(AXIOM_db):
     workflow = create_or_get_workflow(
         strategy_id=_strategy(),
         created_by="pytest",
@@ -320,7 +320,7 @@ def test_transient_block_at_legacy_max_attempts_is_retried_not_drained(forven_db
     assert row["attempt_count"] == 3  # ordinary transients keep burning attempts
 
 
-def test_transient_block_drains_terminal_only_at_transient_attempt_cap(forven_db):
+def test_transient_block_drains_terminal_only_at_transient_attempt_cap(AXIOM_db):
     workflow = create_or_get_workflow(
         strategy_id=_strategy(),
         created_by="pytest",
@@ -343,7 +343,7 @@ def test_transient_block_drains_terminal_only_at_transient_attempt_cap(forven_db
     assert detail["workflow"]["status"] == "failed_gate"
 
 
-def test_requeue_backoff_defers_recently_blocked_step(forven_db):
+def test_requeue_backoff_defers_recently_blocked_step(AXIOM_db):
     workflow = create_or_get_workflow(
         strategy_id=_strategy(),
         created_by="pytest",
@@ -379,7 +379,7 @@ def test_requeue_backoff_defers_recently_blocked_step(forven_db):
 # polls a persisted result) or its started_at heartbeat is stale.
 
 
-def test_resume_workflow_does_not_redispatch_fresh_running_step(forven_db):
+def test_resume_workflow_does_not_redispatch_fresh_running_step(AXIOM_db):
     workflow = create_or_get_workflow(
         strategy_id=_strategy(),
         created_by="pytest",
@@ -401,7 +401,7 @@ def test_resume_workflow_does_not_redispatch_fresh_running_step(forven_db):
     assert _step_row(claimed["id"])["status"] == "running"
 
 
-def test_resume_workflow_redispatches_stale_running_step(forven_db):
+def test_resume_workflow_redispatches_stale_running_step(AXIOM_db):
     workflow = create_or_get_workflow(
         strategy_id=_strategy(),
         created_by="pytest",
@@ -423,7 +423,7 @@ def test_resume_workflow_redispatches_stale_running_step(forven_db):
     assert _step_row(claimed["id"])["status"] == "passed"
 
 
-def test_resume_workflow_still_polls_fresh_running_step_with_poll_handle(forven_db):
+def test_resume_workflow_still_polls_fresh_running_step_with_poll_handle(AXIOM_db):
     """The optimization poll cadence must survive the in-flight guard: a
     running step WITH a persisted result_id is safe to re-dispatch (the runner
     only polls), and skipping it until staleness would freeze polling."""
@@ -453,7 +453,7 @@ def test_resume_workflow_still_polls_fresh_running_step_with_poll_handle(forven_
     assert _step_row(step_id)["status"] == "passed"
 
 
-def test_overlapping_drivers_cannot_double_execute_a_step(forven_db):
+def test_overlapping_drivers_cannot_double_execute_a_step(AXIOM_db):
     """Regression for the double-drive: a second driver (overlapping tick or
     HTTP resume) arriving while the step is mid-execution must skip instead of
     re-running it."""
@@ -483,7 +483,7 @@ def test_overlapping_drivers_cannot_double_execute_a_step(forven_db):
     assert overlapping[0]["last_outcome"]["status"] == "in_flight"
 
 
-def test_running_step_heartbeat_prevents_stale_recovery(forven_db):
+def test_running_step_heartbeat_prevents_stale_recovery(AXIOM_db):
     workflow = create_or_get_workflow(
         strategy_id=_strategy(),
         created_by="pytest",
@@ -506,7 +506,7 @@ def test_running_step_heartbeat_prevents_stale_recovery(forven_db):
     assert row["started_at"] > stale_started
 
 
-def test_block_step_serializes_numpy_payload(forven_db):
+def test_block_step_serializes_numpy_payload(AXIOM_db):
     """Robustness responses carry numpy scalars; the outcome write must not crash.
 
     Regression: a np.bool_ inside a walk-forward payload made block_step raise
@@ -545,7 +545,7 @@ def test_block_step_serializes_numpy_payload(forven_db):
     assert parsed["trades"] == 12
 
 
-def test_complete_step_serializes_numpy_output(forven_db):
+def test_complete_step_serializes_numpy_output(AXIOM_db):
     import json as _json
 
     import numpy as np
@@ -564,7 +564,7 @@ def test_complete_step_serializes_numpy_output(forven_db):
     assert _json.loads(row["output_json"])["annualized_return_reliable"] is False
 
 
-def test_resume_workflow_records_outcome_even_when_payload_write_fails(forven_db):
+def test_resume_workflow_records_outcome_even_when_payload_write_fails(AXIOM_db):
     """A failed outcome write must downgrade to a minimal record, never leave 'running'."""
     workflow = create_or_get_workflow(
         strategy_id=_strategy(),

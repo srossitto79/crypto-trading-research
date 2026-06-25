@@ -1,7 +1,7 @@
-"""Regression tests for the drop-zone intake timeframe fix.
+﻿"""Regression tests for the drop-zone intake timeframe fix.
 
 Intake previously hard-coded every registered strategy's stored timeframe to
-"1h" (forven/strategies/intake.py), and the gauntlet gates -- including the
+"1h" (Axiom/strategies/intake.py), and the gauntlet gates -- including the
 INITIAL quick_screen, which runs before timeframe_sweep -- evaluate on that
 stored timeframe. So a 4h-designed edge was gated on 1h, and a 4h-only edge
 died at the 1h quick_screen before the sweep could rescue it.
@@ -11,8 +11,8 @@ validated against the data layer's supported intervals, falling back to "1h".
 """
 from __future__ import annotations
 
-from forven.strategies.intake import _intended_timeframe
-from forven.strategies.params import _COMMON_ALLOWED_PARAMS
+from axiom.strategies.intake import _intended_timeframe
+from axiom.strategies.params import _COMMON_ALLOWED_PARAMS
 
 
 def test_declared_supported_timeframe_is_stored():

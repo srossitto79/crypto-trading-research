@@ -1,5 +1,5 @@
 <!--
-Heads up: Forven is NOT yet accepting external code contributions — a contributor
+Heads up: Axiom is NOT yet accepting external code contributions — a contributor
 agreement (CLA) isn't in place, so outside pull requests can't be merged for now.
 See CONTRIBUTING.md. Issues, ideas, and discussion are very welcome.
 
@@ -17,7 +17,7 @@ Closes #
 ## Testing
 
 - [ ] `python -m pytest tests -q` (or the relevant subset) passes
-- [ ] `python -m ruff check forven tests` is clean
+- [ ] `python -m ruff check axiom tests` is clean
 - [ ] `cd frontend && npm run check` passes (if frontend touched)
 
 ## Checklist

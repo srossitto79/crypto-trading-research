@@ -143,9 +143,16 @@
 </script>
 
 <aside class="relative z-40 w-60 flex-shrink-0 border-r border-[#222] bg-black flex flex-col">
-	<div class="px-3 py-4 border-b border-[#222] flex items-center justify-center gap-2">
-		<div class="w-2 h-2 bg-orange-500 shrink-0" title="forven"></div>
-		<div class="text-sm font-mono lowercase tracking-wide text-orange-500">forven</div>
+	<div class="px-3 py-4 border-b border-[#222] flex items-center justify-center gap-3">
+		<img
+			src="/axiom-avatar.png"
+			alt="Axiom"
+			class="w-7 h-7 rounded-md shrink-0 ring-1 ring-orange-500/30"
+			title="Axiom — Algorithmic Trading Ops"
+		/>
+		<div class="text-base font-bold tracking-tight text-white">
+			<span class="text-orange-500">A</span>xiom
+		</div>
 	</div>
 
 	<nav aria-label="Primary navigation" class="flex-1 overflow-y-auto px-2 py-4 flex flex-col gap-4">
@@ -222,7 +229,7 @@
 			target="_blank"
 			rel="noopener noreferrer"
 			class="text-[10px] text-gray-600 hover:text-gray-400 transition-colors"
-			title="Forven source code (AGPL-3.0)"
+			title="Axiom source code (AGPL-3.0)"
 		>Source · AGPL-3.0</a>
 	</div>
 

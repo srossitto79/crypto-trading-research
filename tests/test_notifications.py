@@ -1,5 +1,5 @@
-from forven.db import get_db, init_db
-from forven.notifications import (
+﻿from axiom.db import get_db, init_db
+from axiom.notifications import (
     acknowledge_notification,
     acknowledge_notifications,
     create_notification_repair_task,
@@ -19,7 +19,7 @@ from forven.notifications import (
 def test_agent_completion_stores_without_discord(monkeypatch):
     init_db()
     sent = []
-    monkeypatch.setattr("forven.bot.send_sync", lambda *args, **kwargs: sent.append((args, kwargs)) or True)
+    monkeypatch.setattr("axiom.bot.send_sync", lambda *args, **kwargs: sent.append((args, kwargs)) or True)
 
     item = emit_notification(
         "agent_task_completed",
@@ -41,7 +41,7 @@ def test_trade_alert_delivers_and_records_delivery(monkeypatch):
         sent.append((channel_name, message, channel_id))
         return True
 
-    monkeypatch.setattr("forven.bot.send_sync", fake_send)
+    monkeypatch.setattr("axiom.bot.send_sync", fake_send)
 
     item = emit_notification(
         "trade_opened",
@@ -67,7 +67,7 @@ def test_trade_alert_delivers_and_records_delivery(monkeypatch):
 def test_duplicate_system_alert_is_suppressed(monkeypatch):
     init_db()
     sent = []
-    monkeypatch.setattr("forven.bot.send_sync", lambda *args, **kwargs: sent.append((args, kwargs)) or True)
+    monkeypatch.setattr("axiom.bot.send_sync", lambda *args, **kwargs: sent.append((args, kwargs)) or True)
 
     first = emit_notification(
         "system_degraded",
@@ -94,7 +94,7 @@ def test_critical_not_deduped_against_lower_severity_with_same_key(monkeypatch):
     CRITICAL — cross-severity collisions silently muted health_critical."""
     init_db()
     sent = []
-    monkeypatch.setattr("forven.bot.send_sync", lambda *args, **kwargs: sent.append((args, kwargs)) or True)
+    monkeypatch.setattr("axiom.bot.send_sync", lambda *args, **kwargs: sent.append((args, kwargs)) or True)
 
     warning = emit_notification(
         "health_warning",
@@ -122,7 +122,7 @@ def test_critical_duplicate_still_suppressed(monkeypatch):
     """Regression guard: critical-vs-critical dedupe still works."""
     init_db()
     sent = []
-    monkeypatch.setattr("forven.bot.send_sync", lambda *args, **kwargs: sent.append((args, kwargs)) or True)
+    monkeypatch.setattr("axiom.bot.send_sync", lambda *args, **kwargs: sent.append((args, kwargs)) or True)
 
     first = emit_notification(
         "health_critical",
@@ -150,7 +150,7 @@ def test_failed_delivery_does_not_block_reemission(monkeypatch):
     """B-33: a 'failed' row must not count as a duplicate — otherwise one
     Discord outage mutes the alert for the whole cooldown window."""
     init_db()
-    monkeypatch.setattr("forven.bot.send_sync", lambda *args, **kwargs: False)
+    monkeypatch.setattr("axiom.bot.send_sync", lambda *args, **kwargs: False)
     first = emit_notification(
         "system_degraded",
         source="daemon",
@@ -161,7 +161,7 @@ def test_failed_delivery_does_not_block_reemission(monkeypatch):
     assert first["status"] == "failed"
 
     sent = []
-    monkeypatch.setattr("forven.bot.send_sync", lambda *args, **kwargs: sent.append((args, kwargs)) or True)
+    monkeypatch.setattr("axiom.bot.send_sync", lambda *args, **kwargs: sent.append((args, kwargs)) or True)
     second = emit_notification(
         "system_degraded",
         source="daemon",
@@ -181,7 +181,7 @@ def test_digest_uses_thread_delivery(monkeypatch):
         delivered.append((channel_name, title, message, channel_id))
         return True
 
-    monkeypatch.setattr("forven.bot.send_thread_sync", fake_thread)
+    monkeypatch.setattr("axiom.bot.send_thread_sync", fake_thread)
 
     item = emit_notification(
         "digest_daily",
@@ -207,8 +207,8 @@ def test_digest_thread_fallback_records_attempts_and_final_delivery(monkeypatch)
         immediate_deliveries.append((channel_name, message, channel_id))
         return True
 
-    monkeypatch.setattr("forven.bot.send_thread_sync", fake_thread)
-    monkeypatch.setattr("forven.bot.send_sync", fake_send)
+    monkeypatch.setattr("axiom.bot.send_thread_sync", fake_thread)
+    monkeypatch.setattr("axiom.bot.send_sync", fake_send)
 
     item = emit_notification(
         "digest_daily",
@@ -235,8 +235,8 @@ def test_digest_thread_fallback_records_attempts_and_final_delivery(monkeypatch)
 def test_digest_thread_delivery_marks_failed_when_all_attempts_fail(monkeypatch):
     init_db()
 
-    monkeypatch.setattr("forven.bot.send_thread_sync", lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("thread create failed")))
-    monkeypatch.setattr("forven.bot.send_sync", lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("fallback send failed")))
+    monkeypatch.setattr("axiom.bot.send_thread_sync", lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("thread create failed")))
+    monkeypatch.setattr("axiom.bot.send_sync", lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("fallback send failed")))
 
     item = emit_notification(
         "digest_daily",
@@ -256,7 +256,7 @@ def test_digest_thread_delivery_marks_failed_when_all_attempts_fail(monkeypatch)
 
 def test_preferences_and_acknowledge_flow(monkeypatch):
     init_db()
-    monkeypatch.setattr("forven.bot.send_sync", lambda *args, **kwargs: True)
+    monkeypatch.setattr("axiom.bot.send_sync", lambda *args, **kwargs: True)
 
     prefs = get_notification_preferences()
     assert prefs["agent_completion_to_discord"] is False
@@ -283,7 +283,7 @@ def test_preferences_and_acknowledge_flow(monkeypatch):
 
 def test_bulk_acknowledge_flow(monkeypatch):
     init_db()
-    monkeypatch.setattr("forven.bot.send_sync", lambda *args, **kwargs: True)
+    monkeypatch.setattr("axiom.bot.send_sync", lambda *args, **kwargs: True)
 
     first = emit_notification(
         "agent_task_completed",
@@ -305,7 +305,7 @@ def test_bulk_acknowledge_flow(monkeypatch):
 
 def test_list_notifications_supports_event_type_before_id_and_group_key(monkeypatch):
     init_db()
-    monkeypatch.setattr("forven.bot.send_sync", lambda *args, **kwargs: True)
+    monkeypatch.setattr("axiom.bot.send_sync", lambda *args, **kwargs: True)
 
     first = emit_notification(
         "trade_opened",
@@ -343,7 +343,7 @@ def test_list_notifications_supports_event_type_before_id_and_group_key(monkeypa
 
 def test_list_notifications_grouped_returns_issue_centric_counts_and_latest_item(monkeypatch):
     init_db()
-    monkeypatch.setattr("forven.bot.send_sync", lambda *args, **kwargs: True)
+    monkeypatch.setattr("axiom.bot.send_sync", lambda *args, **kwargs: True)
 
     older_trade = emit_notification(
         "system_degraded",
@@ -388,7 +388,7 @@ def test_list_notifications_grouped_returns_issue_centric_counts_and_latest_item
 
 def test_list_notifications_grouped_page_returns_cursor_metadata(monkeypatch):
     init_db()
-    monkeypatch.setattr("forven.bot.send_sync", lambda *args, **kwargs: True)
+    monkeypatch.setattr("axiom.bot.send_sync", lambda *args, **kwargs: True)
 
     warn_group = emit_notification(
         "system_degraded",
@@ -442,7 +442,7 @@ def test_delivery_history_and_resend_flow(monkeypatch):
         sent.append((channel_name, message, channel_id))
         return True
 
-    monkeypatch.setattr("forven.bot.send_sync", fake_send)
+    monkeypatch.setattr("axiom.bot.send_sync", fake_send)
 
     original = emit_notification(
         "system_degraded",
@@ -471,7 +471,7 @@ def test_send_test_notification_records_delivery(monkeypatch):
         sent.append((channel_name, message, channel_id))
         return True
 
-    monkeypatch.setattr("forven.bot.send_sync", fake_send)
+    monkeypatch.setattr("axiom.bot.send_sync", fake_send)
 
     item = send_test_notification()
     assert item["event_type"] == "system_degraded"
@@ -482,7 +482,7 @@ def test_send_test_notification_records_delivery(monkeypatch):
 
 def test_create_notification_repair_task_creates_and_dedupes(monkeypatch):
     init_db()
-    monkeypatch.setattr("forven.bot.send_sync", lambda *args, **kwargs: True)
+    monkeypatch.setattr("axiom.bot.send_sync", lambda *args, **kwargs: True)
     with get_db() as conn:
         conn.execute(
             """
@@ -514,13 +514,13 @@ def test_create_notification_repair_task_creates_and_dedupes(monkeypatch):
 
 def test_non_actionable_notification_cannot_create_repair_task(monkeypatch):
     init_db()
-    monkeypatch.setattr("forven.bot.send_sync", lambda *args, **kwargs: True)
+    monkeypatch.setattr("axiom.bot.send_sync", lambda *args, **kwargs: True)
 
     item = emit_notification(
         "daemon_online",
         source="daemon",
         severity="info",
-        title="Forven daemon online",
+        title="axiom daemon online",
         summary="Daemon startup complete.",
     )
 

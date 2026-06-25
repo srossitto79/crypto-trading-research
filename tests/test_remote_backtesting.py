@@ -1,4 +1,4 @@
-"""Tests for remote backtesting integration and monthly return fixes."""
+﻿"""Tests for remote backtesting integration and monthly return fixes."""
 
 from __future__ import annotations
 
@@ -12,53 +12,53 @@ import pytest
 # 1. Remote URL resolution
 # ---------------------------------------------------------------------------
 
-def test_remote_resolution_returns_none_when_unconfigured(forven_db):
+def test_remote_resolution_returns_none_when_unconfigured(AXIOM_db):
     """No env var + no settings → None."""
-    from forven.api_core import _resolve_backtest_results_remote_api
+    from axiom.api_core import _resolve_backtest_results_remote_api
 
     empty_settings = {"remote_engine_enabled": False, "remote_engine_url": ""}
     with patch.dict(os.environ, {}, clear=False):
-        os.environ.pop("FORVEN_BACKTEST_RESULTS_REMOTE_API", None)
-        with patch("forven.api_core._load_settings_payload", return_value=empty_settings):
+        os.environ.pop("AXIOM_BACKTEST_RESULTS_REMOTE_API", None)
+        with patch("axiom.api_core._load_settings_payload", return_value=empty_settings):
             result = _resolve_backtest_results_remote_api()
     assert result is None
 
 
-def test_remote_resolution_reads_env_var(forven_db):
+def test_remote_resolution_reads_env_var(AXIOM_db):
     """Env var set → returns normalized URL."""
-    from forven.api_core import _resolve_backtest_results_remote_api
+    from axiom.api_core import _resolve_backtest_results_remote_api
 
-    with patch.dict(os.environ, {"FORVEN_BACKTEST_RESULTS_REMOTE_API": "10.0.0.5:9050"}):
+    with patch.dict(os.environ, {"AXIOM_BACKTEST_RESULTS_REMOTE_API": "10.0.0.5:9050"}):
         result = _resolve_backtest_results_remote_api()
     assert result == "http://10.0.0.5:9050/api"
 
 
-def test_remote_resolution_falls_back_to_settings(forven_db):
+def test_remote_resolution_falls_back_to_settings(AXIOM_db):
     """No env var + settings configured → returns settings URL."""
-    from forven.api_core import _resolve_backtest_results_remote_api
+    from axiom.api_core import _resolve_backtest_results_remote_api
 
     settings = {
         "remote_engine_enabled": True,
         "remote_engine_url": "http://192.168.1.100:9050",
     }
     with patch.dict(os.environ, {}, clear=False):
-        os.environ.pop("FORVEN_BACKTEST_RESULTS_REMOTE_API", None)
-        with patch("forven.api_core._load_settings_payload", return_value=settings):
+        os.environ.pop("AXIOM_BACKTEST_RESULTS_REMOTE_API", None)
+        with patch("axiom.api_core._load_settings_payload", return_value=settings):
             result = _resolve_backtest_results_remote_api()
     assert result == "http://192.168.1.100:9050/api"
 
 
-def test_remote_resolution_ignores_disabled_settings(forven_db):
+def test_remote_resolution_ignores_disabled_settings(AXIOM_db):
     """No env var + settings present but disabled → None."""
-    from forven.api_core import _resolve_backtest_results_remote_api
+    from axiom.api_core import _resolve_backtest_results_remote_api
 
     settings = {
         "remote_engine_enabled": False,
         "remote_engine_url": "http://192.168.1.100:9050",
     }
     with patch.dict(os.environ, {}, clear=False):
-        os.environ.pop("FORVEN_BACKTEST_RESULTS_REMOTE_API", None)
-        with patch("forven.api_core._load_settings_payload", return_value=settings):
+        os.environ.pop("AXIOM_BACKTEST_RESULTS_REMOTE_API", None)
+        with patch("axiom.api_core._load_settings_payload", return_value=settings):
             result = _resolve_backtest_results_remote_api()
     assert result is None
 
@@ -67,24 +67,24 @@ def test_remote_resolution_ignores_disabled_settings(forven_db):
 # 2. Remote-only behavior
 # ---------------------------------------------------------------------------
 
-def test_remote_unreachable_raises_503(forven_db):
+def test_remote_unreachable_raises_503(AXIOM_db):
     """Remote configured + unreachable → HTTPException(503)."""
     from fastapi import HTTPException
-    from forven.api_core import get_backtest_results
+    from axiom.api_core import get_backtest_results
 
-    with patch("forven.api_core._is_remote_configured", return_value=True), \
-         patch("forven.api_core._resolve_backtest_results_remote_api", return_value="http://dead-host:9050/api"), \
-         patch("forven.api_core._fetch_remote_backtest_summaries", return_value=[]), \
-         patch("forven.api_core._is_remote_backtest_results_available", return_value=False):
+    with patch("axiom.api_core._is_remote_configured", return_value=True), \
+         patch("axiom.api_core._resolve_backtest_results_remote_api", return_value="http://dead-host:9050/api"), \
+         patch("axiom.api_core._fetch_remote_backtest_summaries", return_value=[]), \
+         patch("axiom.api_core._is_remote_backtest_results_available", return_value=False):
         with pytest.raises(HTTPException) as exc_info:
             get_backtest_results()
         assert exc_info.value.status_code == 503
         assert "unreachable" in str(exc_info.value.detail).lower()
 
 
-def test_local_only_when_unconfigured(forven_db):
+def test_local_only_when_unconfigured(AXIOM_db):
     """No remote → returns local Chroma data."""
-    from forven.api_core import get_backtest_results
+    from axiom.api_core import get_backtest_results
 
     fake_records = [
         {
@@ -102,9 +102,9 @@ def test_local_only_when_unconfigured(forven_db):
             },
         }
     ]
-    with patch("forven.api_core._is_remote_configured", return_value=False), \
-         patch("forven.api_core._chroma_backtest_records", return_value=fake_records), \
-         patch("forven.api_core.get_db") as mock_db:
+    with patch("axiom.api_core._is_remote_configured", return_value=False), \
+         patch("axiom.api_core._chroma_backtest_records", return_value=fake_records), \
+         patch("axiom.api_core.get_db") as mock_db:
         mock_conn = MagicMock()
         mock_conn.execute.return_value.fetchall.return_value = []
         mock_db.return_value.__enter__ = MagicMock(return_value=mock_conn)
@@ -114,15 +114,15 @@ def test_local_only_when_unconfigured(forven_db):
     assert results[0]["id"] == "test-123"
 
 
-def test_remote_detail_unreachable_raises_503(forven_db):
+def test_remote_detail_unreachable_raises_503(AXIOM_db):
     """Remote configured + unreachable on detail → HTTPException(503)."""
     from fastapi import HTTPException
-    from forven.api_core import get_backtest_result
+    from axiom.api_core import get_backtest_result
 
-    with patch("forven.api_core._is_remote_configured", return_value=True), \
-         patch("forven.api_core._resolve_backtest_results_remote_api", return_value="http://dead-host:9050/api"), \
-         patch("forven.api_core._fetch_remote_backtest_detail", return_value=None), \
-         patch("forven.api_core._is_remote_backtest_results_available", return_value=False):
+    with patch("axiom.api_core._is_remote_configured", return_value=True), \
+         patch("axiom.api_core._resolve_backtest_results_remote_api", return_value="http://dead-host:9050/api"), \
+         patch("axiom.api_core._fetch_remote_backtest_detail", return_value=None), \
+         patch("axiom.api_core._is_remote_backtest_results_available", return_value=False):
         with pytest.raises(HTTPException) as exc_info:
             get_backtest_result("some-id")
         assert exc_info.value.status_code == 503
@@ -132,9 +132,9 @@ def test_remote_detail_unreachable_raises_503(forven_db):
 # 3. Monthly return fixes
 # ---------------------------------------------------------------------------
 
-def test_monthly_return_derived_from_total(forven_db):
+def test_monthly_return_derived_from_total(AXIOM_db):
     """total_return=50%, monthly=None, duration ~6mo → correct geometric monthly."""
-    from forven.api_core import _normalize_backtest_summary
+    from axiom.api_core import _normalize_backtest_summary
 
     record = {
         "id": "test-derive",
@@ -167,9 +167,9 @@ def test_monthly_return_derived_from_total(forven_db):
     assert result["annualized_return_pct"] > 50.0  # annualized should be larger
 
 
-def test_monthly_return_sentinel_filtered(forven_db):
+def test_monthly_return_sentinel_filtered(AXIOM_db):
     """-999.0 in metadata → None in output (when no derivation possible)."""
-    from forven.api_core import _normalize_backtest_summary
+    from axiom.api_core import _normalize_backtest_summary
 
     record = {
         "id": "test-sentinel",
@@ -210,8 +210,8 @@ def test_vectordb_stores_sentinel_for_missing_monthly():
         "total_trades": 10,
     }
 
-    with patch("forven.vectordb._upsert") as mock_upsert:
-        from forven.vectordb import store_backtest_result
+    with patch("axiom.vectordb._upsert") as mock_upsert:
+        from axiom.vectordb import store_backtest_result
         store_backtest_result("strat-1", "BTC", "rsi", {"p": 14}, metrics, 75.0)
 
     mock_upsert.assert_called_once()
@@ -221,9 +221,9 @@ def test_vectordb_stores_sentinel_for_missing_monthly():
     assert stored_metadata["backtest_months"] == -999.0
 
 
-def test_coerce_backtest_summary_filters_sentinel(forven_db):
+def test_coerce_backtest_summary_filters_sentinel(AXIOM_db):
     """_coerce_backtest_summary_payload filters -999.0 sentinels."""
-    from forven.api_core import _coerce_backtest_summary_payload
+    from axiom.api_core import _coerce_backtest_summary_payload
 
     record = {
         "id": "remote-1",
@@ -248,9 +248,9 @@ def test_coerce_backtest_summary_filters_sentinel(forven_db):
     assert result["backtest_months"] is None
 
 
-def test_leaderboard_does_not_use_total_as_monthly(forven_db):
+def test_leaderboard_does_not_use_total_as_monthly(AXIOM_db):
     """Leaderboard monthly_return_pct defaults to 0.0, not total_return."""
-    from forven.api_domains.analytics import _dashboard_leaderboard_entries
+    from axiom.api_domains.analytics import _dashboard_leaderboard_entries
 
     fake_strategy = {
         "id": "strat-1",
@@ -261,7 +261,7 @@ def test_leaderboard_does_not_use_total_as_monthly(forven_db):
         "status": "active",
     }
 
-    with patch("forven.api_domains.analytics.get_strategies", return_value=[fake_strategy]):
+    with patch("axiom.api_domains.analytics.get_strategies", return_value=[fake_strategy]):
         entries = _dashboard_leaderboard_entries()
 
     assert len(entries) == 1
@@ -274,14 +274,14 @@ def test_leaderboard_does_not_use_total_as_monthly(forven_db):
 # 4. Backtesting status remote_error
 # ---------------------------------------------------------------------------
 
-def test_backtesting_status_reports_remote_error(forven_db):
+def test_backtesting_status_reports_remote_error(AXIOM_db):
     """Status endpoint reports remote_error when remote is configured but unreachable."""
-    from forven.api_core import get_backtesting_status
+    from axiom.api_core import get_backtesting_status
 
-    with patch("forven.api_core._resolve_backtest_results_remote_api", return_value="http://dead-host:9050/api"), \
-         patch("forven.api_core._is_remote_backtest_results_available", return_value=False), \
-         patch("forven.api_core.get_backtesting_runs", return_value={"runs": []}), \
-         patch("forven.api_core.get_backtesting_outcomes", return_value={}):
+    with patch("axiom.api_core._resolve_backtest_results_remote_api", return_value="http://dead-host:9050/api"), \
+         patch("axiom.api_core._is_remote_backtest_results_available", return_value=False), \
+         patch("axiom.api_core.get_backtesting_runs", return_value={"runs": []}), \
+         patch("axiom.api_core.get_backtesting_outcomes", return_value={}):
         result = get_backtesting_status(remote_skip=False)
     assert "remote_error" in result
     assert "unreachable" in result["remote_error"].lower()

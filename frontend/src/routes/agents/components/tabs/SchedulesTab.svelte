@@ -5,10 +5,10 @@
 	 * tab stays a thin presenter (and the duplicate editor that lived in
 	 * SettingsAgents is dropped).
 	 */
-	import type { ForvenSchedulerJob } from '$lib/api';
+	import type { AxiomSchedulerJob } from '$lib/api';
 	import SchedulerJobRow from '../SchedulerJobRow.svelte';
 
-	export let jobs: ForvenSchedulerJob[] = [];
+	export let jobs: AxiomSchedulerJob[] = [];
 	export let onSave: (
 		jobId: string | number,
 		scheduleType: string,

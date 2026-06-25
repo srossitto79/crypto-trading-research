@@ -1,4 +1,4 @@
-"""Tests for self-healing funding history and enrichment coverage.
+﻿"""Tests for self-healing funding history and enrichment coverage.
 
 The capability under test: a fresh install (or factory reset) must converge to
 full historical funding coverage automatically — gap detection + backfill at
@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 
-from forven import market_data_collector as mdc
+from axiom import market_data_collector as mdc
 
 
 def _ms(dt: datetime) -> int:
@@ -183,7 +183,7 @@ class TestReconcileFundingHistory:
 
 class TestEnrichmentCoverage:
     def test_coverage_pct_measures_non_nan_share(self):
-        from forven.strategies.backtest import _enrichment_coverage_pct
+        from axiom.strategies.backtest import _enrichment_coverage_pct
 
         idx = pd.date_range("2026-01-01", periods=10, freq="1h", tz="UTC")
         df = pd.DataFrame(
@@ -193,14 +193,14 @@ class TestEnrichmentCoverage:
         assert _enrichment_coverage_pct(df, "funding_rate") == 30.0
 
     def test_coverage_pct_missing_column_is_zero(self):
-        from forven.strategies.backtest import _enrichment_coverage_pct
+        from axiom.strategies.backtest import _enrichment_coverage_pct
 
         idx = pd.date_range("2026-01-01", periods=5, freq="1h", tz="UTC")
         df = pd.DataFrame({"close": 1.0}, index=idx)
         assert _enrichment_coverage_pct(df, "funding_rate") == 0.0
 
     def test_coverage_pct_empty_frame_is_zero(self):
-        from forven.strategies.backtest import _enrichment_coverage_pct
+        from axiom.strategies.backtest import _enrichment_coverage_pct
 
         assert _enrichment_coverage_pct(pd.DataFrame(), "funding_rate") == 0.0
         assert _enrichment_coverage_pct(None, "funding_rate") == 0.0

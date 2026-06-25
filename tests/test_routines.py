@@ -1,6 +1,6 @@
-"""Phase 5 / P5-T06 — Routine CRUD helpers.
+﻿"""Phase 5 / P5-T06 — Routine CRUD helpers.
 
-Covers ``forven.control_plane.routines`` validation, round-trip, and the
+Covers ``Axiom.control_plane.routines`` validation, round-trip, and the
 ``record_routine_run`` / ``preview_schedule`` helpers.
 """
 from __future__ import annotations
@@ -10,8 +10,8 @@ import re
 
 import pytest
 
-from forven.control_plane import routines as r
-from forven.db import init_db
+from axiom.control_plane import routines as r
+from axiom.db import init_db
 
 
 def _make(**overrides) -> int:
@@ -27,31 +27,31 @@ def _make(**overrides) -> int:
 
 # --- validation -----------------------------------------------------------
 
-def test_create_rejects_invalid_cron(forven_db) -> None:
+def test_create_rejects_invalid_cron(AXIOM_db) -> None:
     init_db()
     with pytest.raises(r.RoutineValidationError):
         _make(cron_expr="not a cron")
 
 
-def test_create_rejects_empty_cron(forven_db) -> None:
+def test_create_rejects_empty_cron(AXIOM_db) -> None:
     init_db()
     with pytest.raises(r.RoutineValidationError):
         _make(cron_expr="   ")
 
 
-def test_create_rejects_empty_name(forven_db) -> None:
+def test_create_rejects_empty_name(AXIOM_db) -> None:
     init_db()
     with pytest.raises(r.RoutineValidationError):
         _make(name="   ")
 
 
-def test_create_rejects_empty_prompt(forven_db) -> None:
+def test_create_rejects_empty_prompt(AXIOM_db) -> None:
     init_db()
     with pytest.raises(r.RoutineValidationError):
         _make(prompt="")
 
 
-def test_create_rejects_invalid_context(forven_db) -> None:
+def test_create_rejects_invalid_context(AXIOM_db) -> None:
     init_db()
     with pytest.raises(r.RoutineValidationError):
         _make(tools_context="bogus")
@@ -59,7 +59,7 @@ def test_create_rejects_invalid_context(forven_db) -> None:
 
 # --- round-trip -----------------------------------------------------------
 
-def test_create_and_get_round_trip(forven_db) -> None:
+def test_create_and_get_round_trip(AXIOM_db) -> None:
     init_db()
     routine_id = _make(skills=["recall", "post_mortem"])
     fetched = r.get_routine(routine_id)
@@ -72,12 +72,12 @@ def test_create_and_get_round_trip(forven_db) -> None:
     assert fetched["skills"] == ["recall", "post_mortem"]
 
 
-def test_get_routine_missing_returns_none(forven_db) -> None:
+def test_get_routine_missing_returns_none(AXIOM_db) -> None:
     init_db()
     assert r.get_routine(999999) is None
 
 
-def test_get_by_name_round_trip(forven_db) -> None:
+def test_get_by_name_round_trip(AXIOM_db) -> None:
     init_db()
     _make(name="alpha-routine")
     fetched = r.get_routine_by_name("alpha-routine")
@@ -85,7 +85,7 @@ def test_get_by_name_round_trip(forven_db) -> None:
     assert fetched["name"] == "alpha-routine"
 
 
-def test_list_routines_returns_all_then_filtered(forven_db) -> None:
+def test_list_routines_returns_all_then_filtered(AXIOM_db) -> None:
     init_db()
     _make(name="r1")
     _make(name="r2", enabled=False)
@@ -103,7 +103,7 @@ def test_list_routines_returns_all_then_filtered(forven_db) -> None:
 
 # --- update / enable / delete ---------------------------------------------
 
-def test_update_routine_changes_fields(forven_db) -> None:
+def test_update_routine_changes_fields(AXIOM_db) -> None:
     init_db()
     routine_id = _make()
     updated = r.update_routine(
@@ -121,21 +121,21 @@ def test_update_routine_changes_fields(forven_db) -> None:
     assert updated["skills"] == ["recall"]
 
 
-def test_update_routine_rejects_bad_cron(forven_db) -> None:
+def test_update_routine_rejects_bad_cron(AXIOM_db) -> None:
     init_db()
     routine_id = _make()
     with pytest.raises(r.RoutineValidationError):
         r.update_routine(routine_id, cron_expr="not valid")
 
 
-def test_update_routine_rejects_empty_name(forven_db) -> None:
+def test_update_routine_rejects_empty_name(AXIOM_db) -> None:
     init_db()
     routine_id = _make()
     with pytest.raises(r.RoutineValidationError):
         r.update_routine(routine_id, name="   ")
 
 
-def test_set_routine_enabled_toggles(forven_db) -> None:
+def test_set_routine_enabled_toggles(AXIOM_db) -> None:
     init_db()
     routine_id = _make()
     paused = r.set_routine_enabled(routine_id, False)
@@ -147,7 +147,7 @@ def test_set_routine_enabled_toggles(forven_db) -> None:
     assert resumed["enabled"] == 1
 
 
-def test_delete_routine_removes_row(forven_db) -> None:
+def test_delete_routine_removes_row(AXIOM_db) -> None:
     init_db()
     routine_id = _make()
     assert r.delete_routine(routine_id) is True
@@ -158,7 +158,7 @@ def test_delete_routine_removes_row(forven_db) -> None:
 
 # --- record_routine_run ---------------------------------------------------
 
-def test_record_routine_run_writes_status(forven_db) -> None:
+def test_record_routine_run_writes_status(AXIOM_db) -> None:
     init_db()
     routine_id = _make()
     r.record_routine_run(routine_id, status="success")
@@ -169,7 +169,7 @@ def test_record_routine_run_writes_status(forven_db) -> None:
     assert row["last_run_at"]
 
 
-def test_record_routine_run_records_error(forven_db) -> None:
+def test_record_routine_run_records_error(AXIOM_db) -> None:
     init_db()
     routine_id = _make()
     r.record_routine_run(routine_id, status="error", error="boom")
@@ -184,7 +184,7 @@ def test_record_routine_run_records_error(forven_db) -> None:
 _ISO_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00$")
 
 
-def test_preview_schedule_returns_n_iso_timestamps(forven_db) -> None:
+def test_preview_schedule_returns_n_iso_timestamps(AXIOM_db) -> None:
     init_db()
     out = r.preview_schedule("0 9 * * *", count=5)
     assert len(out) == 5
@@ -192,14 +192,14 @@ def test_preview_schedule_returns_n_iso_timestamps(forven_db) -> None:
         assert _ISO_RE.match(ts), f"not ISO-UTC: {ts!r}"
 
 
-def test_preview_schedule_clamps_count(forven_db) -> None:
+def test_preview_schedule_clamps_count(AXIOM_db) -> None:
     init_db()
     # Asks for far more than the cap; helper clamps to <= 50.
     out = r.preview_schedule("* * * * *", count=10_000)
     assert 1 <= len(out) <= 50
 
 
-def test_preview_schedule_rejects_invalid_cron(forven_db) -> None:
+def test_preview_schedule_rejects_invalid_cron(AXIOM_db) -> None:
     init_db()
     with pytest.raises(r.RoutineValidationError):
         r.preview_schedule("not a cron")
@@ -207,7 +207,7 @@ def test_preview_schedule_rejects_invalid_cron(forven_db) -> None:
 
 # --- skills serialization edge cases --------------------------------------
 
-def test_skills_none_round_trip(forven_db) -> None:
+def test_skills_none_round_trip(AXIOM_db) -> None:
     init_db()
     routine_id = _make(skills=None)
     row = r.get_routine(routine_id)
@@ -215,7 +215,7 @@ def test_skills_none_round_trip(forven_db) -> None:
     assert row["skills"] == []
 
 
-def test_skills_already_json_string_passthrough(forven_db) -> None:
+def test_skills_already_json_string_passthrough(AXIOM_db) -> None:
     init_db()
     routine_id = _make(skills=json.dumps(["recall"]))
     row = r.get_routine(routine_id)

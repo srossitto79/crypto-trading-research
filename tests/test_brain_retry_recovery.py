@@ -1,15 +1,15 @@
-import asyncio
+﻿import asyncio
 import json
 from datetime import datetime, timezone
 
 import httpx
 
-from forven.db import get_db
-from forven.runtime_worker import process_brain_tasks_once
+from axiom.db import get_db
+from axiom.runtime_worker import process_brain_tasks_once
 
 
-def test_headless_brain_transient_failure_requeues_task(forven_db, monkeypatch):
-    from forven import runtime_worker
+def test_headless_brain_transient_failure_requeues_task(AXIOM_db, monkeypatch):
+    from axiom import runtime_worker
 
     with get_db() as conn:
         conn.execute(
@@ -43,8 +43,8 @@ def test_headless_brain_transient_failure_requeues_task(forven_db, monkeypatch):
     assert "Provider unavailable; requeued for retry: ConnectTimeout" in str(row["error"])
 
 
-def test_headless_brain_transient_failure_exhausts_after_budget(forven_db, monkeypatch):
-    from forven import runtime_worker
+def test_headless_brain_transient_failure_exhausts_after_budget(AXIOM_db, monkeypatch):
+    from axiom import runtime_worker
 
     with get_db() as conn:
         conn.execute(
@@ -78,8 +78,8 @@ def test_headless_brain_transient_failure_exhausts_after_budget(forven_db, monke
     assert "Provider retries exhausted" in str(row["error"])
 
 
-def test_headless_brain_timeout_requeues_task(forven_db, monkeypatch):
-    from forven import runtime_worker
+def test_headless_brain_timeout_requeues_task(AXIOM_db, monkeypatch):
+    from axiom import runtime_worker
 
     with get_db() as conn:
         conn.execute(
@@ -97,7 +97,7 @@ def test_headless_brain_timeout_requeues_task(forven_db, monkeypatch):
     monkeypatch.setattr(runtime_worker, "_run_brain_task", _sleepy)
     monkeypatch.setattr(runtime_worker, "_headless_task_processing_allowed", lambda: True)
     monkeypatch.setattr(runtime_worker, "_BRAIN_TASK_TIMEOUT_SECONDS", 0.01)
-    monkeypatch.setattr("forven.system_mode_policy.is_manual_mode", lambda: False)
+    monkeypatch.setattr("axiom.system_mode_policy.is_manual_mode", lambda: False)
 
     processed = asyncio.run(process_brain_tasks_once())
 
@@ -115,8 +115,8 @@ def test_headless_brain_timeout_requeues_task(forven_db, monkeypatch):
     assert "Brain task timeout after 0.01s" in str(row["error"])
 
 
-def test_headless_brain_agent_callback_timeout_suppresses_retry_and_reviews_task(forven_db, monkeypatch):
-    from forven import runtime_worker
+def test_headless_brain_agent_callback_timeout_suppresses_retry_and_reviews_task(AXIOM_db, monkeypatch):
+    from axiom import runtime_worker
 
     now = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
@@ -156,7 +156,7 @@ def test_headless_brain_agent_callback_timeout_suppresses_retry_and_reviews_task
     monkeypatch.setattr(runtime_worker, "_run_brain_task", _sleepy)
     monkeypatch.setattr(runtime_worker, "_headless_task_processing_allowed", lambda: True)
     monkeypatch.setattr(runtime_worker, "_BRAIN_TASK_TIMEOUT_SECONDS", 0.01)
-    monkeypatch.setattr("forven.system_mode_policy.is_manual_mode", lambda: False)
+    monkeypatch.setattr("axiom.system_mode_policy.is_manual_mode", lambda: False)
 
     processed = asyncio.run(process_brain_tasks_once())
 
@@ -180,7 +180,7 @@ def test_headless_brain_agent_callback_timeout_suppresses_retry_and_reviews_task
 
 
 def test_direct_brain_chat_rate_limit_returns_retryable_error(monkeypatch):
-    from forven import api_core
+    from axiom import api_core
 
     request = httpx.Request("POST", "https://api.openai.com/v1/chat/completions")
     response = httpx.Response(429, request=request)
@@ -188,9 +188,9 @@ def test_direct_brain_chat_rate_limit_returns_retryable_error(monkeypatch):
     async def _raise_rate_limit(*args, **kwargs):
         raise httpx.HTTPStatusError("429 Too Many Requests", request=request, response=response)
 
-    monkeypatch.setattr("forven.agents.runner._call_with_tools", _raise_rate_limit)
-    monkeypatch.setattr("forven.brain.resolve_brain_provider_model", lambda provider, model: ("openai", "gpt-5.2"))
-    monkeypatch.setattr("forven.context.build_chat_context", lambda: "context")
+    monkeypatch.setattr("axiom.agents.runner._call_with_tools", _raise_rate_limit)
+    monkeypatch.setattr("axiom.brain.resolve_brain_provider_model", lambda provider, model: ("openai", "gpt-5.2"))
+    monkeypatch.setattr("axiom.context.build_chat_context", lambda: "context")
 
     result = asyncio.run(api_core.post_brain_chat_direct(api_core.BrainChatBody(message="hello")))
 

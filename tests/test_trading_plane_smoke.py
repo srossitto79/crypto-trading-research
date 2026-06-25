@@ -1,29 +1,29 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 
-from forven.db import get_db
-from forven.trading_smoke import collect_trading_plane_smoke
+from axiom.db import get_db
+from axiom.trading_smoke import collect_trading_plane_smoke
 
 
-def test_collect_trading_plane_smoke_passive_ok(forven_db, monkeypatch):
+def test_collect_trading_plane_smoke_passive_ok(AXIOM_db, monkeypatch):
     monkeypatch.setattr(
-        "forven.trading_smoke.get_account_value",
+        "axiom.trading_smoke.get_account_value",
         lambda testnet=True, require_connection=True: {
             "accountValue": 1234.5,
             "totalMarginUsed": 12.0,
         },
     )
     monkeypatch.setattr(
-        "forven.trading_smoke.get_positions",
+        "axiom.trading_smoke.get_positions",
         lambda testnet=True: {"positions": [{"position": {"coin": "BTC", "szi": "0"}}]},
     )
-    monkeypatch.setattr("forven.trading_smoke.get_open_orders", lambda testnet=True: [])
+    monkeypatch.setattr("axiom.trading_smoke.get_open_orders", lambda testnet=True: [])
     monkeypatch.setattr(
-        "forven.trading_smoke.get_all_mids",
+        "axiom.trading_smoke.get_all_mids",
         lambda testnet=True: {"SOL": 150.0, "ETH": 3400.0},
     )
-    monkeypatch.setattr("forven.trading_smoke.log_activity", lambda *args, **kwargs: None)
+    monkeypatch.setattr("axiom.trading_smoke.log_activity", lambda *args, **kwargs: None)
 
     report = collect_trading_plane_smoke()
 
@@ -36,30 +36,30 @@ def test_collect_trading_plane_smoke_passive_ok(forven_db, monkeypatch):
     assert check_map["execution"]["summary"] == "Active order smoke skipped"
 
 
-def test_collect_trading_plane_smoke_active_order_path(forven_db, monkeypatch):
+def test_collect_trading_plane_smoke_active_order_path(AXIOM_db, monkeypatch):
     monkeypatch.setattr(
-        "forven.trading_smoke.get_account_value",
+        "axiom.trading_smoke.get_account_value",
         lambda testnet=True, require_connection=True: {"accountValue": 5000.0, "totalMarginUsed": 0.0},
     )
-    monkeypatch.setattr("forven.trading_smoke.get_positions", lambda testnet=True: {"positions": []})
-    monkeypatch.setattr("forven.trading_smoke.get_open_orders", lambda testnet=True: [])
-    monkeypatch.setattr("forven.trading_smoke.get_all_mids", lambda testnet=True: {"SOL": 150.0})
+    monkeypatch.setattr("axiom.trading_smoke.get_positions", lambda testnet=True: {"positions": []})
+    monkeypatch.setattr("axiom.trading_smoke.get_open_orders", lambda testnet=True: [])
+    monkeypatch.setattr("axiom.trading_smoke.get_all_mids", lambda testnet=True: {"SOL": 150.0})
     monkeypatch.setattr(
-        "forven.trading_smoke.market_order",
+        "axiom.trading_smoke.market_order",
         lambda asset, side, size, stop_loss_price=None, testnet=True: {
             "entry_price": 151.0,
             "order_id": "open-1",
         },
     )
     monkeypatch.setattr(
-        "forven.trading_smoke.close_position",
+        "axiom.trading_smoke.close_position",
         lambda asset, size, side="sell", testnet=True: {
             "close_price": 149.5,
             "order_id": "close-1",
         },
     )
-    monkeypatch.setattr("forven.trading_smoke.cancel_all_orders", lambda asset=None, testnet=True: [])
-    monkeypatch.setattr("forven.trading_smoke.log_activity", lambda *args, **kwargs: None)
+    monkeypatch.setattr("axiom.trading_smoke.cancel_all_orders", lambda asset=None, testnet=True: [])
+    monkeypatch.setattr("axiom.trading_smoke.log_activity", lambda *args, **kwargs: None)
 
     report = collect_trading_plane_smoke(
         place_test_order=True,
@@ -91,30 +91,30 @@ def test_collect_trading_plane_smoke_active_order_path(forven_db, monkeypatch):
     assert int(portfolio_count["count"]) == 0
 
 
-def test_collect_trading_plane_smoke_active_close_failure_retains_trade(forven_db, monkeypatch):
+def test_collect_trading_plane_smoke_active_close_failure_retains_trade(AXIOM_db, monkeypatch):
     monkeypatch.setattr(
-        "forven.trading_smoke.get_account_value",
+        "axiom.trading_smoke.get_account_value",
         lambda testnet=True, require_connection=True: {"accountValue": 5000.0, "totalMarginUsed": 0.0},
     )
-    monkeypatch.setattr("forven.trading_smoke.get_positions", lambda testnet=True: {"positions": []})
-    monkeypatch.setattr("forven.trading_smoke.get_open_orders", lambda testnet=True: [])
-    monkeypatch.setattr("forven.trading_smoke.get_all_mids", lambda testnet=True: {"SOL": 150.0})
+    monkeypatch.setattr("axiom.trading_smoke.get_positions", lambda testnet=True: {"positions": []})
+    monkeypatch.setattr("axiom.trading_smoke.get_open_orders", lambda testnet=True: [])
+    monkeypatch.setattr("axiom.trading_smoke.get_all_mids", lambda testnet=True: {"SOL": 150.0})
     monkeypatch.setattr(
-        "forven.trading_smoke.market_order",
+        "axiom.trading_smoke.market_order",
         lambda asset, side, size, stop_loss_price=None, testnet=True: {
             "entry_price": 151.0,
             "order_id": "open-1",
         },
     )
     monkeypatch.setattr(
-        "forven.trading_smoke.close_position",
+        "axiom.trading_smoke.close_position",
         lambda asset, size, side="sell", testnet=True: {"error": "close failed"},
     )
     monkeypatch.setattr(
-        "forven.trading_smoke.cancel_all_orders",
+        "axiom.trading_smoke.cancel_all_orders",
         lambda asset=None, testnet=True: [{"coin": asset, "oid": "cleanup-1"}] if asset else [],
     )
-    monkeypatch.setattr("forven.trading_smoke.log_activity", lambda *args, **kwargs: None)
+    monkeypatch.setattr("axiom.trading_smoke.log_activity", lambda *args, **kwargs: None)
 
     report = collect_trading_plane_smoke(
         place_test_order=True,

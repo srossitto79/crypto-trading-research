@@ -1,6 +1,6 @@
-"""Tests for forven.security.env_allowlist — subprocess env filter."""
+﻿"""Tests for Axiom.security.env_allowlist — subprocess env filter."""
 
-from forven.security.env_allowlist import build_subprocess_env
+from axiom.security.env_allowlist import build_subprocess_env
 
 
 def test_path_passes_through():
@@ -63,11 +63,11 @@ def test_xdg_vars_pass():
     assert "XDG_DATA_HOME" in env
 
 
-def test_forven_vars_pass():
-    base = {"PATH": "/x", "FORVEN_HOME": "/home/x/.forven", "FORVEN_PROFILE": "default"}
+def test_AXIOM_vars_pass():
+    base = {"PATH": "/x", "AXIOM_HOME": "/home/x/.Axiom", "AXIOM_PROFILE": "default"}
     env = build_subprocess_env(base=base)
-    assert env["FORVEN_HOME"] == "/home/x/.forven"
-    assert env["FORVEN_PROFILE"] == "default"
+    assert env["AXIOM_HOME"] == "/home/x/.Axiom"
+    assert env["AXIOM_PROFILE"] == "default"
 
 
 def test_empty_base():

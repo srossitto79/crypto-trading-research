@@ -1,12 +1,12 @@
-"""Phase 6 / P6-T04 — /api/profile router tests."""
+﻿"""Phase 6 / P6-T04 — /api/profile router tests."""
 from __future__ import annotations
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from forven.api_security import require_operator_access
-from forven.routers.profile import router as profile_router
+from axiom.api_security import require_operator_access
+from axiom.routers.profile import router as profile_router
 
 
 @pytest.fixture
@@ -22,7 +22,7 @@ def test_get_empty_profile(client):
     r = client.get("/api/profile")
     assert r.status_code == 200
     body = r.json()
-    # _isolate_forven_home creates a workspace dir, but USER.md is absent
+    # _isolate_AXIOM_home creates a workspace dir, but USER.md is absent
     # so exists may be False. If a default template is auto-installed, exists
     # might be True with body content.
     assert "exists" in body

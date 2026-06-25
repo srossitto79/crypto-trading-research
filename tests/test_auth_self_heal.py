@@ -1,4 +1,4 @@
-"""auth.json self-heals from a backup when it goes missing/corrupt, but an
+﻿"""auth.json self-heals from a backup when it goes missing/corrupt, but an
 intentional logout (a valid, smaller store) is honoured — not resurrected.
 
 Regression for the recurring "it dropped our auth" failure: a lost/corrupt
@@ -11,15 +11,15 @@ from __future__ import annotations
 def _isolate_auth(tmp_path, monkeypatch):
     from cryptography.fernet import Fernet
 
-    from forven import config as cfg
-    from forven import secret_storage
-    from forven.auth import store as auth_store
+    from axiom import config as cfg
+    from axiom import secret_storage
+    from axiom.auth import store as auth_store
 
     auth_file = tmp_path / "auth.json"
-    key_file = tmp_path / ".forven_key"
-    monkeypatch.setenv("FORVEN_ENCRYPTION_KEY", Fernet.generate_key().decode("utf-8"))
+    key_file = tmp_path / ".axiom_key"
+    monkeypatch.setenv("AXIOM_ENCRYPTION_KEY", Fernet.generate_key().decode("utf-8"))
     monkeypatch.setattr(cfg, "AUTH_FILE", auth_file)
-    monkeypatch.setattr(cfg, "FORVEN_HOME", tmp_path)
+    monkeypatch.setattr(cfg, "AXIOM_HOME", tmp_path)
     monkeypatch.setattr(auth_store, "AUTH_FILE", auth_file)
     monkeypatch.setattr(auth_store, "LOCK_PATH", auth_file.with_suffix(".lock"))
     monkeypatch.setattr(secret_storage, "_preferred_key_path", lambda: key_file)

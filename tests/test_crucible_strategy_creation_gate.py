@@ -1,10 +1,10 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 
-from forven.brain import create_strategy
-from forven.db import get_db
-from forven.hypotheses import create_hypothesis
+from axiom.brain import create_strategy
+from axiom.db import get_db
+from axiom.hypotheses import create_hypothesis
 
 
 def _create_hypothesis() -> str:
@@ -50,8 +50,8 @@ def _insert_running_planner_task(
         )
 
 
-def test_validate_candidate_strategy_creation_rejects_agent_without_planner_task(forven_db):
-    from forven.crucible_tasks import validate_candidate_strategy_creation
+def test_validate_candidate_strategy_creation_rejects_agent_without_planner_task(AXIOM_db):
+    from axiom.crucible_tasks import validate_candidate_strategy_creation
 
     result = validate_candidate_strategy_creation(
         crucible_id="HYP-123",
@@ -63,8 +63,8 @@ def test_validate_candidate_strategy_creation_rejects_agent_without_planner_task
     assert "planner-approved" in result.reason
 
 
-def test_validate_candidate_strategy_creation_allows_running_planner_candidate_task(forven_db):
-    from forven.crucible_tasks import validate_candidate_strategy_creation
+def test_validate_candidate_strategy_creation_allows_running_planner_candidate_task(AXIOM_db):
+    from axiom.crucible_tasks import validate_candidate_strategy_creation
 
     _insert_running_planner_task(
         display_id="T0001",
@@ -82,8 +82,8 @@ def test_validate_candidate_strategy_creation_allows_running_planner_candidate_t
     assert result.reason == ""
 
 
-def test_validate_candidate_strategy_creation_rejects_mismatched_requested_hypothesis(forven_db):
-    from forven.crucible_tasks import validate_candidate_strategy_creation
+def test_validate_candidate_strategy_creation_rejects_mismatched_requested_hypothesis(AXIOM_db):
+    from axiom.crucible_tasks import validate_candidate_strategy_creation
 
     _insert_running_planner_task(
         display_id="T0002",
@@ -102,8 +102,8 @@ def test_validate_candidate_strategy_creation_rejects_mismatched_requested_hypot
     assert "planner-approved" in result.reason
 
 
-def test_validate_candidate_strategy_creation_rejects_wrong_agent_running_task(forven_db):
-    from forven.crucible_tasks import validate_candidate_strategy_creation
+def test_validate_candidate_strategy_creation_rejects_wrong_agent_running_task(AXIOM_db):
+    from axiom.crucible_tasks import validate_candidate_strategy_creation
 
     _insert_running_planner_task(
         display_id="T0003",
@@ -121,8 +121,8 @@ def test_validate_candidate_strategy_creation_rejects_wrong_agent_running_task(f
     assert "current agent" in result.reason
 
 
-def test_validate_candidate_strategy_creation_allows_matching_payload_hypothesis_alias(forven_db):
-    from forven.crucible_tasks import validate_candidate_strategy_creation
+def test_validate_candidate_strategy_creation_allows_matching_payload_hypothesis_alias(AXIOM_db):
+    from axiom.crucible_tasks import validate_candidate_strategy_creation
 
     with get_db() as conn:
         conn.execute(
@@ -154,8 +154,8 @@ def test_validate_candidate_strategy_creation_allows_matching_payload_hypothesis
     assert result.allowed is True
 
 
-def test_validate_candidate_strategy_creation_allows_hypothesis_promotion_loop_candidate(forven_db):
-    from forven.crucible_tasks import validate_candidate_strategy_creation
+def test_validate_candidate_strategy_creation_allows_hypothesis_promotion_loop_candidate(AXIOM_db):
+    from axiom.crucible_tasks import validate_candidate_strategy_creation
 
     with get_db() as conn:
         conn.execute(
@@ -187,8 +187,8 @@ def test_validate_candidate_strategy_creation_allows_hypothesis_promotion_loop_c
     assert result.allowed is True
 
 
-def test_validate_candidate_strategy_creation_recovers_missing_task_display_id(forven_db):
-    from forven.crucible_tasks import validate_candidate_strategy_creation
+def test_validate_candidate_strategy_creation_recovers_missing_task_display_id(AXIOM_db):
+    from axiom.crucible_tasks import validate_candidate_strategy_creation
 
     with get_db() as conn:
         conn.execute(
@@ -223,9 +223,9 @@ def test_validate_candidate_strategy_creation_recovers_missing_task_display_id(f
     assert result.hypothesis_id == "HYP-789"
 
 
-def test_brain_create_strategy_persists_strategy_provenance(forven_db, monkeypatch):
+def test_brain_create_strategy_persists_strategy_provenance(AXIOM_db, monkeypatch):
     hypothesis_id = _create_hypothesis()
-    monkeypatch.setattr("forven.lab_features.is_pipeline_saturated", lambda: (False, 0, ""))
+    monkeypatch.setattr("axiom.lab_features.is_pipeline_saturated", lambda: (False, 0, ""))
 
     result = create_strategy(
         strategy_id="provenance-strategy-1",

@@ -1,10 +1,10 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 
-from forven.db import create_strategy_container, get_db, init_db
-from forven.gauntlet.definition import WORKFLOW_DEFINITION_VERSION, ordered_step_keys
-from forven.gauntlet.store import create_or_get_workflow, get_workflow_detail
+from axiom.db import create_strategy_container, get_db, init_db
+from axiom.gauntlet.definition import WORKFLOW_DEFINITION_VERSION, ordered_step_keys
+from axiom.gauntlet.store import create_or_get_workflow, get_workflow_detail
 
 
 def _create_strategy() -> str:
@@ -22,7 +22,7 @@ def _create_strategy() -> str:
     return strategy_id
 
 
-def test_init_db_creates_gauntlet_tables(forven_db):
+def test_init_db_creates_gauntlet_tables(AXIOM_db):
     init_db()
     with get_db() as conn:
         tables = {
@@ -40,7 +40,7 @@ def test_init_db_creates_gauntlet_tables(forven_db):
     }.issubset(tables)
 
 
-def test_create_or_get_workflow_seeds_definition_steps(forven_db):
+def test_create_or_get_workflow_seeds_definition_steps(AXIOM_db):
     strategy_id = _create_strategy()
 
     workflow = create_or_get_workflow(

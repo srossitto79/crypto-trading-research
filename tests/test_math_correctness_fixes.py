@@ -1,4 +1,4 @@
-"""Regression tests for MATH-01, MATH-02, MATH-05 fixes from the Phase 1.5
+﻿"""Regression tests for MATH-01, MATH-02, MATH-05 fixes from the Phase 1.5
 math correctness audit (docs/superpowers/audits/2026-04-16-math-correctness.md).
 """
 
@@ -7,7 +7,7 @@ from __future__ import annotations
 import math
 import pytest
 
-from forven.db import init_db
+from axiom.db import init_db
 
 
 @pytest.fixture(autouse=True)
@@ -17,7 +17,7 @@ def _ensure_db():
 
 def test_profit_factor_is_infinite_when_no_losses():
     """MATH-01: profit_factor with all winners returns inf, not 10.0 sentinel."""
-    from forven.policy import score_strategy
+    from axiom.policy import score_strategy
 
     metrics = {
         "total_trades": 3,
@@ -40,7 +40,7 @@ def test_profit_factor_is_infinite_when_no_losses():
 
 def test_score_strategy_rejects_single_trade_strategy():
     """MATH-02: single-trade strategies are rejected (Sharpe undefined)."""
-    from forven.policy import score_strategy
+    from axiom.policy import score_strategy
 
     metrics = {
         "total_trades": 1,
@@ -56,7 +56,7 @@ def test_score_strategy_rejects_single_trade_strategy():
 
 def test_score_strategy_penalizes_low_trade_count():
     """MATH-02: <5 trades incurs -30 penalty in addition to scoring."""
-    from forven.policy import score_strategy
+    from axiom.policy import score_strategy
 
     weak = {
         "total_trades": 3,
@@ -83,7 +83,7 @@ def test_score_strategy_penalizes_low_trade_count():
 
 def test_validate_backtest_metrics_returns_penalty_value():
     """MATH-05: validate returns a non-zero penalty for shape weaknesses."""
-    from forven.policy import validate_backtest_metrics
+    from axiom.policy import validate_backtest_metrics
 
     metrics = {
         "total_trades": 10,
@@ -97,7 +97,7 @@ def test_validate_backtest_metrics_returns_penalty_value():
 
 def test_compute_metrics_emits_profit_factor_is_infinite_flag():
     """MATH-01: compute_metrics() exposes the new flag downstream."""
-    from forven.strategies.backtest import compute_metrics
+    from axiom.strategies.backtest import compute_metrics
 
     # Three winning trades, zero losing.
     trades = [

@@ -1,0 +1,101 @@
+// ============================================================================
+// Simple Donchian 20/10 Breakout — TradingView clone of Axiom S01509
+// ============================================================================
+// Purpose: cross-validate Axiom backtest math against TradingView using a
+// strategy with bit-for-bit deterministic indicators (no EMA-style warmup).
+//
+// Axiom side
+//   strategy_id : S01509  (simple_donchian_breakout_demo)
+//   dataset     : BTC/USDT-1h  (binance)
+//   window      : 2025-04-19 16:00 UTC  →  2026-04-19 16:00 UTC  (8760 bars)
+//   leverage    : 1x
+//   fee model   : ~11 bps round-trip (5.5 bps per side) inferred from trades
+//   entry       : close > highest(high, 20) of the PRIOR 20 bars
+//   exit        : close < lowest(low, 10)   of the PRIOR 10 bars
+//
+// How to use
+//   1. Open BINANCE:BTCUSDT on the 1H chart in TradingView.
+//   2. Paste this script into the Pine Editor and Add to Chart.
+//   3. Open the Strategy Tester panel. The script auto-restricts trades to
+//      the Axiom window, so TradingView's totals should line up with
+//      Axiom's combined (IS + OOS) figures below.
+//
+// Expected Axiom numbers (leverage=1x, long-only, single-side)
+//                        trades   win_rate   return_pct   profit_factor   max_dd
+//   In-sample (8.4m)      103      0.2621       -0.345        0.539        0.369
+//   Out-of-sample (3.6m)   35      0.4000       -0.026        0.947        0.147
+//   Combined (~12m)       138      0.2971       -0.362        0.650        0.369 ~
+//
+// ~ = approximation. Max DD is max(IS, OOS) rather than recomputed from the
+// joined return stream — true full-window drawdown may be slightly larger.
+//
+// Math note
+//   pandas  df['high'].rolling(20).max().shift(1)
+//   Pine    ta.highest(high[1], 20)   ==   ta.highest(high, 20)[1]
+//   are bit-for-bit identical — no seeding / warmup ambiguity. Any residual
+//   delta vs Axiom should come from fee model precision and the open-bar
+//   equity curve, not from indicator math.
+// ============================================================================
+
+//@version=6
+strategy(
+     title              = "Axiom S01509 — Simple Donchian 20/10 Breakout",
+     shorttitle         = "S01509",
+     overlay            = true,
+     pyramiding         = 0,
+     initial_capital    = 10000,
+     default_qty_type   = strategy.percent_of_equity,
+     default_qty_value  = 100,
+     commission_type    = strategy.commission.percent,
+     commission_value   = 0.055,
+     slippage           = 0,
+     calc_on_every_tick = false,
+     process_orders_on_close = true)
+
+// ---- Inputs ----------------------------------------------------------------
+entry_len = input.int(20, "Entry channel length (prior N-bar high)", minval = 2, group = "Signal")
+exit_len  = input.int(10, "Exit channel length (prior N-bar low)",   minval = 2, group = "Signal")
+
+use_window = input.bool(true,  "Restrict to Axiom window",  group = "Date range")
+// Hardcoded epoch ms (const int — Pine v6 requires this for input.time defval):
+//   1745078400000 = 2025-04-19 16:00:00 UTC
+//   1776614400000 = 2026-04-19 16:00:00 UTC
+start_ts   = input.time(1745078400000, "Window start (UTC)", group = "Date range")
+end_ts     = input.time(1776614400000, "Window end (UTC)",   group = "Date range")
+
+// ---- Indicators ------------------------------------------------------------
+// `ta.highest(high[1], N)` == rolling(N).max().shift(1) — the max over the
+// N bars strictly BEFORE the current bar. Classic turtle breakout.
+prior_high = ta.highest(high[1], entry_len)
+prior_low  = ta.lowest(low[1],   exit_len)
+
+plot(prior_high, "Prior 20-bar high", color = color.new(color.green, 0))
+plot(prior_low,  "Prior 10-bar low",  color = color.new(color.red,   0))
+
+// ---- Window gate -----------------------------------------------------------
+in_window = not use_window or (time >= start_ts and time <= end_ts)
+
+// ---- Signals ---------------------------------------------------------------
+break_up   = close > prior_high
+break_down = close < prior_low
+
+if in_window and break_up
+    strategy.entry("Long", strategy.long)
+
+if break_down
+    strategy.close("Long")
+
+// Force-flat at window end so totals are directly comparable to Axiom.
+if use_window and (time > end_ts)
+    strategy.close_all()
+
+// ---- Visuals ---------------------------------------------------------------
+plotshape(break_up   and in_window, title = "Long entry",
+     style = shape.triangleup,   location = location.belowbar,
+     color = color.new(color.green, 0), size = size.tiny)
+
+plotshape(break_down, title = "Long exit",
+     style = shape.triangledown, location = location.abovebar,
+     color = color.new(color.red, 0),   size = size.tiny)
+
+bgcolor(in_window ? color.new(color.blue, 92) : na, title = "In-window shading")

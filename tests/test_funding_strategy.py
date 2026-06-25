@@ -1,8 +1,8 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import pandas as pd
 
-from forven.strategies.builtin.funding import FundingStrategy
+from axiom.strategies.builtin.funding import FundingStrategy
 
 
 def _sample_ohlcv(rows: int = 240) -> pd.DataFrame:
@@ -20,7 +20,7 @@ def _sample_ohlcv(rows: int = 240) -> pd.DataFrame:
 
 def test_funding_strategy_uses_sentiment_funding_rates(monkeypatch):
     monkeypatch.setattr(
-        "forven.strategies.sentiment.fetch_funding_rates",
+        "axiom.strategies.sentiment.fetch_funding_rates",
         lambda: {"BTC": {"funding": -0.0002, "openInterest": 1000.0}},
     )
 

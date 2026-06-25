@@ -1,13 +1,13 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import argparse
 import json
 
-from forven.soak import collect_backend_soak_report
+from axiom.soak import collect_backend_soak_report
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run the Forven backend soak-readiness report.")
+    parser = argparse.ArgumentParser(description="Run the Axiom backend soak-readiness report.")
     parser.add_argument(
         "--require-exchange-connection",
         action="store_true",

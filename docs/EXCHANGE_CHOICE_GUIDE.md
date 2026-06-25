@@ -42,8 +42,8 @@ Do you need to test/paper-trade without risking capital?
 **Solution**: MockExchange
 
 ```python
-from forven.exchange import MockExchange
-from forven.exchange.hyperliquid import set_exchange
+from axiom.exchange import MockExchange
+from axiom.exchange.hyperliquid import set_exchange
 
 # Safe: No capital, instant fills, no network calls
 mock = MockExchange()
@@ -61,7 +61,7 @@ set_exchange(mock)
 
 ```python
 # Just works—no code changes required
-from forven.exchange import get_exchange
+from axiom.exchange import get_exchange
 
 exchange = get_exchange()
 await exchange.market_order('BTC', 'buy', 0.1)
@@ -75,8 +75,8 @@ await exchange.market_order('BTC', 'buy', 0.1)
 **Solution**: CCXTExchange with Binance
 
 ```python
-from forven.exchange import CCXTExchange
-from forven.exchange.hyperliquid import set_exchange
+from axiom.exchange import CCXTExchange
+from axiom.exchange.hyperliquid import set_exchange
 
 exchange = CCXTExchange(
     exchange_id='binance',
@@ -97,8 +97,8 @@ set_exchange(exchange)
 **Solution**: Create instances and swap at runtime
 
 ```python
-from forven.exchange import CCXTExchange
-from forven.exchange.hyperliquid import set_exchange, get_exchange
+from axiom.exchange import CCXTExchange
+from axiom.exchange.hyperliquid import set_exchange, get_exchange
 
 exchanges = {
     'binance': CCXTExchange(exchange_id='binance', api_key='...', api_secret='...'),
@@ -121,8 +121,8 @@ for name, exchange in exchanges.items():
 **Solution**: MockExchange + CCXT price sync
 
 ```python
-from forven.exchange import CCXTExchange, MockExchange
-from forven.exchange.hyperliquid import set_exchange
+from axiom.exchange import CCXTExchange, MockExchange
+from axiom.exchange.hyperliquid import set_exchange
 
 # Get live prices from Binance (no auth needed for public data)
 binance = CCXTExchange(exchange_id='binance', api_key='', api_secret='')
@@ -145,7 +145,7 @@ set_exchange(mock)
 
 ```python
 # Don't hardcode exchange—use the interface
-from forven.exchange.hyperliquid import get_exchange
+from axiom.exchange.hyperliquid import get_exchange
 
 async def execute_trade():
     exchange = get_exchange()  # Gets whatever is configured
@@ -188,7 +188,7 @@ async def execute_trade():
 
 ### Step 1: Test with MockExchange (Safe)
 ```python
-from forven.exchange import MockExchange
+from axiom.exchange import MockExchange
 mock = MockExchange()
 set_exchange(mock)
 # Run your strategy with zero risk
@@ -196,7 +196,7 @@ set_exchange(mock)
 
 ### Step 2: Paper trade with live prices
 ```python
-from forven.exchange import CCXTExchange, MockExchange
+from axiom.exchange import CCXTExchange, MockExchange
 binance = CCXTExchange(exchange_id='binance', api_key='', api_secret='')
 mock = MockExchange()
 mock.set_mids(await binance.get_all_mids())
@@ -292,7 +292,7 @@ while True:
 **Choose MockExchange if**:
 - You're testing strategies (safe, no capital)
 - You're doing CI/CD testing (no network needed)
-- You're learning Forven (zero risk)
+- You're learning Axiom (zero risk)
 - You want instant feedback (no network latency)
 
 **Choose HyperliquidExchange if**:

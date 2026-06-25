@@ -1,4 +1,4 @@
-"""Audit lead B-5: data_manager.enrich must work on backtest-shaped frames.
+﻿"""Audit lead B-5: data_manager.enrich must work on backtest-shaped frames.
 
 Backtest frames (post _normalize_backtest_frame) carry the timestamp as a
 DatetimeIndex named "timestamp" with OHLCV columns only — no "timestamp"
@@ -18,7 +18,7 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 
-from forven.data_manager import DataManager, _merge_asof_parquet, _save_stream_parquet
+from axiom.data_manager import DataManager, _merge_asof_parquet, _save_stream_parquet
 
 
 # ---------------------------------------------------------------------------
@@ -75,10 +75,10 @@ def _write_binance_funding(tmp_path, symbol: str = "BTC-USDT") -> None:
 
 def _patch_dirs(tmp_path):
     return (
-        patch("forven.data_manager.FUNDING_DIR", tmp_path / "funding"),
-        patch("forven.data_manager.OI_DIR", tmp_path / "oi"),
-        patch("forven.data_manager.DERIVATIVES_DIR", tmp_path / "derivatives"),
-        patch("forven.data_manager.MACRO_DIR", tmp_path / "macro"),
+        patch("axiom.data_manager.FUNDING_DIR", tmp_path / "funding"),
+        patch("axiom.data_manager.OI_DIR", tmp_path / "oi"),
+        patch("axiom.data_manager.DERIVATIVES_DIR", tmp_path / "derivatives"),
+        patch("axiom.data_manager.MACRO_DIR", tmp_path / "macro"),
     )
 
 
@@ -229,7 +229,7 @@ def test_enrich_stream_failure_logged_at_warning(tmp_path, caplog):
 
     p1, p2, p3, p4 = _patch_dirs(tmp_path)
     with p1, p2, p3, p4, patch.object(dm, "_enrich_long_short_ratio", side_effect=RuntimeError("boom")):
-        with caplog.at_level(logging.WARNING, logger="forven.data_manager"):
+        with caplog.at_level(logging.WARNING, logger="axiom.data_manager"):
             out = dm.enrich(frame, "BTC-USDT", "1h", exclude_streams=("funding", "oi"))
 
     assert len(out) == len(frame)
@@ -243,7 +243,7 @@ def test_enrich_stream_failure_logged_at_warning(tmp_path, caplog):
 def test_load_backtest_candles_gains_order_flow_columns(tmp_path, monkeypatch):
     """The actual backtest loader: dataset frame gains ls/taker columns and the
     Binance funding parquet is never consulted (funding/oi excluded)."""
-    import forven.strategies.backtest as backtest_mod
+    import axiom.strategies.backtest as backtest_mod
 
     _write_lsr(tmp_path, n=48)
     _write_taker(tmp_path, n=48)
@@ -261,7 +261,7 @@ def test_load_backtest_candles_gains_order_flow_columns(tmp_path, monkeypatch):
         }
     )
 
-    monkeypatch.setattr("forven.data.load_parquet", lambda *a, **k: raw.copy())
+    monkeypatch.setattr("axiom.data.load_parquet", lambda *a, **k: raw.copy())
     monkeypatch.setattr(backtest_mod, "_dataset_symbol_candidates", lambda asset: ["BTC-USDT"])
     monkeypatch.setattr(backtest_mod, "_resolve_point_in_time_as_of", lambda: None)
 

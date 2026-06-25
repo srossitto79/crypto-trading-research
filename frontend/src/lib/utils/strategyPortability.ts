@@ -20,7 +20,7 @@ export function buildExportFilename(displayId: string, name?: string): string {
 		.replace(/[^a-z0-9]+/g, '-')
 		.replace(/^-+|-+$/g, '')
 		.slice(0, 48);
-	return slug ? `forven-${id}-${slug}.json` : `forven-${id}.json`;
+	return slug ? `axiom-${id}-${slug}.json` : `axiom-${id}.json`;
 }
 
 export function downloadJson(envelope: unknown, filename: string): void {
@@ -104,7 +104,7 @@ function countArray(value: unknown): number {
 
 /**
  * Parse + shallow-validate an export envelope. Throws an Error with a
- * user-facing message when the payload is not a recognizable Forven export.
+ * user-facing message when the payload is not a recognizable Axiom export.
  */
 export function parseEnvelope(text: string): ParsedEnvelope {
 	let raw: unknown;
@@ -118,9 +118,9 @@ export function parseEnvelope(text: string): ParsedEnvelope {
 	}
 
 	const env = raw as Record<string, unknown>;
-	const meta = asRecord(env.forven_export);
-	if (!env.forven_export || typeof env.forven_export !== 'object') {
-		throw new Error('Missing "forven_export" metadata — this is not a Forven strategy export.');
+	const meta = asRecord(env.axiom_export);
+	if (!env.axiom_export || typeof env.axiom_export !== 'object') {
+		throw new Error('Missing "axiom_export" metadata — this is not an Axiom strategy export.');
 	}
 	const kind = String(meta.kind ?? '').trim();
 	if (kind !== EXPECTED_KIND) {

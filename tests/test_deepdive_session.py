@@ -1,10 +1,10 @@
-import asyncio
+﻿import asyncio
 import json
 
 import pytest
 
-from forven.db import get_db, init_db
-from forven.deepdive_db import create_or_get_active_thread, list_messages
+from axiom.db import get_db, init_db
+from axiom.deepdive_db import create_or_get_active_thread, list_messages
 
 
 def _seed(sid="S55001"):
@@ -20,13 +20,13 @@ def _seed(sid="S55001"):
 
 
 @pytest.fixture
-def thread(forven_db):
+def thread(AXIOM_db):
     sid = _seed()
     return create_or_get_active_thread(sid)
 
 
 def test_run_turn_persists_user_and_assistant(thread, monkeypatch):
-    from forven import deepdive_session
+    from axiom import deepdive_session
 
     async def fake_invoke(messages, strategy_id):
         return {"content": "hi back", "cost_usd": 0.001, "model": "stub"}
@@ -50,8 +50,8 @@ def test_run_turn_persists_user_and_assistant(thread, monkeypatch):
     assert any(e["type"] == "assistant_token" for e in events)
 
 
-def test_unknown_thread_emits_error(forven_db, monkeypatch):
-    from forven import deepdive_session
+def test_unknown_thread_emits_error(AXIOM_db, monkeypatch):
+    from axiom import deepdive_session
     events = []
     async def collect():
         async for ev in deepdive_session.run_turn("dd_doesnotexist", user_text="hi"):
@@ -61,8 +61,8 @@ def test_unknown_thread_emits_error(forven_db, monkeypatch):
 
 
 def test_archived_thread_emits_error(thread, monkeypatch):
-    from forven import deepdive_session
-    from forven.deepdive_db import archive_thread
+    from axiom import deepdive_session
+    from axiom.deepdive_db import archive_thread
     archive_thread(thread["id"])
     events = []
     async def collect():
@@ -73,8 +73,8 @@ def test_archived_thread_emits_error(thread, monkeypatch):
 
 
 def test_strategy_id_set_during_turn(thread, monkeypatch):
-    from forven import deepdive_session
-    from forven.agents import tools_deepdive
+    from axiom import deepdive_session
+    from axiom.agents import tools_deepdive
 
     captured = {}
     async def fake_invoke(messages, strategy_id):

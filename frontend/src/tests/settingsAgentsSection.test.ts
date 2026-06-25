@@ -2,13 +2,13 @@ import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { mount, unmount } from 'svelte';
 
 const apiMocks = vi.hoisted(() => ({
-	getForvenAgents: vi.fn(),
-	getForvenAgentDocuments: vi.fn(),
-	updateForvenAgent: vi.fn(),
-	updateForvenAgentDocument: vi.fn(),
-	testForvenAgentDiscord: vi.fn(),
-	getForvenSchedulerJobs: vi.fn(),
-	updateForvenSchedulerJob: vi.fn(),
+	getAxiomAgents: vi.fn(),
+	getAxiomAgentDocuments: vi.fn(),
+	updateAxiomAgent: vi.fn(),
+	updateAxiomAgentDocument: vi.fn(),
+	testAxiomAgentDiscord: vi.fn(),
+	getAxiomSchedulerJobs: vi.fn(),
+	updateAxiomSchedulerJob: vi.fn(),
 }));
 
 vi.mock('$lib/api', () => apiMocks);
@@ -27,15 +27,15 @@ afterEach(() => {
 beforeEach(() => {
 	clearDirty();
 	originalValues.set({});
-	apiMocks.getForvenAgents.mockReset();
-	apiMocks.getForvenAgentDocuments.mockReset();
-	apiMocks.updateForvenAgent.mockReset();
-	apiMocks.updateForvenAgentDocument.mockReset();
-	apiMocks.testForvenAgentDiscord.mockReset();
-	apiMocks.getForvenSchedulerJobs.mockReset();
-	apiMocks.updateForvenSchedulerJob.mockReset();
+	apiMocks.getAxiomAgents.mockReset();
+	apiMocks.getAxiomAgentDocuments.mockReset();
+	apiMocks.updateAxiomAgent.mockReset();
+	apiMocks.updateAxiomAgentDocument.mockReset();
+	apiMocks.testAxiomAgentDiscord.mockReset();
+	apiMocks.getAxiomSchedulerJobs.mockReset();
+	apiMocks.updateAxiomSchedulerJob.mockReset();
 
-	apiMocks.getForvenAgents.mockResolvedValue([
+	apiMocks.getAxiomAgents.mockResolvedValue([
 		{
 			id: 'alpha',
 			name: 'Alpha',
@@ -61,12 +61,12 @@ beforeEach(() => {
 			has_discord_token: false,
 		},
 	]);
-	apiMocks.getForvenAgentDocuments.mockResolvedValue({
+	apiMocks.getAxiomAgentDocuments.mockResolvedValue({
 		soul: 'SOUL for alpha',
 		agents: 'AGENTS for alpha',
 		role: 'ROLE for alpha',
 	});
-	apiMocks.getForvenSchedulerJobs.mockResolvedValue([
+	apiMocks.getAxiomSchedulerJobs.mockResolvedValue([
 		{
 			id: 'job-1',
 			name: 'Daily regime check',
@@ -118,8 +118,8 @@ describe('SettingsAgents section', () => {
 		});
 		await flush();
 
-		expect(apiMocks.getForvenAgents).toHaveBeenCalled();
-		expect(apiMocks.getForvenAgentDocuments).toHaveBeenCalledWith('alpha');
+		expect(apiMocks.getAxiomAgents).toHaveBeenCalled();
+		expect(apiMocks.getAxiomAgentDocuments).toHaveBeenCalledWith('alpha');
 
 		const text = target.textContent || '';
 		expect(text).toContain('Alpha');
@@ -158,7 +158,7 @@ describe('SettingsAgents section', () => {
 		});
 		await flush();
 
-		expect(apiMocks.getForvenSchedulerJobs).toHaveBeenCalled();
+		expect(apiMocks.getAxiomSchedulerJobs).toHaveBeenCalled();
 		const text = target.textContent || '';
 		expect(text).toContain('Daily regime check');
 		expect(text).toContain('Hourly sweep');

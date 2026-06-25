@@ -1,4 +1,4 @@
-# Forven Exchange Abstraction Migration - Status Report
+# Axiom Exchange Abstraction Migration - Status Report
 
 **Date**: June 24, 2026  
 **Status**: Phase 1 & 2 Complete, Phase 3 In Progress  
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-We've successfully decoupled Forven from hard-wired Hyperliquid SDK calls by introducing an `ExchangeInterface` abstraction layer. This enables:
+We've successfully decoupled Axiom from hard-wired Hyperliquid SDK calls by introducing an `ExchangeInterface` abstraction layer. This enables:
 - **Testing** with `MockExchange` (no real deposits required)
 - **Future exchange swaps** without code changes to callers
 - **LLM configuration** that actually works (fixed 401 errors)
@@ -26,7 +26,7 @@ We've successfully decoupled Forven from hard-wired Hyperliquid SDK calls by int
 
 ### What Was Built
 
-**1. `forven/exchange/interface.py` (202 LOC)**
+**1. `axiom/exchange/interface.py` (202 LOC)**
 ```
 ExchangeInterface (abstract base)
 ├── Account Operations
@@ -52,19 +52,19 @@ ExchangeInterface (abstract base)
 │   └── get_exchange_info() → Dict
 ```
 
-**2. `forven/exchange/hyperliquid_adapter.py` (350 LOC)**
+**2. `axiom/exchange/hyperliquid_adapter.py` (350 LOC)**
 - `HyperliquidExchange(ExchangeInterface)` - Full implementation
 - Wraps all existing hyperliquid.py functions with `asyncio.to_thread()`
 - Converts raw SDK responses to standardized types
 - Ready for production use
 
-**3. `forven/exchange/mock.py` (300 LOC)**
+**3. `axiom/exchange/mock.py` (300 LOC)**
 - `MockExchange(ExchangeInterface)` - In-memory implementation
 - Simulates orders at configurable prices
 - Maintains virtual account state
 - Perfect for testing without real money
 
-**4. `forven/exchange/sync_wrapper.py` (170 LOC)**
+**4. `axiom/exchange/sync_wrapper.py` (170 LOC)**
 - `SyncExchange` - Wraps async interface for sync contexts
 - `get_sync_exchange()` - Module-level convenience function
 - Uses event loop management for sync → async calls
@@ -74,11 +74,11 @@ ExchangeInterface (abstract base)
 **✅ 100% Backwards Compatible**
 ```python
 # Old code still works (module-level functions)
-from forven.exchange.hyperliquid import market_order
+from axiom.exchange.hyperliquid import market_order
 result = market_order("BTC", "long", 1.0, testnet=True)
 
 # New code can use interface
-from forven.exchange.hyperliquid import get_exchange
+from axiom.exchange.hyperliquid import get_exchange
 result = await get_exchange().market_order("BTC", "long", 1.0)
 ```
 
@@ -102,46 +102,46 @@ ExchangeInterface (abstract)
 
 **Before**: Users couldn't configure LLM providers without browser console hacks
 ```
-Error: FORVEN_OPERATOR_KEY not configured
-User workaround: window.localStorage.setItem('forven_operator_key', '...')
+Error: AXIOM_OPERATOR_KEY not configured
+User workaround: window.localStorage.setItem('axiom_operator_key', '...')
 (Still returns 401)
 ```
 
 **After**: Clear, guided setup flow
 ```bash
-$ python -m forven auth init-operator-key
-✓ Generated FORVEN_OPERATOR_KEY:
+$ python -m axiom auth init-operator-key
+✓ Generated AXIOM_OPERATOR_KEY:
   aBcDe...XyZ
 
 Add this to your .env file:
-  export FORVEN_OPERATOR_KEY='aBcDe...XyZ'
+  export AXIOM_OPERATOR_KEY='aBcDe...XyZ'
 
-Then restart the Forven backend.
+Then restart the Axiom backend.
 ```
 
 ### Changes Made
 
-1. **New CLI Command** (`forven/cli.py`)
+1. **New CLI Command** (`axiom/cli.py`)
    ```bash
-   python -m forven auth init-operator-key
+   python -m axiom auth init-operator-key
    ```
    - Generates cryptographically-secure 32-byte keys
    - Prints setup instructions
    - No manual `set-storage` hacks needed
 
-2. **Better Error Messages** (`forven/api_security.py`)
+2. **Better Error Messages** (`axiom/api_security.py`)
    ```
-   Invalid or missing operator key. Run 'python -m forven auth 
+   Invalid or missing operator key. Run 'python -m axiom auth 
    init-operator-key' to generate one, then add it to your .env file.
    ```
 
-3. **Startup Warnings** (`forven/api_core.py`)
-   - Notifies users if `FORVEN_OPERATOR_KEY` not set
+3. **Startup Warnings** (`axiom/api_core.py`)
+   - Notifies users if `AXIOM_OPERATOR_KEY` not set
    - Happens on backend startup, not on first request
    - Encourages proactive setup
 
 4. **Updated Documentation** (`docs/FIRST_RUN_CHECKLIST.md`)
-   - Explicit step: `python -m forven auth init-operator-key`
+   - Explicit step: `python -m axiom auth init-operator-key`
    - Added to the "Configure auth and secrets" section
    - Removed browser console workaround mentions
 
@@ -158,7 +158,7 @@ Then restart the Forven backend.
 
 ### Completed Migrations
 
-#### 1. `forven/agents/tools_exchange.py` ✅
+#### 1. `axiom/agents/tools_exchange.py` ✅
 **Status**: Key execution tools migrated to async interface
 
 **Functions Updated** (4/7):
@@ -170,16 +170,16 @@ Then restart the Forven backend.
 **Pattern Demonstrated**:
 ```python
 # OLD (sync hyperliquid functions)
-from forven.exchange.hyperliquid import market_order
+from axiom.exchange.hyperliquid import market_order
 result = market_order(asset, side, size, testnet=True)
 
 # NEW (async interface)
-from forven.exchange.hyperliquid import get_exchange
+from axiom.exchange.hyperliquid import get_exchange
 exchange = get_exchange()
 result = await exchange.market_order(symbol=asset, side=side, size=size)
 ```
 
-#### 2. `forven/soak.py` ✅
+#### 2. `axiom/soak.py` ✅
 **Status**: Health check migrated
 
 **Function Updated** (1/2):
@@ -195,7 +195,7 @@ async def _fetch():
 positions = asyncio.run(_fetch())
 ```
 
-#### 3. `forven/api_domains/trading.py` ✅
+#### 3. `axiom/api_domains/trading.py` ✅
 **Status**: Fully migrated to SyncExchange wrapper
 
 **Functions Updated**:
@@ -206,7 +206,7 @@ positions = asyncio.run(_fetch())
 
 **Pattern Demonstrated**: SyncExchange wrapper handles async internally - no await needed
 
-#### 4. `forven/api_domains/paper_control.py` ✅
+#### 4. `axiom/api_domains/paper_control.py` ✅
 **Status**: Fully migrated to SyncExchange wrapper
 
 **Functions Updated**:
@@ -219,9 +219,9 @@ positions = asyncio.run(_fetch())
 ### Remaining Migrations
 
 **High Risk** (critical path - requires careful testing):
-- `forven/scanner.py` (5,963 LOC) - Core strategy execution
-- `forven/exchange/risk.py` (3,270 LOC) - Kill-switches, emergency closes
-- `forven/daemon.py` (1,994 LOC) - Market data loop
+- `axiom/scanner.py` (5,963 LOC) - Core strategy execution
+- `axiom/exchange/risk.py` (3,270 LOC) - Kill-switches, emergency closes
+- `axiom/daemon.py` (1,994 LOC) - Market data loop
 
 **Low Risk** (test utilities):
 - Test files (30 files, 821 LOC) - Use MockExchange instead of sync mocks
@@ -263,7 +263,7 @@ These remain Hyperliquid-specific but can be wrapped later:
 ## Testing & Verification
 
 ### Current Status
-✅ All new code compiles (`python -c "import forven.exchange.interface"`)  
+✅ All new code compiles (`python -c "import axiom.exchange.interface"`)  
 ✅ tools_exchange.py migrated and syntax-checked  
 ✅ Backwards compatibility maintained  
 ✅ No breaking changes to existing code  
@@ -277,7 +277,7 @@ These remain Hyperliquid-specific but can be wrapped later:
 
 2. **Integration Test** (soak check)
    ```bash
-   python -m forven soak
+   python -m axiom soak
    ```
    Should show: `hyperliquid: ok` (not FAIL)
 
@@ -290,7 +290,7 @@ These remain Hyperliquid-specific but can be wrapped later:
    - Verify logs show no errors
 
 4. **Live Test** (if testnet available)
-   - Set `FORVEN_EXECUTION_MODE=paper`
+   - Set `AXIOM_EXECUTION_MODE=paper`
    - Set `HYPERLIQUID_TESTNET=true`
    - Place a small order
    - Verify on https://testnet.hyperliquid.com
@@ -300,21 +300,21 @@ These remain Hyperliquid-specific but can be wrapped later:
 ## Files Modified
 
 ### New Files (1,222 LOC)
-- `forven/exchange/interface.py` (202 LOC)
-- `forven/exchange/hyperliquid_adapter.py` (350 LOC)
-- `forven/exchange/mock.py` (300 LOC)
-- `forven/exchange/sync_wrapper.py` (170 LOC)
+- `axiom/exchange/interface.py` (202 LOC)
+- `axiom/exchange/hyperliquid_adapter.py` (350 LOC)
+- `axiom/exchange/mock.py` (300 LOC)
+- `axiom/exchange/sync_wrapper.py` (170 LOC)
 - `EXCHANGE_MIGRATION_GUIDE.md` (documentation)
 - `MIGRATION_STATUS.md` (this file)
 
 ### Modified Files
-- `forven/exchange/hyperliquid.py` - Added module-level interface functions (+15 LOC)
-- `forven/cli.py` - Added init-operator-key command (+25 LOC)
-- `forven/api_security.py` - Improved error message (+3 LOC)
-- `forven/api_core.py` - Added startup check (+7 LOC)
+- `axiom/exchange/hyperliquid.py` - Added module-level interface functions (+15 LOC)
+- `axiom/cli.py` - Added init-operator-key command (+25 LOC)
+- `axiom/api_security.py` - Improved error message (+3 LOC)
+- `axiom/api_core.py` - Added startup check (+7 LOC)
 - `docs/FIRST_RUN_CHECKLIST.md` - Updated instructions (+10 LOC)
-- `forven/agents/tools_exchange.py` - Migrated 4 functions (~200 LOC changes)
-- `forven/soak.py` - Migrated health check (~30 LOC changes)
+- `axiom/agents/tools_exchange.py` - Migrated 4 functions (~200 LOC changes)
+- `axiom/soak.py` - Migrated health check (~30 LOC changes)
 
 ---
 
@@ -374,10 +374,10 @@ Follow the **EXCHANGE_MIGRATION_GUIDE.md** to:
 
 ## References
 
-- `forven/exchange/interface.py` - Interface definition
+- `axiom/exchange/interface.py` - Interface definition
 - `EXCHANGE_MIGRATION_GUIDE.md` - Step-by-step migration guide
-- `forven/agents/tools_exchange.py` - Example migrated code
-- `forven/exchange/sync_wrapper.py` - How to call async from sync
+- `axiom/agents/tools_exchange.py` - Example migrated code
+- `axiom/exchange/sync_wrapper.py` - How to call async from sync
 - Plan file: `C:\Users\sross\.claude\plans\robust-popping-wave.md`
 
 ---

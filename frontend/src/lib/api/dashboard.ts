@@ -4,8 +4,8 @@ import {
 	fetchApi,
 	isNotFoundError,
 } from './core';
-import { getForvenStrategiesQuery } from './forven';
-import type { ManualScannerRunResponse } from './forven';
+import { getAxiomStrategiesQuery } from './axiom';
+import type { ManualScannerRunResponse } from './axiom';
 
 // ============================================================================
 // Dashboard
@@ -241,7 +241,7 @@ function normalizeLeaderboardEntry(raw: unknown, index: number): LeaderboardEntr
 async function getLegacyDashboardOverview(): Promise<DashboardOverview> {
 	const [dashboardResult, strategiesResult] = await Promise.allSettled([
 		fetchApi<Record<string, unknown>>('/dashboard'),
-		getForvenStrategiesQuery(),
+		getAxiomStrategiesQuery(),
 	]);
 	const dashboard = dashboardResult.status === 'fulfilled' ? (dashboardResult.value ?? {}) : {};
 	const strategyRows = strategiesResult.status === 'fulfilled' ? strategiesResult.value : [];
@@ -293,7 +293,7 @@ async function getLegacyDashboardOverview(): Promise<DashboardOverview> {
 }
 
 async function getLegacyLeaderboardEntries(): Promise<LeaderboardEntry[]> {
-	const rows = await getForvenStrategiesQuery();
+	const rows = await getAxiomStrategiesQuery();
 	const mapped: LeaderboardEntry[] = [];
 	for (const raw of rows) {
 		const row = asRecord(raw);

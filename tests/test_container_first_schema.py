@@ -1,4 +1,4 @@
-"""Container-first schema and ID semantics tests."""
+﻿"""Container-first schema and ID semantics tests."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import re
 import json
 from datetime import datetime, timezone
 
-from forven.db import (
+from axiom.db import (
     auto_assign_best_symbol,
     create_strategy_container,
     get_db,
@@ -15,7 +15,7 @@ from forven.db import (
 )
 
 
-def test_backtest_results_table_has_strategy_fk(forven_db):
+def test_backtest_results_table_has_strategy_fk(AXIOM_db):
     with get_db() as conn:
         fk_rows = conn.execute("PRAGMA foreign_key_list(backtest_results)").fetchall()
 
@@ -27,7 +27,7 @@ def test_backtest_results_table_has_strategy_fk(forven_db):
     )
 
 
-def test_create_strategy_container_uses_canonical_s_id(forven_db):
+def test_create_strategy_container_uses_canonical_s_id(AXIOM_db):
     with get_db() as conn:
         strategy_id, display_id, base_id = create_strategy_container(
             conn=conn,
@@ -53,7 +53,7 @@ def test_create_strategy_container_uses_canonical_s_id(forven_db):
     assert int(row["base_id"]) == int(strategy_id[1:])
 
 
-def test_backtest_runs_backfills_backtest_results_on_migration(forven_db):
+def test_backtest_runs_backfills_backtest_results_on_migration(AXIOM_db):
     now_iso = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
         strategy_id, _, _ = create_strategy_container(
@@ -90,7 +90,7 @@ def test_backtest_runs_backfills_backtest_results_on_migration(forven_db):
     assert str(row["timeframe"]) == "15m"
 
 
-def test_create_strategy_container_defaults_symbol_when_missing(forven_db):
+def test_create_strategy_container_defaults_symbol_when_missing(AXIOM_db):
     with get_db() as conn:
         strategy_id, _, _ = create_strategy_container(
             conn=conn,
@@ -110,7 +110,7 @@ def test_create_strategy_container_defaults_symbol_when_missing(forven_db):
     assert str(row["name"]) == f"BTC-EMA_CROSS-{strategy_id}"
 
 
-def test_init_db_repairs_legacy_generic_strategy_identity(forven_db):
+def test_init_db_repairs_legacy_generic_strategy_identity(AXIOM_db):
     with get_db() as conn:
         strategy_id, _, _ = create_strategy_container(
             conn=conn,
@@ -138,7 +138,7 @@ def test_init_db_repairs_legacy_generic_strategy_identity(forven_db):
     assert str(row["name"]) == f"SOL-EMA_CROSS-{strategy_id}"
 
 
-def test_trades_schema_exposes_runtime_read_columns(forven_db):
+def test_trades_schema_exposes_runtime_read_columns(AXIOM_db):
     required_columns = {
         "display_id",
         "strategy_name",
@@ -195,7 +195,7 @@ def test_trades_schema_exposes_runtime_read_columns(forven_db):
     assert "signal_data" in matching[0]
 
 
-def test_auto_assign_best_symbol_updates_timeframe_context(forven_db):
+def test_auto_assign_best_symbol_updates_timeframe_context(AXIOM_db):
     now_iso = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
         strategy_id, _, _ = create_strategy_container(

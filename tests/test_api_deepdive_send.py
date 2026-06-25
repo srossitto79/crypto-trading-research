@@ -1,10 +1,10 @@
-import json
+﻿import json
 
 import pytest
 from fastapi.testclient import TestClient
 
-from forven.db import get_db, init_db
-from forven.deepdive_db import create_or_get_active_thread
+from axiom.db import get_db, init_db
+from axiom.deepdive_db import create_or_get_active_thread
 
 
 def _seed(sid="S22001"):
@@ -19,14 +19,14 @@ def _seed(sid="S22001"):
 
 
 @pytest.fixture
-def thread(forven_db):
+def thread(AXIOM_db):
     sid = _seed()
     return create_or_get_active_thread(sid)
 
 
 @pytest.fixture
 def client():
-    from forven.api import app
+    from axiom.api import app
     return TestClient(app)
 
 
@@ -45,7 +45,7 @@ def test_send_streams_events_in_order(thread, client, monkeypatch):
         yield {"type": "done", "message_id": "m1"}
 
     # patch the symbol as imported by the router module
-    monkeypatch.setattr("forven.routers.deepdive.run_turn", fake_run_turn)
+    monkeypatch.setattr("axiom.routers.deepdive.run_turn", fake_run_turn)
 
     with client.stream("POST", f"/api/deepdive/threads/{thread['id']}/send",
                        json={"user_text": "hi"}) as r:
@@ -59,7 +59,7 @@ def test_send_streams_events_in_order(thread, client, monkeypatch):
     assert events[2]["message_id"] == "m1"
 
 
-def test_send_unknown_thread_returns_404(client, forven_db):
+def test_send_unknown_thread_returns_404(client, AXIOM_db):
     r = client.post("/api/deepdive/threads/dd_nope/send", json={"user_text": "hi"})
     assert r.status_code == 404
 
@@ -69,7 +69,7 @@ def test_send_propagates_error_event(thread, client, monkeypatch):
         yield {"type": "user_persisted"}
         yield {"type": "error", "code": "cost_cap", "message": "too expensive"}
 
-    monkeypatch.setattr("forven.routers.deepdive.run_turn", errored_run_turn)
+    monkeypatch.setattr("axiom.routers.deepdive.run_turn", errored_run_turn)
 
     with client.stream("POST", f"/api/deepdive/threads/{thread['id']}/send",
                        json={"user_text": "hi"}) as r:
@@ -80,7 +80,7 @@ def test_send_propagates_error_event(thread, client, monkeypatch):
 
 
 def test_send_to_archived_thread_returns_409(thread, client):
-    from forven.deepdive_db import archive_thread
+    from axiom.deepdive_db import archive_thread
     archive_thread(thread["id"])
     r = client.post(
         f"/api/deepdive/threads/{thread['id']}/send",

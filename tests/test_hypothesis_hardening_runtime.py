@@ -1,11 +1,11 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 
 
-def test_create_strategy_container_persists_hypothesis_id(forven_db):
-    from forven.db import create_strategy_container, get_db
-    from forven.hypotheses import create_hypothesis
+def test_create_strategy_container_persists_hypothesis_id(AXIOM_db):
+    from axiom.db import create_strategy_container, get_db
+    from axiom.hypotheses import create_hypothesis
 
     hypothesis = create_hypothesis(
         title="Container lineage",
@@ -36,10 +36,10 @@ def test_create_strategy_container_persists_hypothesis_id(forven_db):
     assert row["hypothesis_id"] == hypothesis["id"]
 
 
-def test_autonomous_strategy_research_with_hypothesis_creation_skips_generic_brain_callback(forven_db):
-    from forven.agents import runner
-    from forven.agents.manager import create_agent
-    from forven.db import get_db
+def test_autonomous_strategy_research_with_hypothesis_creation_skips_generic_brain_callback(AXIOM_db):
+    from axiom.agents import runner
+    from axiom.agents.manager import create_agent
+    from axiom.db import get_db
 
     create_agent(
         agent_id="1",
@@ -99,9 +99,9 @@ def test_autonomous_strategy_research_with_hypothesis_creation_skips_generic_bra
     )
 
 
-def test_manual_or_nonresearch_tasks_still_queue_brain_callback(forven_db):
-    from forven.agents import runner
-    from forven.agents.manager import create_agent
+def test_manual_or_nonresearch_tasks_still_queue_brain_callback(AXIOM_db):
+    from axiom.agents import runner
+    from axiom.agents.manager import create_agent
 
     create_agent(
         agent_id="1",

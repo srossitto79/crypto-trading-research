@@ -1,11 +1,11 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """Backfill BTC-USDT 1m and 5m data from Binance via CCXT.
 
 Writes Parquet files directly to data/ohlcv/BTC-USDT/ in the same format
-the Forven BarStore uses (columns: timestamp, open, high, low, close, volume;
+the Axiom BarStore uses (columns: timestamp, open, high, low, close, volume;
 zstd compression). Merges with any existing data.
 
-Run from the forven root: python scripts/backfill_btc.py
+Run from the Axiom root: python scripts/backfill_btc.py
 """
 
 import os

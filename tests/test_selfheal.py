@@ -1,6 +1,6 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
-import forven.selfheal as selfheal_mod
+import axiom.selfheal as selfheal_mod
 
 
 def test_validate_strategy_code_uses_runtime_smoke_harness(monkeypatch):
@@ -20,7 +20,7 @@ def test_validate_strategy_code_uses_runtime_smoke_harness(monkeypatch):
 
     result = selfheal_mod.validate_strategy_code(
         """
-from forven.strategies.base import BaseStrategy, Signal
+from axiom.strategies.base import BaseStrategy, Signal
 
 class DemoStrategy(BaseStrategy):
     @property
@@ -70,7 +70,7 @@ def test_validate_strategy_code_hoists_future_imports_before_harness(monkeypatch
 """Generated strategy."""
 from __future__ import annotations
 
-from forven.strategies.base import BaseStrategy, Signal
+from axiom.strategies.base import BaseStrategy, Signal
 
 class DemoStrategy(BaseStrategy):
     @property
@@ -103,7 +103,7 @@ def test_validate_strategy_code_rejects_vector_signal_from_generate_signal():
     result = selfheal_mod.validate_strategy_code(
         """
 import pandas as pd
-from forven.strategies.base import BaseStrategy, Signal
+from axiom.strategies.base import BaseStrategy, Signal
 
 class VectorSignalStrategy(BaseStrategy):
     name = "vector"

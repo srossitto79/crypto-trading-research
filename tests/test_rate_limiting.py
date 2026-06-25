@@ -1,24 +1,24 @@
-"""Regression tests for H-S6 (HTTP rate limiting via slowapi)."""
+﻿"""Regression tests for H-S6 (HTTP rate limiting via slowapi)."""
 
 from __future__ import annotations
 
 
 
-from forven import rate_limiting
+from axiom import rate_limiting
 
 
 def test_rate_limit_enabled_default(monkeypatch):
-    monkeypatch.delenv("FORVEN_RATE_LIMIT_ENABLED", raising=False)
+    monkeypatch.delenv("AXIOM_RATE_LIMIT_ENABLED", raising=False)
     assert rate_limiting.rate_limit_enabled() is True
 
 
 def test_rate_limit_disabled_via_env(monkeypatch):
-    monkeypatch.setenv("FORVEN_RATE_LIMIT_ENABLED", "0")
+    monkeypatch.setenv("AXIOM_RATE_LIMIT_ENABLED", "0")
     assert rate_limiting.rate_limit_enabled() is False
 
 
 def test_default_limit_overridable_via_env(monkeypatch):
-    monkeypatch.setenv("FORVEN_RATE_LIMIT_DEFAULT", "5/second")
+    monkeypatch.setenv("AXIOM_RATE_LIMIT_DEFAULT", "5/second")
     assert rate_limiting.get_default_limit() == "5/second"
 
 
@@ -37,7 +37,7 @@ def test_other_paths_are_not_exempt():
 
 
 def test_install_returns_none_when_disabled(monkeypatch):
-    monkeypatch.setenv("FORVEN_RATE_LIMIT_ENABLED", "0")
+    monkeypatch.setenv("AXIOM_RATE_LIMIT_ENABLED", "0")
 
     class _FakeApp:
         state = type("_S", (), {})()
@@ -49,7 +49,7 @@ def test_install_returns_none_when_disabled(monkeypatch):
 
 
 def test_install_returns_limiter_when_enabled(monkeypatch):
-    monkeypatch.setenv("FORVEN_RATE_LIMIT_ENABLED", "1")
+    monkeypatch.setenv("AXIOM_RATE_LIMIT_ENABLED", "1")
 
     class _FakeApp:
         state = type("_S", (), {})()

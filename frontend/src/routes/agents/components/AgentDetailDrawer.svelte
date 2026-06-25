@@ -2,7 +2,7 @@
 	/**
 	 * Per-agent detail drawer for the Roster tab. Edits role + instructions,
 	 * the per-agent documents SOUL.md / AGENTS.md / ROLE.md (PUT
-	 * /api/agents/{id}/documents/{doc}; GET via getForvenAgentDocuments), the
+	 * /api/agents/{id}/documents/{doc}; GET via getAxiomAgentDocuments), the
 	 * Discord bot token, and a test-discord button.
 	 *
 	 * The backend is making SOUL/AGENTS per-agent; this drawer degrades
@@ -10,18 +10,18 @@
 	 */
 	import { onMount } from 'svelte';
 	import {
-		getForvenAgentDocuments,
-		updateForvenAgent,
-		updateForvenAgentDocument,
-		testForvenAgentDiscord,
-		type ForvenAgent,
+		getAxiomAgentDocuments,
+		updateAxiomAgent,
+		updateAxiomAgentDocument,
+		testAxiomAgentDiscord,
+		type AxiomAgent,
 	} from '$lib/api';
 	import { addToast } from '$lib/stores/processTracker';
 	import { createEventDispatcher } from 'svelte';
 
-	export let agent: ForvenAgent;
+	export let agent: AxiomAgent;
 
-	const dispatch = createEventDispatcher<{ close: void; saved: ForvenAgent }>();
+	const dispatch = createEventDispatcher<{ close: void; saved: AxiomAgent }>();
 
 	type DocKind = 'soul' | 'agents' | 'role';
 	const DOC_KINDS: DocKind[] = ['soul', 'agents', 'role'];
@@ -45,7 +45,7 @@
 		if (!agentId) return;
 		docsLoading = true;
 		try {
-			const res = await getForvenAgentDocuments(agentId);
+			const res = await getAxiomAgentDocuments(agentId);
 			docs = { soul: res.soul ?? '', agents: res.agents ?? '', role: res.role ?? '' };
 		} catch (e) {
 			addToast(e instanceof Error ? e.message : 'Failed to load agent documents', 'error');
@@ -68,7 +68,7 @@
 				instructions: instructions.trimEnd(),
 			};
 			if (discordToken.trim()) payload.discord_token = discordToken.trim();
-			const updated = await updateForvenAgent(agentId, payload);
+			const updated = await updateAxiomAgent(agentId, payload);
 			hasDiscordToken = Boolean(updated.has_discord_token ?? hasDiscordToken ?? discordToken.trim());
 			discordToken = '';
 			addToast(`${agentName} updated`, 'success');
@@ -84,7 +84,7 @@
 		if (!agentId) return;
 		docSaving = { ...docSaving, [doc]: true };
 		try {
-			await updateForvenAgentDocument(agentId, doc, docs[doc]);
+			await updateAxiomAgentDocument(agentId, doc, docs[doc]);
 			addToast(`${doc.toUpperCase()}.md saved`, 'success');
 		} catch (e) {
 			addToast(e instanceof Error ? e.message : `Failed to save ${doc}`, 'error');
@@ -97,7 +97,7 @@
 		if (!agentId) return;
 		discordTesting = true;
 		try {
-			const result = await testForvenAgentDiscord(agentId, discordToken.trim() || undefined);
+			const result = await testAxiomAgentDiscord(agentId, discordToken.trim() || undefined);
 			addToast(`Test sent to #${result.channel} as ${result.agent_name ?? agentId}`, 'success');
 		} catch (e) {
 			addToast(e instanceof Error ? e.message : 'Failed to send agent test message', 'error');

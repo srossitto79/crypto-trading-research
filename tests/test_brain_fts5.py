@@ -1,4 +1,4 @@
-"""Phase 1 (P1-T08) — FTS5 trigger smoke tests + rebuild helper.
+﻿"""Phase 1 (P1-T08) — FTS5 trigger smoke tests + rebuild helper.
 
 Three contentless FTS5 virtual tables sit alongside source tables:
 
@@ -12,7 +12,7 @@ trigger wiring actually works for all three pairs, and that
 """
 from __future__ import annotations
 
-from forven.db import FTS5_TABLES, get_db, rebuild_fts5_indices
+from axiom.db import FTS5_TABLES, get_db, rebuild_fts5_indices
 
 
 # Use uppercase sentinel tokens that won't collide with anything else the
@@ -73,7 +73,7 @@ def _insert_brain_lesson(situation: str, lesson: str) -> int:
 
 # --- brain_decisions_fts -------------------------------------------------
 
-def test_brain_decisions_insert_makes_row_searchable(forven_db):
+def test_brain_decisions_insert_makes_row_searchable(AXIOM_db):
     decision_id = _insert_decision(f"market is {TOKEN_INSERT} today")
     with get_db() as conn:
         row = conn.execute(
@@ -84,7 +84,7 @@ def test_brain_decisions_insert_makes_row_searchable(forven_db):
     assert int(row["rowid"]) == decision_id
 
 
-def test_brain_decisions_update_reflects_new_body(forven_db):
+def test_brain_decisions_update_reflects_new_body(AXIOM_db):
     decision_id = _insert_decision(f"hello {TOKEN_INSERT}")
     with get_db() as conn:
         conn.execute(
@@ -106,7 +106,7 @@ def test_brain_decisions_update_reflects_new_body(forven_db):
     assert int(new["rowid"]) == decision_id
 
 
-def test_brain_decisions_delete_removes_from_index(forven_db):
+def test_brain_decisions_delete_removes_from_index(AXIOM_db):
     decision_id = _insert_decision(f"transient {TOKEN_INSERT}")
     with get_db() as conn:
         conn.execute("DELETE FROM brain_decisions WHERE id = ?", (decision_id,))
@@ -119,7 +119,7 @@ def test_brain_decisions_delete_removes_from_index(forven_db):
 
 # --- agent_tasks_fts -----------------------------------------------------
 
-def test_agent_tasks_insert_makes_row_searchable(forven_db):
+def test_agent_tasks_insert_makes_row_searchable(AXIOM_db):
     task_id = _insert_agent_task(f"title {TOKEN_INSERT}", "plain description")
     with get_db() as conn:
         row = conn.execute(
@@ -130,7 +130,7 @@ def test_agent_tasks_insert_makes_row_searchable(forven_db):
     assert int(row["rowid"]) == task_id
 
 
-def test_agent_tasks_update_description_and_output(forven_db):
+def test_agent_tasks_update_description_and_output(AXIOM_db):
     task_id = _insert_agent_task("plain title", f"first body {TOKEN_INSERT}")
     with get_db() as conn:
         conn.execute(
@@ -154,7 +154,7 @@ def test_agent_tasks_update_description_and_output(forven_db):
     assert new_out is not None and int(new_out["rowid"]) == task_id
 
 
-def test_agent_tasks_delete_removes_from_index(forven_db):
+def test_agent_tasks_delete_removes_from_index(AXIOM_db):
     task_id = _insert_agent_task(f"ephemeral {TOKEN_INSERT}", "desc")
     with get_db() as conn:
         conn.execute("DELETE FROM agent_tasks WHERE id = ?", (task_id,))
@@ -167,7 +167,7 @@ def test_agent_tasks_delete_removes_from_index(forven_db):
 
 # --- task_audit_log_fts --------------------------------------------------
 
-def test_task_audit_log_insert_makes_row_searchable(forven_db):
+def test_task_audit_log_insert_makes_row_searchable(AXIOM_db):
     audit_id = _insert_audit("t1", "exec_python", f"output had {TOKEN_INSERT} in it")
     with get_db() as conn:
         row = conn.execute(
@@ -178,7 +178,7 @@ def test_task_audit_log_insert_makes_row_searchable(forven_db):
     assert int(row["rowid"]) == audit_id
 
 
-def test_task_audit_log_update_reflects_new_summary(forven_db):
+def test_task_audit_log_update_reflects_new_summary(AXIOM_db):
     audit_id = _insert_audit("t2", "memory", f"first {TOKEN_INSERT}")
     with get_db() as conn:
         conn.execute(
@@ -198,7 +198,7 @@ def test_task_audit_log_update_reflects_new_summary(forven_db):
     assert int(new["rowid"]) == audit_id
 
 
-def test_task_audit_log_delete_removes_from_index(forven_db):
+def test_task_audit_log_delete_removes_from_index(AXIOM_db):
     audit_id = _insert_audit("t3", "exec_python", f"transient {TOKEN_INSERT}")
     with get_db() as conn:
         conn.execute("DELETE FROM task_audit_log WHERE id = ?", (audit_id,))
@@ -211,7 +211,7 @@ def test_task_audit_log_delete_removes_from_index(forven_db):
 
 # --- rebuild helper ------------------------------------------------------
 
-def test_rebuild_fts5_indices_repairs_after_simulated_drift(forven_db):
+def test_rebuild_fts5_indices_repairs_after_simulated_drift(AXIOM_db):
     """Insert a row, manually wipe the FTS index, then rebuild — search must work again."""
     decision_id = _insert_decision(f"drifty {TOKEN_INSERT}")
     task_id = _insert_agent_task(f"drift task {TOKEN_INSERT}", "x")
@@ -259,11 +259,11 @@ def test_rebuild_fts5_indices_repairs_after_simulated_drift(forven_db):
     assert bl is not None and int(bl["rowid"]) == lesson_id
 
 
-def test_fts5_rebuild_cli_command_runs(forven_db):
-    """`forven fts5-rebuild` must exit 0 and print per-table counts."""
+def test_fts5_rebuild_cli_command_runs(AXIOM_db):
+    """`Axiom fts5-rebuild` must exit 0 and print per-table counts."""
     from click.testing import CliRunner
 
-    from forven.cli import cli
+    from axiom.cli import cli
 
     _insert_decision(f"cli {TOKEN_INSERT}")
 

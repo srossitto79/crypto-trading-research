@@ -1,4 +1,4 @@
-"""H-T2: HTTP mock-vs-prod contract checks.
+﻿"""H-T2: HTTP mock-vs-prod contract checks.
 
 The project mocks httpx responses in many tests with MagicMock and custom
 objects. When the mocks drift from the actual httpx.Response interface,
@@ -17,7 +17,7 @@ def test_httpx_response_surface_matches_our_mock_assumptions():
     """A real httpx.Response exposes the attributes our code relies on."""
     req = httpx.Request("GET", "https://example.test/")
     resp = httpx.Response(200, request=req, json={"k": 1})
-    # Attributes we depend on across forven/*.py:
+    # Attributes we depend on across Axiom/*.py:
     assert hasattr(resp, "status_code")
     assert hasattr(resp, "json")
     assert hasattr(resp, "raise_for_status")

@@ -1,12 +1,12 @@
-"""2026-06-13 — Discord REST sink must circuit-break on a persistent 403 ("Missing
+﻿"""2026-06-13 — Discord REST sink must circuit-break on a persistent 403 ("Missing
 Access") instead of re-POSTing + warning on every notification. Overnight: ~196
-403s, each paired with a forven.bot WARNING and a forven.notifications WARNING."""
+403s, each paired with a Axiom.bot WARNING and a Axiom.notifications WARNING."""
 import logging
 
 import httpx
 import pytest
 
-from forven import bot
+from axiom import bot
 
 
 class _DummyResponse:
@@ -45,7 +45,7 @@ def test_send_sync_skips_http_when_circuit_open(monkeypatch):
 
 def test_send_sync_single_warning_per_cooldown(monkeypatch, caplog):
     monkeypatch.setattr(httpx, "post", lambda *a, **k: _DummyResponse(403, {"message": "Missing Access"}))
-    with caplog.at_level(logging.WARNING, logger="forven.bot"):
+    with caplog.at_level(logging.WARNING, logger="axiom.bot"):
         for _ in range(3):
             bot.send_sync("heartbeat", "hi", channel_id="999")
     lacks = [r for r in caplog.records if "lacks access to channel" in r.message]

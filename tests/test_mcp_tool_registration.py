@@ -1,4 +1,4 @@
-"""Phase 4 / P4-T06 — Dynamic MCP tool registration into tool_registry.
+﻿"""Phase 4 / P4-T06 — Dynamic MCP tool registration into tool_registry.
 
 Confirms `register_server_tools` exposes a fake stdio MCP server's tools
 to granted agents through `get_tools_for_agent`, that ungranted agents
@@ -12,12 +12,12 @@ import json
 import sys
 from pathlib import Path
 
-from forven.agents.mcp_client import (
+from axiom.agents.mcp_client import (
     register_server_tools,
     unregister_server_tools,
 )
-from forven.agents.tool_registry import _REGISTRY, get_tools_for_agent
-from forven.db import get_db, init_db
+from axiom.agents.tool_registry import _REGISTRY, get_tools_for_agent
+from axiom.db import get_db, init_db
 
 
 FAKE_SERVER = Path(__file__).parent / "fake_mcp_stdio_server.py"

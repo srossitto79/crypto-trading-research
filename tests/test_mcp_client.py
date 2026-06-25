@@ -1,4 +1,4 @@
-"""Phase 4 / P4-T04 — MCP client integration tests.
+﻿"""Phase 4 / P4-T04 — MCP client integration tests.
 
 Exercises the full handshake → list → call → close flow against a fake
 stdio MCP server (``tests/fake_mcp_stdio_server.py``). Also validates:
@@ -15,8 +15,8 @@ from pathlib import Path
 
 import pytest
 
-from forven.agents import mcp_client
-from forven.agents.mcp_client import (
+from axiom.agents import mcp_client
+from axiom.agents.mcp_client import (
     MCPProtocolError,
     MCPServerConfig,
     call_tool,
@@ -26,7 +26,7 @@ from forven.agents.mcp_client import (
     load_server_config,
     record_status,
 )
-from forven.db import get_db, init_db
+from axiom.db import get_db, init_db
 
 
 FAKE_SERVER = Path(__file__).parent / "fake_mcp_stdio_server.py"

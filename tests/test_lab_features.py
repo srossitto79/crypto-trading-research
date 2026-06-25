@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from datetime import datetime, timezone
 
@@ -16,9 +16,9 @@ def _insert_strategy(conn, strategy_id: str, stage: str) -> None:
     )
 
 
-def test_paper_wip_default_allows_unattended_rotation(forven_db):
-    from forven.db import get_db
-    from forven.lab_features import check_stage_wip_capacity
+def test_paper_wip_default_allows_unattended_rotation(AXIOM_db):
+    from axiom.db import get_db
+    from axiom.lab_features import check_stage_wip_capacity
 
     with get_db() as conn:
         for idx in range(10):
@@ -32,9 +32,9 @@ def test_paper_wip_default_allows_unattended_rotation(forven_db):
     assert "10/20" in reason
 
 
-def test_paper_wip_override_can_still_enforce_tighter_cap(forven_db):
-    from forven.db import get_db, kv_set
-    from forven.lab_features import check_stage_wip_capacity
+def test_paper_wip_override_can_still_enforce_tighter_cap(AXIOM_db):
+    from axiom.db import get_db, kv_set
+    from axiom.lab_features import check_stage_wip_capacity
 
     kv_set("pipeline:wip_cap:paper", 2)
     with get_db() as conn:
@@ -49,9 +49,9 @@ def test_paper_wip_override_can_still_enforce_tighter_cap(forven_db):
     assert "WIP cap reached" in reason
 
 
-def test_paper_wip_override_can_be_unlimited(forven_db):
-    from forven.db import get_db, kv_set
-    from forven.lab_features import check_stage_wip_capacity
+def test_paper_wip_override_can_be_unlimited(AXIOM_db):
+    from axiom.db import get_db, kv_set
+    from axiom.lab_features import check_stage_wip_capacity
 
     kv_set("pipeline:wip_cap:paper", "unlimited")
     with get_db() as conn:
@@ -66,10 +66,10 @@ def test_paper_wip_override_can_be_unlimited(forven_db):
     assert "No WIP cap" in reason
 
 
-def test_pipeline_settings_can_set_paper_wip_unlimited(forven_db):
-    from forven.api_core import PipelineSettingsUpdateBody, get_settings, put_pipeline_settings
-    from forven.db import kv_get
-    from forven.lab_features import check_stage_wip_capacity
+def test_pipeline_settings_can_set_paper_wip_unlimited(AXIOM_db):
+    from axiom.api_core import PipelineSettingsUpdateBody, get_settings, put_pipeline_settings
+    from axiom.db import kv_get
+    from axiom.lab_features import check_stage_wip_capacity
 
     put_pipeline_settings(
         PipelineSettingsUpdateBody(
@@ -90,10 +90,10 @@ def test_pipeline_settings_can_set_paper_wip_unlimited(forven_db):
     assert settings["paper_wip_cap"] == 20
 
 
-def test_pipeline_settings_can_set_paper_wip_cap(forven_db):
-    from forven.api_core import PipelineSettingsUpdateBody, put_pipeline_settings
-    from forven.db import get_db, kv_get
-    from forven.lab_features import check_stage_wip_capacity
+def test_pipeline_settings_can_set_paper_wip_cap(AXIOM_db):
+    from axiom.api_core import PipelineSettingsUpdateBody, put_pipeline_settings
+    from axiom.db import get_db, kv_get
+    from axiom.lab_features import check_stage_wip_capacity
 
     put_pipeline_settings(
         PipelineSettingsUpdateBody(
@@ -114,8 +114,8 @@ def test_pipeline_settings_can_set_paper_wip_cap(forven_db):
     assert "WIP cap reached" in reason
 
 
-def test_pipeline_settings_can_set_graveyard_strategy_limit_unlimited(forven_db):
-    from forven.api_core import (
+def test_pipeline_settings_can_set_graveyard_strategy_limit_unlimited(AXIOM_db):
+    from axiom.api_core import (
         PipelineSettingsUpdateBody,
         configured_graveyard_strategy_limit,
         get_settings,
@@ -138,8 +138,8 @@ def test_pipeline_settings_can_set_graveyard_strategy_limit_unlimited(forven_db)
     assert settings["graveyard_strategy_limit"] == 500
 
 
-def test_strategy_query_limit_honors_graveyard_strategy_cap(forven_db):
-    from forven.api_core import (
+def test_strategy_query_limit_honors_graveyard_strategy_cap(AXIOM_db):
+    from axiom.api_core import (
         PipelineSettingsUpdateBody,
         configured_graveyard_strategy_limit,
         put_pipeline_settings,

@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import pandas as pd
 
@@ -16,13 +16,13 @@ class _FakeSource:
         yield pd.DataFrame()
 
     def health(self):
-        from forven.dataeng.source import SourceHealth
+        from axiom.dataeng.source import SourceHealth
 
         return SourceHealth(source=self.id, status="closed")
 
 
 def test_source_registry_register_lookup_and_capability():
-    from forven.dataeng.source import SourceRegistry, Stream
+    from axiom.dataeng.source import SourceRegistry, Stream
 
     registry = SourceRegistry()
     source = _FakeSource({Stream.CANDLES})
@@ -35,7 +35,7 @@ def test_source_registry_register_lookup_and_capability():
 
 
 def test_source_registry_breaker_trips_and_recovers():
-    from forven.dataeng.source import SourceRegistry, Stream
+    from axiom.dataeng.source import SourceRegistry, Stream
 
     registry = SourceRegistry()
     registry.register(_FakeSource({Stream.CANDLES}))
@@ -60,9 +60,9 @@ def test_source_registry_breaker_trips_and_recovers():
 
 
 def test_ccxt_source_fetches_candles_funding_and_oi_from_exchange_fixture():
-    from forven.dataeng.ccxt_source import CcxtSource
-    from forven.dataeng.identity import to_ref
-    from forven.dataeng.source import Stream
+    from axiom.dataeng.ccxt_source import CcxtSource
+    from axiom.dataeng.identity import to_ref
+    from axiom.dataeng.source import Stream
 
     class FakeExchange:
         def fetch_ohlcv(self, symbol, timeframe, since, limit):
@@ -98,13 +98,13 @@ def test_ccxt_source_fetches_candles_funding_and_oi_from_exchange_fixture():
     assert oi["open_interest"].tolist() == [123.4]
 
 
-def test_funding_and_oi_collectors_use_source_registry_when_enabled(forven_db, tmp_path, monkeypatch):
-    from forven import api_core
-    from forven.data_manager import FundingCollector, OICollector
+def test_funding_and_oi_collectors_use_source_registry_when_enabled(AXIOM_db, tmp_path, monkeypatch):
+    from axiom import api_core
+    from axiom.data_manager import FundingCollector, OICollector
 
     api_core.put_settings_section("data-engine", {"enabled": True})
-    monkeypatch.setattr("forven.data_manager.FUNDING_DIR", tmp_path / "funding")
-    monkeypatch.setattr("forven.data_manager.OI_DIR", tmp_path / "oi")
+    monkeypatch.setattr("axiom.data_manager.FUNDING_DIR", tmp_path / "funding")
+    monkeypatch.setattr("axiom.data_manager.OI_DIR", tmp_path / "oi")
 
     calls: list[tuple[str, str, str | None]] = []
 
@@ -124,9 +124,9 @@ def test_funding_and_oi_collectors_use_source_registry_when_enabled(forven_db, t
             }
         )
 
-    monkeypatch.setattr("forven.data_manager._fetch_stream_via_source_registry", fake_fetch)
+    monkeypatch.setattr("axiom.data_manager._fetch_stream_via_source_registry", fake_fetch)
     monkeypatch.setattr(
-        "forven.data_manager._get_futures_exchange",
+        "axiom.data_manager._get_futures_exchange",
         lambda: (_ for _ in ()).throw(AssertionError("legacy exchange path should not run")),
     )
 

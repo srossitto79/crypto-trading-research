@@ -1,4 +1,4 @@
-"""Closed-only candle enforcement at the OHLCV write boundary.
+﻿"""Closed-only candle enforcement at the OHLCV write boundary.
 
 The REST collector fetches up to now+tf, so the last fetched row is typically the
 in-progress (forming) bar. Persisting it repaints/leaks lookahead into backtests
@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from forven.data import _drop_unclosed_bars
+from axiom.data import _drop_unclosed_bars
 
 
 def _frame(ts_ms: list[int]) -> pd.DataFrame:
@@ -60,7 +60,7 @@ def test_empty_safe():
 
 
 def test_reject_invalid_ohlc_drops_bad_bars():
-    from forven.data import _reject_invalid_ohlc
+    from axiom.data import _reject_invalid_ohlc
 
     df = pd.DataFrame(
         {
@@ -78,7 +78,7 @@ def test_reject_invalid_ohlc_drops_bad_bars():
 
 
 def test_reject_invalid_ohlc_keeps_clean_frame():
-    from forven.data import _reject_invalid_ohlc
+    from axiom.data import _reject_invalid_ohlc
 
     df = pd.DataFrame(
         {
@@ -95,7 +95,7 @@ def test_reject_invalid_ohlc_keeps_clean_frame():
 
 
 def test_get_dataset_source_round_trips_parquet_metadata(monkeypatch, tmp_path):
-    from forven import data as d
+    from axiom import data as d
 
     if not d._using_pyarrow():
         import pytest

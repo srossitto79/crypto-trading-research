@@ -1,9 +1,9 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import pandas as pd
 
-from forven.db import get_db
-from forven.lab_db import (
+from axiom.db import get_db
+from axiom.lab_db import (
     create_lab_experiment,
     create_or_update_model_version,
     create_selection_event,
@@ -12,9 +12,9 @@ from forven.lab_db import (
     replace_regime_containers,
     replace_regime_segments,
 )
-from forven.lab_intent_dispatch import dispatch_paper_intent
-from forven.lab_models import DispatchPaperIntentRequest, SelectorDecideRequest
-from forven.lab_selector import decide_current_regime
+from axiom.lab_intent_dispatch import dispatch_paper_intent
+from axiom.lab_models import DispatchPaperIntentRequest, SelectorDecideRequest
+from axiom.lab_selector import decide_current_regime
 
 
 def _bootstrap_model(symbol: str = "BTC/USDT", timeframe: str = "1h") -> str:
@@ -117,10 +117,10 @@ def test_selector_blocks_uncertain_regime_on_low_confidence(monkeypatch):
         ],
     )
 
-    monkeypatch.setattr("forven.lab_selector._resolve_market_frame", lambda *_args, **_kwargs: pd.DataFrame())
-    monkeypatch.setattr("forven.lab_selector.compute_features_from_frame", lambda *_args, **_kwargs: pd.DataFrame({"x": [1]}))
+    monkeypatch.setattr("axiom.lab_selector._resolve_market_frame", lambda *_args, **_kwargs: pd.DataFrame())
+    monkeypatch.setattr("axiom.lab_selector.compute_features_from_frame", lambda *_args, **_kwargs: pd.DataFrame({"x": [1]}))
     monkeypatch.setattr(
-        "forven.lab_selector.classify_features",
+        "axiom.lab_selector.classify_features",
         lambda *_args, **_kwargs: _classified_frame("TREND_UP_LOW_VOL", 0.40),
     )
 
@@ -137,10 +137,10 @@ def test_selector_blocks_uncertain_regime_on_low_confidence(monkeypatch):
 def test_selector_blocks_when_no_champion(monkeypatch):
     model_id = _bootstrap_model()
 
-    monkeypatch.setattr("forven.lab_selector._resolve_market_frame", lambda *_args, **_kwargs: pd.DataFrame())
-    monkeypatch.setattr("forven.lab_selector.compute_features_from_frame", lambda *_args, **_kwargs: pd.DataFrame({"x": [1]}))
+    monkeypatch.setattr("axiom.lab_selector._resolve_market_frame", lambda *_args, **_kwargs: pd.DataFrame())
+    monkeypatch.setattr("axiom.lab_selector.compute_features_from_frame", lambda *_args, **_kwargs: pd.DataFrame({"x": [1]}))
     monkeypatch.setattr(
-        "forven.lab_selector.classify_features",
+        "axiom.lab_selector.classify_features",
         lambda *_args, **_kwargs: _classified_frame("TREND_UP_LOW_VOL", 0.81),
     )
 
@@ -168,10 +168,10 @@ def test_selector_allows_stable_regime_with_small_transition_noise(monkeypatch):
     regimes = ["TREND_UP_LOW_VOL"] * 12
     raw_meta = [{} for _ in range(11)] + [{"uncertain": True}]
 
-    monkeypatch.setattr("forven.lab_selector._resolve_market_frame", lambda *_args, **_kwargs: pd.DataFrame())
-    monkeypatch.setattr("forven.lab_selector.compute_features_from_frame", lambda *_args, **_kwargs: pd.DataFrame({"x": [1]}))
+    monkeypatch.setattr("axiom.lab_selector._resolve_market_frame", lambda *_args, **_kwargs: pd.DataFrame())
+    monkeypatch.setattr("axiom.lab_selector.compute_features_from_frame", lambda *_args, **_kwargs: pd.DataFrame({"x": [1]}))
     monkeypatch.setattr(
-        "forven.lab_selector.classify_features",
+        "axiom.lab_selector.classify_features",
         lambda *_args, **_kwargs: _classified_frame_custom(
             raw_regimes=raw_regimes,
             regimes=regimes,
@@ -192,10 +192,10 @@ def test_selector_allows_stable_regime_with_small_transition_noise(monkeypatch):
 def test_selector_blocks_transition_state_as_uncertain_not_cold_start(monkeypatch):
     model_id = _bootstrap_model()
 
-    monkeypatch.setattr("forven.lab_selector._resolve_market_frame", lambda *_args, **_kwargs: pd.DataFrame())
-    monkeypatch.setattr("forven.lab_selector.compute_features_from_frame", lambda *_args, **_kwargs: pd.DataFrame({"x": [1]}))
+    monkeypatch.setattr("axiom.lab_selector._resolve_market_frame", lambda *_args, **_kwargs: pd.DataFrame())
+    monkeypatch.setattr("axiom.lab_selector.compute_features_from_frame", lambda *_args, **_kwargs: pd.DataFrame({"x": [1]}))
     monkeypatch.setattr(
-        "forven.lab_selector.classify_features",
+        "axiom.lab_selector.classify_features",
         lambda *_args, **_kwargs: _classified_frame("TRANSITION", 0.82),
     )
 
@@ -207,7 +207,7 @@ def test_selector_blocks_transition_state_as_uncertain_not_cold_start(monkeypatc
     assert decision.meta_json["unseen_regime"] is False
 
 
-def test_dispatch_routes_to_paper_and_persists_feedback(forven_db):
+def test_dispatch_routes_to_paper_and_persists_feedback(AXIOM_db):
     model_id = _bootstrap_model()
     selection_event_id = _create_trade_selection_event(model_id)
 
@@ -253,7 +253,7 @@ def test_dispatch_routes_to_paper_and_persists_feedback(forven_db):
     assert all(str(row["execution_status"]) == "filled" for row in feedback_rows)
 
 
-def test_dispatch_uses_base_strategy_id_but_preserves_candidate_key_metadata(forven_db):
+def test_dispatch_uses_base_strategy_id_but_preserves_candidate_key_metadata(AXIOM_db):
     model_id = _bootstrap_model()
     event = create_selection_event(
         symbol="BTC/USDT",
@@ -311,7 +311,7 @@ def test_dispatch_uses_base_strategy_id_but_preserves_candidate_key_metadata(for
     assert "S100:short_only" in str(trade["signal_data"] or "")
 
 
-def test_dispatch_requires_selection_event_id(forven_db):
+def test_dispatch_requires_selection_event_id(AXIOM_db):
     model_id = _bootstrap_model()
 
     try:

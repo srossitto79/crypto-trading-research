@@ -1,4 +1,4 @@
-"""A 413 "request too large" must not be treated as a retryable rate-limit.
+﻿"""A 413 "request too large" must not be treated as a retryable rate-limit.
 
 Groq's free tier rejects a single request that exceeds its per-minute token
 budget with HTTP 413 and "rate limit" wording. Retrying the identical request
@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import httpx
 
-from forven import ai
+from axiom import ai
 
 
 def _http_error(status: int, message: str) -> httpx.HTTPStatusError:
@@ -86,7 +86,7 @@ def test_spend_cap_is_not_request_too_large():
 
 
 def test_groq_fallback_chain_is_self_only():
-    from forven.model_routing import get_fallback_chain
+    from axiom.model_routing import get_fallback_chain
 
     chain = get_fallback_chain("groq")
     providers = [entry[0] if isinstance(entry, tuple) else entry.get("provider") for entry in chain]
@@ -95,10 +95,10 @@ def test_groq_fallback_chain_is_self_only():
     assert providers == ["groq"]
 
 
-def test_provider_quota_alert_dedupes(forven_db):
+def test_provider_quota_alert_dedupes(AXIOM_db):
     """A persistent-exhaustion alert is raised once per provider per cooldown."""
-    from forven.agents.runner import _emit_provider_quota_alert
-    from forven.db import get_db
+    from axiom.agents.runner import _emit_provider_quota_alert
+    from axiom.db import get_db
 
     _emit_provider_quota_alert("gemini", "spend cap exceeded")
     _emit_provider_quota_alert("gemini", "spend cap exceeded again")  # within cooldown

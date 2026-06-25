@@ -3,12 +3,12 @@
 	import {
 		getJobs,
 		getDashboardOverview,
-		getForvenSchedulerJobs,
-		updateForvenSchedulerJob,
+		getAxiomSchedulerJobs,
+		updateAxiomSchedulerJob,
 		triggerSchedulerJobNow,
 		type Job,
 		type DashboardOverview,
-		type ForvenSchedulerJob,
+		type AxiomSchedulerJob,
 		type Scan,
 	} from '$lib/api';
 	import { activeProcesses, type TrackedProcess } from '$lib/stores/processTracker';
@@ -22,7 +22,7 @@
 
 	let recentJobs: Job[] = [];
 	let runningJobs: Job[] = [];
-	let schedulerJobs: ForvenSchedulerJob[] = [];
+	let schedulerJobs: AxiomSchedulerJob[] = [];
 	let overview: DashboardOverview | null = null;
 	let loading = true;
 	let error: string | null = null;
@@ -60,7 +60,7 @@
 				getJobs('failed', 10),
 				getJobs('running', 20),
 				getJobs('queued', 20),
-				getForvenSchedulerJobs(),
+				getAxiomSchedulerJobs(),
 				getDashboardOverview(),
 			]);
 
@@ -198,7 +198,7 @@
 	let togglingJobs = new Set<string>();
 	let triggeringJobs = new Set<string>();
 
-	async function triggerJob(job: ForvenSchedulerJob) {
+	async function triggerJob(job: AxiomSchedulerJob) {
 		const jobId = String(job.id ?? '');
 		if (!jobId || triggeringJobs.has(jobId)) return;
 		triggeringJobs = new Set(triggeringJobs).add(jobId);
@@ -212,7 +212,7 @@
 		}
 	}
 
-	async function toggleJob(job: ForvenSchedulerJob) {
+	async function toggleJob(job: AxiomSchedulerJob) {
 		const jobId = String(job.id ?? '');
 		if (!jobId || togglingJobs.has(jobId)) return;
 		const newEnabled = !job.enabled;
@@ -220,7 +220,7 @@
 		// Optimistic update so the toggle feels instant
 		schedulerJobs = schedulerJobs.map(j => String(j.id) === jobId ? { ...j, enabled: newEnabled } : j);
 		try {
-			await updateForvenSchedulerJob(jobId, job.schedule_type ?? 'interval', job.schedule_expr ?? '', newEnabled);
+			await updateAxiomSchedulerJob(jobId, job.schedule_type ?? 'interval', job.schedule_expr ?? '', newEnabled);
 		} catch {
 			// Revert on failure
 			schedulerJobs = schedulerJobs.map(j => String(j.id) === jobId ? { ...j, enabled: !newEnabled } : j);

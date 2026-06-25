@@ -1,10 +1,10 @@
-"""Schema normalization tests for Brain response payloads."""
+﻿"""Schema normalization tests for Brain response payloads."""
 
 import asyncio
 
-import forven.ai as ai_mod
-import forven.brain as brain_mod
-from forven.brain import normalize_brain_decision, parse_brain_decision
+import axiom.ai as ai_mod
+import axiom.brain as brain_mod
+from axiom.brain import normalize_brain_decision, parse_brain_decision
 
 
 def test_parse_brain_decision_accepts_markdown_json_block():

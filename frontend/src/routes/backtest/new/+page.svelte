@@ -299,7 +299,7 @@
 </script>
 
 <svelte:head>
-	<title>Manual Backtest | Forven</title>
+	<title>Manual Backtest | Axiom</title>
 </svelte:head>
 
 <div class="min-h-screen bg-[#050505] px-4 py-8 md:px-8">

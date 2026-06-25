@@ -3,7 +3,7 @@
 	 * Specialized renderer for `approval_type === 'skill_update_proposal'`.
 	 *
 	 * The approval payload shape is set by the `propose_skill_update` Brain
-	 * tool in `forven/agents/tools_brain.py`:
+	 * tool in `axiom/agents/tools_brain.py`:
 	 *   {
 	 *     skill_name,
 	 *     description?,

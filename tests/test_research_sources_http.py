@@ -1,6 +1,6 @@
-import pytest
+﻿import pytest
 import httpx
-from forven.research_sources._http import (
+from axiom.research_sources._http import (
     SourceHttpClient,
     RateLimitExceeded,
     UnsafeUrlError,
@@ -42,7 +42,7 @@ def test_sets_user_agent_header():
     client = SourceHttpClient(default_rate_per_min=1000)
     client._transport = httpx.MockTransport(handler)
     client.get("https://example.com/")
-    assert "forven" in captured["ua"].lower()
+    assert "Axiom" in captured["ua"].lower()
 
 
 def test_timeout_surfaces_as_error():

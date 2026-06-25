@@ -1,10 +1,10 @@
-"""Quick test: engulfing ETH/USDT 4h metrics."""
+﻿"""Quick test: engulfing ETH/USDT 4h metrics."""
 import sys, json
 sys.path.insert(0, '.')
 
 
 if __name__ == '__main__':
-    from forven.strategies.backtest import backtest_strategy
+    from axiom.strategies.backtest import backtest_strategy
 
     for volume_mult in [1.5, 1.8, 2.0]:
         params = {'volume_mult': volume_mult, 'atr_period': 14}

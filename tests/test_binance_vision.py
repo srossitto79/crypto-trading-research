@@ -1,4 +1,4 @@
-"""Tests for forven.binance_vision — BinanceVisionClient."""
+﻿"""Tests for Axiom.binance_vision — BinanceVisionClient."""
 from __future__ import annotations
 
 import io
@@ -9,7 +9,7 @@ import httpx
 import pandas as pd
 import pytest
 
-from forven.binance_vision import BinanceVisionClient
+from axiom.binance_vision import BinanceVisionClient
 
 
 BV = BinanceVisionClient()
@@ -142,7 +142,7 @@ def test_probe_start_date_returns_tuple():
     # 3 404s then a 200 — probe finds start on 4th month tried
     with patch("httpx.get", side_effect=[mock_resp_404, mock_resp_404, mock_resp_404, mock_resp_200]):
         # Clear cache first to avoid interference from other tests
-        from forven.binance_vision import _bv_start_cache
+        from axiom.binance_vision import _bv_start_cache
         _bv_start_cache.clear()
         result = BV.probe_start_date("PROBETEST", "klines", timeframe="4h")
     assert result is not None
@@ -156,14 +156,14 @@ def test_probe_start_date_returns_tuple():
 
 def test_needs_backfill_old_data():
     """DataManager._needs_backfill returns True when oldest data is recent (< BV start)."""
-    from forven.data_manager import DataManager
+    from axiom.data_manager import DataManager
 
     # DataFrame with data starting 2024-01-01 (well after BV start)
     ts = pd.date_range("2024-01-01", periods=10, freq="1h", tz="UTC")
     oldest = ts[0]
 
     # BV start probe returns 2020-01 — there's a gap
-    with patch("forven.binance_vision.BinanceVisionClient.probe_start_date", return_value=(2020, 1)):
+    with patch("axiom.binance_vision.BinanceVisionClient.probe_start_date", return_value=(2020, 1)):
         dm = DataManager.__new__(DataManager)  # skip __init__ (avoids thread spawn)
         result = dm._needs_backfill(oldest, "BTCUSDT", "fundingRate")
     assert result is True
@@ -171,13 +171,13 @@ def test_needs_backfill_old_data():
 
 def test_needs_backfill_no_gap():
     """_needs_backfill returns False when oldest data is close to BV start."""
-    from forven.data_manager import DataManager
+    from axiom.data_manager import DataManager
 
     # DataFrame starting 2020-01-15 — only 2 weeks after BV start (2020-01)
     ts = pd.date_range("2020-01-15", periods=10, freq="8h", tz="UTC")
     oldest = ts[0]
 
-    with patch("forven.binance_vision.BinanceVisionClient.probe_start_date", return_value=(2020, 1)):
+    with patch("axiom.binance_vision.BinanceVisionClient.probe_start_date", return_value=(2020, 1)):
         dm = DataManager.__new__(DataManager)
         result = dm._needs_backfill(oldest, "BTCUSDT", "fundingRate")
     assert result is False

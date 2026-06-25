@@ -23,11 +23,11 @@
 	 *
 	 * Persistence (all in ONE save via the shared dirty-bar):
 	 *  - Each changed agent's model → PATCH /api/agents/{id}/model
-	 *    (updateForvenAgentModel).
+	 *    (updateAxiomAgentModel).
 	 *  - Each agent's fallback chain → model-policy fallback_chains under the slot
 	 *    key `agent:<id>`.
 	 *  - provider_priority + aux/backup fallback_chains (+ derived primary) → PUT
-	 *    /api/model-policy (updateForvenModelPolicy) — one call.
+	 *    /api/model-policy (updateAxiomModelPolicy) — one call.
 	 *  - 5 auxiliary kinds → PUT /api/brain/auxiliary (updateBrainAuxiliary). The
 	 *    backend stores a single {provider, model_id} per aux kind; the optional
 	 *    per-slot fallback ordering is persisted alongside in model-policy's
@@ -40,17 +40,17 @@
 	 */
 	import { onMount } from 'svelte';
 	import {
-		updateForvenModelPolicy,
-		updateForvenAgentModel,
+		updateAxiomModelPolicy,
+		updateAxiomAgentModel,
 		updateSettingsSection,
 		getSettings,
-		getForvenAgents,
+		getAxiomAgents,
 		getBrainAuxiliary,
 		updateBrainAuxiliary,
-		type ForvenAgent,
-		type ForvenProvider,
-		type ForvenModelPolicyFallbackEntry,
-		type ForvenModelPolicyUpdatePayload,
+		type AxiomAgent,
+		type AxiomProvider,
+		type AxiomModelPolicyFallbackEntry,
+		type AxiomModelPolicyUpdatePayload,
 		type BrainAuxiliaryTaskKind,
 		type BrainAuxiliaryEntry,
 	} from '$lib/api';
@@ -73,16 +73,16 @@
 		const m = String(modelId ?? '').trim();
 		return p && m ? `${p}:${m}` : '';
 	}
-	function fromKey(key: string): ForvenModelPolicyFallbackEntry | null {
+	function fromKey(key: string): AxiomModelPolicyFallbackEntry | null {
 		const sep = key.indexOf(':');
 		if (sep <= 0) return null;
 		return { provider: key.slice(0, sep), model_id: key.slice(sep + 1) };
 	}
-	function chainToKeys(chain: ForvenModelPolicyFallbackEntry[] | undefined): string[] {
+	function chainToKeys(chain: AxiomModelPolicyFallbackEntry[] | undefined): string[] {
 		return (chain ?? []).map((e) => toKey(e.provider, e.model_id)).filter(Boolean);
 	}
-	function keysToChain(keys: string[]): ForvenModelPolicyFallbackEntry[] {
-		return keys.map(fromKey).filter((e): e is ForvenModelPolicyFallbackEntry => e !== null);
+	function keysToChain(keys: string[]): AxiomModelPolicyFallbackEntry[] {
+		return keys.map(fromKey).filter((e): e is AxiomModelPolicyFallbackEntry => e !== null);
 	}
 
 	function labelForOptionKey(key: string): string {
@@ -188,7 +188,7 @@
 			const [auxRes, live, agentsRes] = await Promise.allSettled([
 				getBrainAuxiliary(),
 				getSettings(),
-				getForvenAgents(),
+				getAxiomAgents(),
 			]);
 
 			// Build the Agents section from EVERY agent (core + strategy
@@ -197,7 +197,7 @@
 			// The Brain's selection here also derives the model-policy primary.
 			if (agentsRes.status === 'fulfilled') {
 				const list = (agentsRes.value ?? []).filter(
-					(a): a is ForvenAgent => Boolean(String(a?.id ?? '').trim())
+					(a): a is AxiomAgent => Boolean(String(a?.id ?? '').trim())
 				);
 				const rows: AgentRow[] = [];
 				const nextKey: Record<string, string> = {};
@@ -292,9 +292,9 @@
 	 * the Brain's provider at the head of provider_priority.
 	 */
 	function withDerivedPrimary(
-		payload: ForvenModelPolicyUpdatePayload
-	): ForvenModelPolicyUpdatePayload {
-		const next: ForvenModelPolicyUpdatePayload = { ...payload };
+		payload: AxiomModelPolicyUpdatePayload
+	): AxiomModelPolicyUpdatePayload {
+		const next: AxiomModelPolicyUpdatePayload = { ...payload };
 		if (brainProvider && brainModel) {
 			next.primary_provider = brainProvider;
 			next.primary_model = brainModel;
@@ -333,8 +333,8 @@
 				if (cur === (agentBaseKey[row.id] ?? '')) continue;
 				const entry = fromKey(cur);
 				if (!entry) continue;
-				await updateForvenAgentModel(row.id, {
-					model: entry.provider as ForvenProvider,
+				await updateAxiomAgentModel(row.id, {
+					model: entry.provider as AxiomProvider,
 					model_id: entry.model_id,
 				});
 			}
@@ -377,7 +377,7 @@
 
 			// 4) All fallback chains (every agent slot + every aux slot + backup)
 			//    in one policy write. The Brain-derived primary rides along.
-			const fallback_chains: Record<string, ForvenModelPolicyFallbackEntry[]> = {
+			const fallback_chains: Record<string, AxiomModelPolicyFallbackEntry[]> = {
 				...(policy?.fallback_chains ?? {}),
 			};
 			for (const row of agentRows) {
@@ -387,7 +387,7 @@
 				fallback_chains[slotChainKey(kind)] = keysToChain(auxFallbacks[kind] ?? []);
 			}
 			fallback_chains['backup'] = keysToChain(backupFallbacks);
-			const updated = await updateForvenModelPolicy(withDerivedPrimary({ fallback_chains }));
+			const updated = await updateAxiomModelPolicy(withDerivedPrimary({ fallback_chains }));
 			agentsConfig.setPolicy(updated);
 
 			// Reflect the saved models as the new baseline and refresh the shared

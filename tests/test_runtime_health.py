@@ -1,12 +1,12 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from forven.db import kv_set
-from forven.runtime_health import normalize_daemon_state
+from axiom.db import kv_set
+from axiom.runtime_health import normalize_daemon_state
 
 
-def test_normalize_daemon_state_marks_stale_dead_process(monkeypatch, forven_db):
+def test_normalize_daemon_state_marks_stale_dead_process(monkeypatch, AXIOM_db):
     stale_tick = datetime.now(timezone.utc) - timedelta(minutes=30)
     kv_set(
         "daemon_state",
@@ -19,9 +19,9 @@ def test_normalize_daemon_state_marks_stale_dead_process(monkeypatch, forven_db)
     )
 
     removed = {"called": False}
-    monkeypatch.setattr("forven.runtime_health.pid_exists", lambda pid: False)
+    monkeypatch.setattr("axiom.runtime_health.pid_exists", lambda pid: False)
     monkeypatch.setattr(
-        "forven.runtime_health.remove_stale_daemon_lock",
+        "axiom.runtime_health.remove_stale_daemon_lock",
         lambda expected_pid=None: removed.__setitem__("called", True) or True,
     )
 

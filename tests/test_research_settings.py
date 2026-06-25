@@ -1,9 +1,9 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
-import forven.api_core as core
+import axiom.api_core as core
 
 
-def test_get_settings_includes_research_settings_defaults(forven_db):
+def test_get_settings_includes_research_settings_defaults(AXIOM_db):
     settings = core.get_settings()
 
     research_settings = settings.get("research_settings")
@@ -13,7 +13,7 @@ def test_get_settings_includes_research_settings_defaults(forven_db):
     assert "book" in research_settings["allowed_external_source_types"]
 
 
-def test_put_research_settings_merges_nested_values(forven_db):
+def test_put_research_settings_merges_nested_values(AXIOM_db):
     updated = core.put_settings_section(
         "research",
         {

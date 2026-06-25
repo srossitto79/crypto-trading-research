@@ -5,7 +5,7 @@ import {
 	fetchApi,
 	isNotFoundError,
 } from './core';
-import { getForvenStrategiesQuery, promoteForvenStrategy } from './forven';
+import { getAxiomStrategiesQuery, promoteAxiomStrategy } from './axiom';
 import { normalizeStrategyPayload } from './strategies';
 
 export async function getPromotedStrategies(): Promise<{ strategies: Strategy[] }> {
@@ -336,12 +336,12 @@ export interface StrategyExportMeta {
 }
 
 /**
- * Raw export envelope: the full container snapshot plus a `forven_export` meta
+ * Raw export envelope: the full container snapshot plus a `axiom_export` meta
  * block. Kept as the verbatim server JSON (not reshaped) so it round-trips on
  * re-import with full fidelity.
  */
 export type StrategyExportEnvelope = Record<string, unknown> & {
-	forven_export?: Partial<StrategyExportMeta>;
+	axiom_export?: Partial<StrategyExportMeta>;
 };
 
 export interface StrategyImportResult {
@@ -860,7 +860,7 @@ export async function transitionStage(
 	reason = '',
 	actor = 'manual',
 ): Promise<{ ok: boolean; strategy_id: string; from: string; to: string; display_id?: string; owner?: string | null }> {
-	const promoted = await promoteForvenStrategy(
+	const promoted = await promoteAxiomStrategy(
 		strategyId,
 		normalizePipelineStageToStatus(targetStage),
 		{ reason: reason || `manual:${actor}`, force: actor === 'manual' },
@@ -874,7 +874,7 @@ export async function transitionStage(
 }
 
 export async function getGraveyard(): Promise<{ active: ContainerStrategy[]; archived: ContainerStrategy[] }> {
-	const rows = await getForvenStrategiesQuery();
+	const rows = await getAxiomStrategiesQuery();
 	const isArchivedStage = (row: Record<string, unknown>) => {
 		const stage = String(row.stage ?? row.status ?? '').toLowerCase();
 		return (
@@ -928,7 +928,7 @@ export async function getGraveyard(): Promise<{ active: ContainerStrategy[]; arc
 }
 
 export async function reviveFromGraveyard(strategyId: string): Promise<{ ok: boolean; strategy_id: string; from: string; to: string }> {
-	const promoted = await promoteForvenStrategy(strategyId, 'researching', {
+	const promoted = await promoteAxiomStrategy(strategyId, 'researching', {
 		reason: 'Revive from graveyard',
 	});
 	return {

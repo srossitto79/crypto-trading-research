@@ -1,6 +1,6 @@
-"""Routine "Run now" — manual dispatch of a routine's brain_invoke job.
+﻿"""Routine "Run now" — manual dispatch of a routine's brain_invoke job.
 
-Covers ``forven.control_plane.routines.dispatch_routine_now`` and the
+Covers ``Axiom.control_plane.routines.dispatch_routine_now`` and the
 ``POST /api/routines/{id}/run`` route. The manual dispatch must enqueue a
 ``brain_invoke`` task using the SAME payload shape the scheduler builds for
 cron fires (prompt + tools_context + skills), differing only by ``source``.
@@ -13,9 +13,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from forven.control_plane import routines as r
-from forven.db import get_db, init_db
-from forven.routers import routines as routines_router
+from axiom.control_plane import routines as r
+from axiom.db import get_db, init_db
+from axiom.routers import routines as routines_router
 
 
 def _make(**overrides) -> int:
@@ -43,7 +43,7 @@ def _latest_brain_invoke_task() -> dict:
 
 
 @pytest.fixture
-def client(forven_db) -> TestClient:
+def client(AXIOM_db) -> TestClient:
     app = FastAPI()
     app.include_router(routines_router.router)
     return TestClient(app)
@@ -51,7 +51,7 @@ def client(forven_db) -> TestClient:
 
 # --- control-plane dispatch ----------------------------------------------
 
-def test_dispatch_enqueues_brain_invoke_task(forven_db) -> None:
+def test_dispatch_enqueues_brain_invoke_task(AXIOM_db) -> None:
     init_db()
     routine_id = _make()
 
@@ -74,7 +74,7 @@ def test_dispatch_enqueues_brain_invoke_task(forven_db) -> None:
     assert payload["skills"] == ["recall", "post_mortem"]
 
 
-def test_dispatch_records_run(forven_db) -> None:
+def test_dispatch_records_run(AXIOM_db) -> None:
     init_db()
     routine_id = _make()
 
@@ -86,13 +86,13 @@ def test_dispatch_records_run(forven_db) -> None:
     assert routine["last_run_at"]
 
 
-def test_dispatch_missing_routine_raises(forven_db) -> None:
+def test_dispatch_missing_routine_raises(AXIOM_db) -> None:
     init_db()
     with pytest.raises(r.RoutineValidationError):
         r.dispatch_routine_now(999999)
 
 
-def test_dispatch_paused_routine_raises(forven_db) -> None:
+def test_dispatch_paused_routine_raises(AXIOM_db) -> None:
     init_db()
     routine_id = _make(enabled=False)
     with pytest.raises(r.RoutineDispatchError):

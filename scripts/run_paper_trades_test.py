@@ -1,15 +1,15 @@
-"""Run scanner in high_activity_test mode to generate paper trades for new strategies."""
+﻿"""Run scanner in high_activity_test mode to generate paper trades for new strategies."""
 import sys, json, time
 sys.path.insert(0, '.')
 
 
 if __name__ == '__main__':
     import sqlite3
-    from forven.config import FORVEN_DB
+    from axiom.config import AXIOM_DB
 
     # Enable high_activity_test mode
     print("Starting paper service in high_activity_test mode...")
-    from forven.api_domains.paper import start_paper_service, stop_paper_service, _run_scanner_once
+    from axiom.api_domains.paper import start_paper_service, stop_paper_service, _run_scanner_once
     result = start_paper_service(high_activity_test=True, run_scan_now=False)
     print(f"  Service started: {result.get('status')}")
 
@@ -21,7 +21,7 @@ if __name__ == '__main__':
         time.sleep(2)
 
     # Check for new trades
-    conn = sqlite3.connect(FORVEN_DB)
+    conn = sqlite3.connect(AXIOM_DB)
     conn.row_factory = sqlite3.Row
 
     rows = conn.execute("""

@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import importlib
@@ -30,10 +30,10 @@ def _hypothesis_payload(**overrides):
     return payload
 
 
-def test_research_tools_create_hypothesis_and_attach_artifacts_and_gaps(forven_db, monkeypatch):
-    from forven.system_pause import set_system_mode
+def test_research_tools_create_hypothesis_and_attach_artifacts_and_gaps(AXIOM_db, monkeypatch):
+    from axiom.system_pause import set_system_mode
 
-    tools_research = importlib.import_module("forven.agents.tools_research")
+    tools_research = importlib.import_module("axiom.agents.tools_research")
 
     set_system_mode("auto")
 
@@ -94,11 +94,11 @@ def test_research_tools_create_hypothesis_and_attach_artifacts_and_gaps(forven_d
     assert gap_result["data_gap"]["request_count"] == 1
 
 
-def test_create_hypothesis_blocked_inside_candidate_task(forven_db):
-    tools_research = importlib.import_module("forven.agents.tools_research")
-    from forven.agents.context import reset_tool_context, set_tool_context
-    from forven.db import get_db
-    from forven.system_pause import set_system_mode
+def test_create_hypothesis_blocked_inside_candidate_task(AXIOM_db):
+    tools_research = importlib.import_module("axiom.agents.tools_research")
+    from axiom.agents.context import reset_tool_context, set_tool_context
+    from axiom.db import get_db
+    from axiom.system_pause import set_system_mode
 
     set_system_mode("auto")
 
@@ -131,7 +131,7 @@ def test_create_hypothesis_blocked_inside_candidate_task(forven_db):
 
     assert result["ok"] is False
     assert result["error_code"] == "hypothesis_creation_blocked_for_task"
-    assert "forven_create_strategy" in result["guidance"]
+    assert "AXIOM_create_strategy" in result["guidance"]
     with get_db() as conn:
         count = conn.execute(
             "SELECT COUNT(*) AS n FROM hypotheses WHERE title = ?",
@@ -140,11 +140,11 @@ def test_create_hypothesis_blocked_inside_candidate_task(forven_db):
     assert count == 0
 
 
-def test_create_hypothesis_allowed_for_propose_crucible_task(forven_db):
-    tools_research = importlib.import_module("forven.agents.tools_research")
-    from forven.agents.context import reset_tool_context, set_tool_context
-    from forven.db import get_db
-    from forven.system_pause import set_system_mode
+def test_create_hypothesis_allowed_for_propose_crucible_task(AXIOM_db):
+    tools_research = importlib.import_module("axiom.agents.tools_research")
+    from axiom.agents.context import reset_tool_context, set_tool_context
+    from axiom.db import get_db
+    from axiom.system_pause import set_system_mode
 
     set_system_mode("auto")
 
@@ -178,7 +178,7 @@ def test_create_hypothesis_allowed_for_propose_crucible_task(forven_db):
 
 
 def test_assert_hypothesis_spawn_allowed_raises_when_limits_reached(monkeypatch):
-    tools_research = importlib.import_module("forven.agents.tools_research")
+    tools_research = importlib.import_module("axiom.agents.tools_research")
 
     monkeypatch.setattr(
         tools_research,
@@ -199,10 +199,10 @@ def test_assert_hypothesis_spawn_allowed_raises_when_limits_reached(monkeypatch)
         raise AssertionError("expected per-run spawn limit failure")
 
 
-def test_strategy_developer_hypothesis_creation_normalizes_lane_and_source(monkeypatch, forven_db):
-    from forven.system_pause import set_system_mode
+def test_strategy_developer_hypothesis_creation_normalizes_lane_and_source(monkeypatch, AXIOM_db):
+    from axiom.system_pause import set_system_mode
 
-    tools_research = importlib.import_module("forven.agents.tools_research")
+    tools_research = importlib.import_module("axiom.agents.tools_research")
 
     set_system_mode("auto")
 
@@ -219,7 +219,7 @@ def test_strategy_developer_hypothesis_creation_normalizes_lane_and_source(monke
         raising=False,
     )
 
-    from forven.db import get_db
+    from axiom.db import get_db
 
     with get_db() as conn:
         conn.execute(
@@ -260,9 +260,9 @@ def test_strategy_developer_hypothesis_creation_normalizes_lane_and_source(monke
     assert created["origin_role"] == "strategy-developer"
 
 
-def test_only_strategy_developer_role_gets_create_hypothesis_tool(forven_db):
-    from forven.agents.manager import create_agent
-    from forven.agents.tool_registry import get_tools_for_agent
+def test_only_strategy_developer_role_gets_create_hypothesis_tool(AXIOM_db):
+    from axiom.agents.manager import create_agent
+    from axiom.agents.tool_registry import get_tools_for_agent
 
     create_agent(
         agent_id="strategy-developer",
@@ -289,11 +289,11 @@ def test_only_strategy_developer_role_gets_create_hypothesis_tool(forven_db):
     assert "create_hypothesis" not in quant_tools
 
 
-def test_custom_strategy_agent_normalizes_origin_role_to_strategy_developer(monkeypatch, forven_db):
-    from forven.agents.manager import create_agent
-    from forven.system_pause import set_system_mode
+def test_custom_strategy_agent_normalizes_origin_role_to_strategy_developer(monkeypatch, AXIOM_db):
+    from axiom.agents.manager import create_agent
+    from axiom.system_pause import set_system_mode
 
-    tools_research = importlib.import_module("forven.agents.tools_research")
+    tools_research = importlib.import_module("axiom.agents.tools_research")
 
     set_system_mode("auto")
 
@@ -328,9 +328,9 @@ def test_custom_strategy_agent_normalizes_origin_role_to_strategy_developer(monk
     assert created["origin_role"] == "strategy-developer"
 
 
-def test_only_strategy_developer_role_gets_strategy_creation_tools(forven_db):
-    from forven.agents.manager import create_agent
-    from forven.agents.tool_registry import get_tools_for_agent
+def test_only_strategy_developer_role_gets_strategy_creation_tools(AXIOM_db):
+    from axiom.agents.manager import create_agent
+    from axiom.agents.tool_registry import get_tools_for_agent
 
     create_agent(
         agent_id="strategy-developer",
@@ -352,16 +352,16 @@ def test_only_strategy_developer_role_gets_strategy_creation_tools(forven_db):
     custom_strategy_tools = {tool["name"] for tool in get_tools_for_agent("1")}
     quant_tools = {tool["name"] for tool in get_tools_for_agent("quant-researcher")}
 
-    assert "forven_create_strategy" in default_strategy_tools
+    assert "AXIOM_create_strategy" in default_strategy_tools
     assert "register_strategy" in default_strategy_tools
-    assert "forven_create_strategy" in custom_strategy_tools
+    assert "AXIOM_create_strategy" in custom_strategy_tools
     assert "register_strategy" in custom_strategy_tools
-    assert "forven_create_strategy" not in quant_tools
+    assert "AXIOM_create_strategy" not in quant_tools
     assert "register_strategy" not in quant_tools
 
 
-def test_strategy_developer_can_discover_and_inspect_youtube_benchmarks(monkeypatch, forven_db):
-    tools_research = importlib.import_module("forven.agents.tools_research")
+def test_strategy_developer_can_discover_and_inspect_youtube_benchmarks(monkeypatch, AXIOM_db):
+    tools_research = importlib.import_module("axiom.agents.tools_research")
 
     monkeypatch.setattr(
         tools_research,
@@ -376,7 +376,7 @@ def test_strategy_developer_can_discover_and_inspect_youtube_benchmarks(monkeypa
         raising=False,
     )
 
-    from forven.db import get_db
+    from axiom.db import get_db
 
     with get_db() as conn:
         conn.execute(
@@ -444,8 +444,8 @@ def test_strategy_developer_can_discover_and_inspect_youtube_benchmarks(monkeypa
     assert inspected["transcript"]["status"] == "available"
 
 
-def test_discover_youtube_benchmarks_passes_query_through(monkeypatch, forven_db):
-    tools_research = importlib.import_module("forven.agents.tools_research")
+def test_discover_youtube_benchmarks_passes_query_through(monkeypatch, AXIOM_db):
+    tools_research = importlib.import_module("axiom.agents.tools_research")
 
     monkeypatch.setattr(
         tools_research,
@@ -454,7 +454,7 @@ def test_discover_youtube_benchmarks_passes_query_through(monkeypatch, forven_db
         raising=False,
     )
 
-    from forven.db import get_db
+    from axiom.db import get_db
 
     with get_db() as conn:
         conn.execute(
@@ -492,8 +492,8 @@ def test_discover_youtube_benchmarks_passes_query_through(monkeypatch, forven_db
     assert captured == {"query": "funding mean reversion", "max_results": 3}
 
 
-def test_youtube_benchmark_tools_reject_non_benchmarking_lane(monkeypatch, forven_db):
-    tools_research = importlib.import_module("forven.agents.tools_research")
+def test_youtube_benchmark_tools_reject_non_benchmarking_lane(monkeypatch, AXIOM_db):
+    tools_research = importlib.import_module("axiom.agents.tools_research")
 
     monkeypatch.setattr(
         tools_research,
@@ -502,7 +502,7 @@ def test_youtube_benchmark_tools_reject_non_benchmarking_lane(monkeypatch, forve
         raising=False,
     )
 
-    from forven.db import get_db
+    from axiom.db import get_db
 
     with get_db() as conn:
         conn.execute(
@@ -531,8 +531,8 @@ def test_youtube_benchmark_tools_reject_non_benchmarking_lane(monkeypatch, forve
     }
 
 
-def test_inspect_youtube_video_rejects_non_benchmarking_lane_with_compact_error(monkeypatch, forven_db):
-    tools_research = importlib.import_module("forven.agents.tools_research")
+def test_inspect_youtube_video_rejects_non_benchmarking_lane_with_compact_error(monkeypatch, AXIOM_db):
+    tools_research = importlib.import_module("axiom.agents.tools_research")
 
     monkeypatch.setattr(
         tools_research,
@@ -541,7 +541,7 @@ def test_inspect_youtube_video_rejects_non_benchmarking_lane_with_compact_error(
         raising=False,
     )
 
-    from forven.db import get_db
+    from axiom.db import get_db
 
     with get_db() as conn:
         conn.execute(
@@ -572,8 +572,8 @@ def test_inspect_youtube_video_rejects_non_benchmarking_lane_with_compact_error(
     }
 
 
-def test_youtube_benchmark_tools_return_compact_error_when_helper_unavailable(monkeypatch, forven_db):
-    tools_research = importlib.import_module("forven.agents.tools_research")
+def test_youtube_benchmark_tools_return_compact_error_when_helper_unavailable(monkeypatch, AXIOM_db):
+    tools_research = importlib.import_module("axiom.agents.tools_research")
 
     monkeypatch.setattr(
         tools_research,
@@ -582,7 +582,7 @@ def test_youtube_benchmark_tools_return_compact_error_when_helper_unavailable(mo
         raising=False,
     )
 
-    from forven.db import get_db
+    from axiom.db import get_db
 
     with get_db() as conn:
         conn.execute(
@@ -604,7 +604,7 @@ def test_youtube_benchmark_tools_return_compact_error_when_helper_unavailable(mo
         )
 
     def _unavailable(*args, **kwargs):
-        raise ImportError("forven.research_sources.youtube is unavailable")
+        raise ImportError("axiom.research_sources.youtube is unavailable")
 
     monkeypatch.setattr(tools_research, "search_youtube_videos", _unavailable)
     monkeypatch.setattr(tools_research, "inspect_youtube_video", _unavailable)
@@ -618,8 +618,8 @@ def test_youtube_benchmark_tools_return_compact_error_when_helper_unavailable(mo
     assert inspected == {"ok": False, "error": "youtube research helper unavailable"}
 
 
-def test_inspect_youtube_video_preserves_channel_name_and_unavailable_transcript_metadata(monkeypatch, forven_db):
-    tools_research = importlib.import_module("forven.agents.tools_research")
+def test_inspect_youtube_video_preserves_channel_name_and_unavailable_transcript_metadata(monkeypatch, AXIOM_db):
+    tools_research = importlib.import_module("axiom.agents.tools_research")
 
     monkeypatch.setattr(
         tools_research,
@@ -628,7 +628,7 @@ def test_inspect_youtube_video_preserves_channel_name_and_unavailable_transcript
         raising=False,
     )
 
-    from forven.db import get_db
+    from axiom.db import get_db
 
     with get_db() as conn:
         conn.execute(
@@ -674,10 +674,10 @@ def test_inspect_youtube_video_preserves_channel_name_and_unavailable_transcript
     assert inspected["transcript"]["reason"] == "transcript_empty"
 
 
-def test_attach_hypothesis_artifact_tool_forwards_cached_content(forven_db):
+def test_attach_hypothesis_artifact_tool_forwards_cached_content(AXIOM_db):
     import json
-    from forven.agents.tools_research import _tool_attach_hypothesis_artifact
-    from forven.hypotheses import create_hypothesis, list_hypothesis_artifacts
+    from axiom.agents.tools_research import _tool_attach_hypothesis_artifact
+    from axiom.hypotheses import create_hypothesis, list_hypothesis_artifacts
 
     hyp = create_hypothesis(
         title="t", market_thesis="m", mechanism="x", why_now="n",
@@ -700,10 +700,10 @@ def test_attach_hypothesis_artifact_tool_forwards_cached_content(forven_db):
     assert arts[0]["content_bytes"] == len(b"the cached body")
 
 
-def test_attach_hypothesis_artifact_tool_without_cached_content_still_works(forven_db):
+def test_attach_hypothesis_artifact_tool_without_cached_content_still_works(AXIOM_db):
     import json
-    from forven.agents.tools_research import _tool_attach_hypothesis_artifact
-    from forven.hypotheses import create_hypothesis, list_hypothesis_artifacts
+    from axiom.agents.tools_research import _tool_attach_hypothesis_artifact
+    from axiom.hypotheses import create_hypothesis, list_hypothesis_artifacts
 
     hyp = create_hypothesis(
         title="t2", market_thesis="m", mechanism="x", why_now="n",
@@ -724,15 +724,15 @@ def test_attach_hypothesis_artifact_tool_without_cached_content_still_works(forv
     assert arts[0]["cached_content"] is None
 
 
-def test_extrapolate_strategy_spec_tool_reconstructs_from_cached_artifact(forven_db, monkeypatch):
+def test_extrapolate_strategy_spec_tool_reconstructs_from_cached_artifact(AXIOM_db, monkeypatch):
     import json
 
-    import forven.strategy_extrapolation as se
-    from forven.agents.tools_research import (
+    import axiom.strategy_extrapolation as se
+    from axiom.agents.tools_research import (
         _tool_attach_hypothesis_artifact,
         _tool_extrapolate_strategy_spec,
     )
-    from forven.hypotheses import create_hypothesis, list_hypothesis_data_gaps
+    from axiom.hypotheses import create_hypothesis, list_hypothesis_data_gaps
 
     hyp = create_hypothesis(
         title="t", market_thesis="m", mechanism="x", why_now="n",
@@ -774,11 +774,11 @@ def test_extrapolate_strategy_spec_tool_reconstructs_from_cached_artifact(forven
     assert "recorded_gaps" not in res2
 
 
-def test_extrapolate_strategy_spec_tool_errors_without_cached_artifact(forven_db):
+def test_extrapolate_strategy_spec_tool_errors_without_cached_artifact(AXIOM_db):
     import json
 
-    from forven.agents.tools_research import _tool_extrapolate_strategy_spec
-    from forven.hypotheses import create_hypothesis
+    from axiom.agents.tools_research import _tool_extrapolate_strategy_spec
+    from axiom.hypotheses import create_hypothesis
 
     hyp = create_hypothesis(
         title="t", market_thesis="m", mechanism="x", why_now="n",
@@ -795,9 +795,9 @@ def test_extrapolate_strategy_spec_tool_errors_without_cached_artifact(forven_db
     assert missing["error"] == "hypothesis_id is required"
 
 
-def test_extrapolate_strategy_spec_tool_role_gated(forven_db):
-    from forven.agents.manager import create_agent
-    from forven.agents.tool_registry import get_tools_for_agent
+def test_extrapolate_strategy_spec_tool_role_gated(AXIOM_db):
+    from axiom.agents.manager import create_agent
+    from axiom.agents.tool_registry import get_tools_for_agent
 
     create_agent(agent_id="strategy-developer", name="Strategy Developer", role="strategy-developer")
     create_agent(agent_id="quant-researcher", name="Quant Researcher", role="quant-researcher")

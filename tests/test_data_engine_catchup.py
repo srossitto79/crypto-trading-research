@@ -1,10 +1,10 @@
-"""Tests for the auto Data Engine catch-up: the bounded plan executor, the wired
+﻿"""Tests for the auto Data Engine catch-up: the bounded plan executor, the wired
 settings, and the scheduled job registration."""
 
 from types import SimpleNamespace
 
-import forven.api_domains.data as data_domain
-from forven.dataeng.settings import (
+import axiom.api_domains.data as data_domain
+from axiom.dataeng.settings import (
     DataEngineSettings,
     default_data_engine_settings_payload,
     merge_data_engine_settings_payload,
@@ -50,13 +50,13 @@ class _FakeCatalog:
 
 
 def _patch_executor(monkeypatch, tasks, backfill):
-    monkeypatch.setattr("forven.dataeng.catchup.CatchUpPlanner", _FakePlanner)
+    monkeypatch.setattr("axiom.dataeng.catchup.CatchUpPlanner", _FakePlanner)
     _FakePlanner.tasks = tasks
-    monkeypatch.setattr("forven.dataeng.catalog.Catalog", _FakeCatalog)
+    monkeypatch.setattr("axiom.dataeng.catalog.Catalog", _FakeCatalog)
     _FakeCatalog.scan_calls = 0
-    monkeypatch.setattr("forven.data.backfill_ohlcv_gaps", backfill)
+    monkeypatch.setattr("axiom.data.backfill_ohlcv_gaps", backfill)
     # The action log touches the DB; keep the unit test isolated from it.
-    monkeypatch.setattr("forven.data._log_data_action", lambda *a, **k: None)
+    monkeypatch.setattr("axiom.data._log_data_action", lambda *a, **k: None)
     # Stall-deprioritization state is process-global; isolate each test.
     data_domain._catchup_stalled.clear()
 
@@ -178,11 +178,11 @@ def test_catchup_advances_past_completed_batch(monkeypatch, tmp_path):
     _write_bars(now - pd.Timedelta(days=3))  # series is 3 days behind
 
     # Point the real Catalog/planner at an isolated lake + duckdb file.
-    monkeypatch.setattr("forven.dataeng.catalog.default_data_root", lambda: lake)
+    monkeypatch.setattr("axiom.dataeng.catalog.default_data_root", lambda: lake)
     monkeypatch.setattr(
-        "forven.dataeng.catalog.default_catalog_path", lambda: tmp_path / "catalog.duckdb"
+        "axiom.dataeng.catalog.default_catalog_path", lambda: tmp_path / "catalog.duckdb"
     )
-    monkeypatch.setattr("forven.data._log_data_action", lambda *a, **k: None)
+    monkeypatch.setattr("axiom.data._log_data_action", lambda *a, **k: None)
     data_domain._catchup_stalled.clear()
 
     backfills: list[str] = []
@@ -195,7 +195,7 @@ def test_catchup_advances_past_completed_batch(monkeypatch, tmp_path):
         _write_bars(now + pd.Timedelta(hours=1))
         return {"bars_added": 71, "no_recent_data": False}
 
-    monkeypatch.setattr("forven.data.backfill_ohlcv_gaps", fake_backfill)
+    monkeypatch.setattr("axiom.data.backfill_ohlcv_gaps", fake_backfill)
 
     first = data_domain.execute_data_engine_catchup(max_tasks=5)
     assert backfills == ["BTC-USDT"]
@@ -232,18 +232,18 @@ def test_settings_defaults_and_roundtrip():
 
 
 def test_catchup_job_is_a_registered_default():
-    """The job id must be in the default set, else reconcile_forven_jobs would
-    delete it as a stale forven- row on every startup."""
-    from forven import scheduler
+    """The job id must be in the default set, else reconcile_AXIOM_jobs would
+    delete it as a stale Axiom- row on every startup."""
+    from axiom import scheduler
 
-    assert "forven-data-engine-catchup" in scheduler._DEFAULT_JOB_IDS
+    assert "Axiom-data-engine-catchup" in scheduler._DEFAULT_JOB_IDS
 
 
 def test_catchup_runs_in_background_pool():
     """The network-heavy catch-up must run in the concurrent background pool, not
     inline — inline, a slow/hung run blocks the due-job loop and holds up every
     other inline job behind it (scanner, phantom recovery, validation cycle)."""
-    from forven import scheduler
+    from axiom import scheduler
 
     assert "data_engine_catchup" in scheduler._BACKGROUND_SCHEDULER_JOB_KINDS
 

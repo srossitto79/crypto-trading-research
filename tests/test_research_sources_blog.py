@@ -1,10 +1,10 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from pathlib import Path
 
 import httpx
 
-from forven.research_sources import blog
+from axiom.research_sources import blog
 
 FIX = Path(__file__).parent / "fixtures"
 

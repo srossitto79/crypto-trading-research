@@ -1,21 +1,21 @@
-"""Tests for the /data Activity log: the data-action audit feed + its instrumentation."""
+﻿"""Tests for the /data Activity log: the data-action audit feed + its instrumentation."""
 
 from __future__ import annotations
 
 import json
 
-from forven.api_domains.data import get_data_activity
-from forven.data import _log_data_action
-from forven.db import get_db, log_activity
+from axiom.api_domains.data import get_data_activity
+from axiom.data import _log_data_action
+from axiom.db import get_db, log_activity
 
 
 def test_execute_data_engine_backfill(monkeypatch):
     """Executing the catch-up plan runs the real gap/tail backfill for candle tasks
     only, bounded by max_tasks, and counts a stalled (no_recent_data) task as failed
     rather than a green success."""
-    from forven import data as ddata
-    from forven.api_domains import data as dd
-    from forven.dataeng import catchup
+    from axiom import data as ddata
+    from axiom.api_domains import data as dd
+    from axiom.dataeng import catchup
 
     T = catchup.CatchUpTask
     tasks = [
@@ -64,8 +64,8 @@ def test_get_stream_rows_funding(monkeypatch):
     table with ISO timestamps."""
     import pandas as pd
 
-    from forven import data_manager as dmmod
-    from forven.api_domains import data as dd
+    from axiom import data_manager as dmmod
+    from axiom.api_domains import data as dd
 
     ts = pd.to_datetime([0, 3_600_000], unit="ms", utc=True)
     df = pd.DataFrame({"timestamp": ts, "funding_rate": [0.0001, 0.00008]})
@@ -83,8 +83,8 @@ def test_get_stream_rows_sanitizes_non_finite(monkeypatch):
     """A stored NaN/inf (provider gap) must serialize as null, not 500 the response."""
     import pandas as pd
 
-    from forven import data_manager as dmmod
-    from forven.api_domains import data as dd
+    from axiom import data_manager as dmmod
+    from axiom.api_domains import data as dd
 
     ts = pd.to_datetime([0, 3_600_000], unit="ms", utc=True)
     df = pd.DataFrame({"timestamp": ts, "funding_rate": [float("nan"), float("inf")]})
@@ -98,7 +98,7 @@ def test_get_stream_rows_rejects_ohlcv():
     import pytest
     from fastapi import HTTPException
 
-    from forven.api_domains import data as dd
+    from axiom.api_domains import data as dd
 
     # OHLCV has its own series endpoint; the rows endpoint is funding/oi only.
     with pytest.raises(HTTPException):
@@ -108,8 +108,8 @@ def test_get_stream_rows_rejects_ohlcv():
 def test_collect_ohlcv_reports_real_row_count(monkeypatch):
     """post_collect_stream used to hardcode rows_added=0 for ohlcv; it must now sum
     the real per-timeframe counts so the Collect button can report what it did."""
-    from forven import data_manager as dmmod
-    from forven.api_domains import data as dd
+    from axiom import data_manager as dmmod
+    from axiom.api_domains import data as dd
 
     dd._collect_debounce.clear()  # avoid a 429 from a prior call in this process
 
@@ -134,7 +134,7 @@ def _clear_activity() -> None:
         conn.execute("DELETE FROM activity_log")
 
 
-def test_activity_filters_to_data_source(forven_db):
+def test_activity_filters_to_data_source(AXIOM_db):
     _clear_activity()
     log_activity("info", "data", "Backfilled BTC-USDT 1h: +120 bars", {"action": "backfill", "symbol": "BTC-USDT"})
     log_activity("info", "scheduler", "unrelated scheduler tick", {})
@@ -145,7 +145,7 @@ def test_activity_filters_to_data_source(forven_db):
     assert all("unrelated scheduler tick" not in m for m in messages)  # non-data source excluded
 
 
-def test_activity_event_shape_and_actions(forven_db):
+def test_activity_event_shape_and_actions(AXIOM_db):
     _clear_activity()
     log_activity("info", "data", "a backfill", {"action": "backfill"})
     log_activity("warning", "data", "a reconcile", {"action": "source_reconciliation"})
@@ -160,7 +160,7 @@ def test_activity_event_shape_and_actions(forven_db):
     assert reconcile["level"] == "warning"
 
 
-def test_log_data_action_writes_data_source(forven_db):
+def test_log_data_action_writes_data_source(AXIOM_db):
     _clear_activity()
     _log_data_action("backfill", "filled gaps", symbol="ETH-USDT", bars_added=7)
     with get_db() as conn:
@@ -174,7 +174,7 @@ def test_log_data_action_writes_data_source(forven_db):
     assert detail["bars_added"] == 7
 
 
-def test_log_data_action_never_raises(forven_db):
+def test_log_data_action_never_raises(AXIOM_db):
     # Best-effort: a bad payload must not propagate out of the auditing helper.
     _log_data_action("backfill", "ok", weird=object())  # object() is not JSON-serializable
     # No exception = pass; the row may or may not be written, but the caller is safe.
@@ -182,7 +182,7 @@ def test_log_data_action_never_raises(forven_db):
 
 # --------------------------- real action instrumentation ---------------------------
 
-import forven.data as d  # noqa: E402
+import axiom.data as d  # noqa: E402
 
 
 def _bars(n: int = 3):
@@ -194,7 +194,7 @@ def _bars(n: int = 3):
     )
 
 
-def test_dataset_delete_logs(forven_db, monkeypatch, tmp_path):
+def test_dataset_delete_logs(AXIOM_db, monkeypatch, tmp_path):
     _clear_activity()
     monkeypatch.setattr(d, "DATA_DIR", tmp_path / "ohlcv")
     d.save_parquet(_bars(), "BTC-USDT", "1h")
@@ -206,7 +206,7 @@ def test_dataset_delete_logs(forven_db, monkeypatch, tmp_path):
     assert deleted[0]["level"] == "warning"
 
 
-def test_csv_upload_logs(forven_db, monkeypatch, tmp_path):
+def test_csv_upload_logs(AXIOM_db, monkeypatch, tmp_path):
     _clear_activity()
     monkeypatch.setattr(d, "DATA_DIR", tmp_path / "ohlcv")
     csv = (
@@ -220,7 +220,7 @@ def test_csv_upload_logs(forven_db, monkeypatch, tmp_path):
     assert any(e["action"] == "csv_upload" and "prices.csv" in e["message"] for e in events)
 
 
-def test_csv_upload_drops_unclosed_current_bar(forven_db, monkeypatch, tmp_path):
+def test_csv_upload_drops_unclosed_current_bar(AXIOM_db, monkeypatch, tmp_path):
     """A CSV that includes the still-forming current bar must not persist it —
     the closed-only write boundary drops it (else it repaints / leaks lookahead)."""
     import time
@@ -252,7 +252,7 @@ def test_csv_upload_drops_unclosed_current_bar(forven_db, monkeypatch, tmp_path)
     assert last_ms == closed_open  # the forming bar was dropped
 
 
-def test_orphan_scan_clean_does_not_log(forven_db, monkeypatch, tmp_path):
+def test_orphan_scan_clean_does_not_log(AXIOM_db, monkeypatch, tmp_path):
     _clear_activity()
     monkeypatch.setattr(d, "DATA_DIR", tmp_path / "ohlcv")
     d.save_parquet(_bars(), "BTC-USDT", "1h")  # one healthy series, no drift
@@ -264,7 +264,7 @@ def test_orphan_scan_clean_does_not_log(forven_db, monkeypatch, tmp_path):
     assert n == 0  # a clean scan must NOT spam the audit feed
 
 
-def test_orphan_scan_and_cleanup_log_on_drift(forven_db, monkeypatch, tmp_path):
+def test_orphan_scan_and_cleanup_log_on_drift(AXIOM_db, monkeypatch, tmp_path):
     import os
     import time
 
@@ -292,7 +292,7 @@ def test_orphan_scan_and_cleanup_log_on_drift(forven_db, monkeypatch, tmp_path):
     assert {"orphan_scan", "orphan_cleanup"}.issubset(actions)
 
 
-def test_cleanup_never_deletes_fresh_tmp_or_unreadable(forven_db, monkeypatch, tmp_path):
+def test_cleanup_never_deletes_fresh_tmp_or_unreadable(AXIOM_db, monkeypatch, tmp_path):
     """Data-loss guard: an in-flight (fresh) .tmp and a non-empty unreadable parquet
     must be preserved — only stale temp + zero-byte files are auto-removed."""
     _clear_activity()

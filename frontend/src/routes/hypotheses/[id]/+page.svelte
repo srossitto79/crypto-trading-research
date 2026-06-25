@@ -485,7 +485,7 @@
 </script>
 
 <svelte:head>
-	<title>{hypothesis?.title ? `${hypothesis.title} | Crucibles | Forven` : 'Crucible Detail | Forven'}</title>
+	<title>{hypothesis?.title ? `${hypothesis.title} | Crucibles | Axiom` : 'Crucible Detail | Axiom'}</title>
 </svelte:head>
 
 <div class="min-h-full bg-[#050505] px-4 py-5 text-slate-100 md:px-6">

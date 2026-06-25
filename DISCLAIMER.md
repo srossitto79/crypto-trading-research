@@ -1,10 +1,10 @@
 # Disclaimer
 
-**Forven is experimental software for educational and research use. It is NOT financial advice, and it is provided AS IS, without warranty of any kind.**
+**Axiom is experimental software for educational and research use. It is NOT financial advice, and it is provided AS IS, without warranty of any kind.**
 
 ## No financial advice
 
-Nothing produced by Forven — strategies, backtests, signals, metrics, or autonomous decisions — is financial, investment, legal, or tax advice. You are solely responsible for every decision and every order.
+Nothing produced by Axiom — strategies, backtests, signals, metrics, or autonomous decisions — is financial, investment, legal, or tax advice. You are solely responsible for every decision and every order.
 
 ## Substantial risk of loss
 
@@ -12,7 +12,7 @@ Trading cryptocurrencies and derivatives carries a substantial risk of loss, inc
 
 ## Paper + testnet only
 
-Forven ships configured for **paper trading** with **Hyperliquid testnet** as the supported default. Live / mainnet (real-money) trading is **not a supported feature**: a live execution engine exists in the code but is **disabled by default** and reachable only through deliberate, multi-step opt-in (`FORVEN_EXECUTION_MODE=live` *and* `FORVEN_ALLOW_MAINNET=1` *and* mainnet credentials). If you enable it, you do so entirely **at your own risk** — the authors do not support, endorse, or take responsibility for that use.
+Axiom ships configured for **paper trading** with **Hyperliquid testnet** as the supported default. Live / mainnet (real-money) trading is **not a supported feature**: a live execution engine exists in the code but is **disabled by default** and reachable only through deliberate, multi-step opt-in (`AXIOM_EXECUTION_MODE=live` *and* `AXIOM_ALLOW_MAINNET=1` *and* mainnet credentials). If you enable it, you do so entirely **at your own risk** — the authors do not support, endorse, or take responsibility for that use.
 
 ## Backtest / paper performance is not predictive
 
@@ -24,10 +24,12 @@ You are solely responsible for obtaining, funding, securing, and using your own 
 
 ## Eligibility & jurisdiction
 
-Crypto and crypto-derivatives trading is restricted or prohibited for some persons and in some jurisdictions. You are solely responsible for determining whether you are legally eligible to use any exchange you connect, and for complying with all applicable laws, sanctions, and regulations (including those of your country of residence) and with each exchange's terms of service. Do not use Forven where doing so would be unlawful.
+Crypto and crypto-derivatives trading is restricted or prohibited for some persons and in some jurisdictions. You are solely responsible for determining whether you are legally eligible to use any exchange you connect, and for complying with all applicable laws, sanctions, and regulations (including those of your country of residence) and with each exchange's terms of service. Do not use Axiom where doing so would be unlawful.
 
 ## No warranty / no liability
 
-To the maximum extent permitted by law, Forven is provided **WITHOUT WARRANTY OF ANY KIND**, express or implied (see sections 15–16 of the AGPL-3.0 text in [`LICENSE`](LICENSE)). The authors and contributors accept **no liability** for any loss or damage of any kind arising from your use of the software. This file is an additional notice under AGPL-3.0 section 7(a); it does not modify the license itself.
+To the maximum extent permitted by law, Axiom is provided **WITHOUT WARRANTY OF ANY KIND**, express or implied (see sections 15–16 of the AGPL-3.0 text in [`LICENSE`](LICENSE)). The authors and contributors accept **no liability** for any loss or damage of any kind arising from your use of the software. This file is an additional notice under AGPL-3.0 section 7(a); it does not modify the license itself.
 
-By using Forven you acknowledge and accept these terms.
+Based on Forven by Judder.
+
+By using Axiom you acknowledge and accept these terms.

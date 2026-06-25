@@ -1,4 +1,4 @@
-"""Live-position indicator / signal / marker endpoints.
+﻿"""Live-position indicator / signal / marker endpoints.
 
 These mirror the paper-trading panels for live/deployed strategies. The indicator
 and marker handlers are thin delegations to the paper domain (paper "sessions" are
@@ -11,8 +11,8 @@ hitting the network (candle fetches are mocked / not exercised).
 import pytest
 from fastapi import HTTPException
 
-import forven.api_domains.trading as t
-from forven.db import get_db, kv_set
+import axiom.api_domains.trading as t
+from axiom.db import get_db, kv_set
 
 
 def _seed_strategy(sid: str, stage: str = "deployed", timeframe: str = "4h") -> str:
@@ -26,7 +26,7 @@ def _seed_strategy(sid: str, stage: str = "deployed", timeframe: str = "4h") -> 
     return sid
 
 
-def test_live_indicators_delegates_with_resolved_timeframe(forven_db, monkeypatch):
+def test_live_indicators_delegates_with_resolved_timeframe(AXIOM_db, monkeypatch):
     _seed_strategy("S-IND", timeframe="4h")
     captured: dict = {}
 
@@ -34,25 +34,25 @@ def test_live_indicators_delegates_with_resolved_timeframe(forven_db, monkeypatc
         captured.update(session_id=session_id, limit=limit, timeframe=timeframe)
         return {"session_id": session_id, "config": {}, "indicators": {}}
 
-    monkeypatch.setattr("forven.api_domains.paper.get_paper_session_indicators", _fake)
+    monkeypatch.setattr("axiom.api_domains.paper.get_paper_session_indicators", _fake)
     out = t.read_live_indicators("S-IND")  # no explicit tf -> resolve from strategy row
     assert captured["session_id"] == "S-IND"
     assert captured["timeframe"] == "4h"  # resolved from the strategy row
     assert out["config"] == {}
 
 
-def test_live_indicators_explicit_timeframe_wins(forven_db, monkeypatch):
+def test_live_indicators_explicit_timeframe_wins(AXIOM_db, monkeypatch):
     _seed_strategy("S-IND2", timeframe="4h")
     captured: dict = {}
     monkeypatch.setattr(
-        "forven.api_domains.paper.get_paper_session_indicators",
+        "axiom.api_domains.paper.get_paper_session_indicators",
         lambda session_id, indicators=None, limit=500, timeframe=None: captured.update(timeframe=timeframe) or {},
     )
     t.read_live_indicators("S-IND2", timeframe="1h")
     assert captured["timeframe"] == "1h"
 
 
-def test_live_markers_delegates(forven_db, monkeypatch):
+def test_live_markers_delegates(AXIOM_db, monkeypatch):
     _seed_strategy("S-MK")
     captured: dict = {}
 
@@ -60,13 +60,13 @@ def test_live_markers_delegates(forven_db, monkeypatch):
         captured.update(session_id=session_id, limit=limit, include_generated=include_generated)
         return {"entries": [], "exits": [], "blocked": []}
 
-    monkeypatch.setattr("forven.api_domains.paper.get_paper_session_markers", _fake)
+    monkeypatch.setattr("axiom.api_domains.paper.get_paper_session_markers", _fake)
     out = t.read_live_markers("S-MK", limit=100)
     assert captured == {"session_id": "S-MK", "limit": 100, "include_generated": False}
     assert out["entries"] == []
 
 
-def test_live_signals_builds_pending_from_scanner_snapshot(forven_db):
+def test_live_signals_builds_pending_from_scanner_snapshot(AXIOM_db):
     _seed_strategy("S-SIG")
     kv_set(
         "scanner_state",
@@ -85,7 +85,7 @@ def test_live_signals_builds_pending_from_scanner_snapshot(forven_db):
     assert "rsi" in out["indicators"] and out["indicators"]["rsi"]["value"] == 28.0
 
 
-def test_live_signals_no_snapshot_is_empty(forven_db):
+def test_live_signals_no_snapshot_is_empty(AXIOM_db):
     _seed_strategy("S-NONE")
     kv_set("scanner_state", {"last_scan": "2026-06-17T00:00:00+00:00", "signals": {}})
     out = t.read_live_signals("S-NONE")
@@ -93,7 +93,7 @@ def test_live_signals_no_snapshot_is_empty(forven_db):
     assert out["last_signal"] == "none"
 
 
-def test_empty_strategy_id_rejected(forven_db):
+def test_empty_strategy_id_rejected(AXIOM_db):
     for fn in (t.read_live_indicators, t.read_live_markers, t.read_live_signals):
         with pytest.raises(HTTPException):
             fn("")

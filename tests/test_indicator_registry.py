@@ -1,12 +1,12 @@
-"""Validate the central indicator registry and its rule_engine integration."""
+﻿"""Validate the central indicator registry and its rule_engine integration."""
 from __future__ import annotations
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from forven.strategies import indicators as ind
-from forven.strategies.builtin import rule_engine as re
+from axiom.strategies import indicators as ind
+from axiom.strategies.builtin import rule_engine as re
 
 
 def _synth(n: int = 400) -> pd.DataFrame:

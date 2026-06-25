@@ -1,11 +1,11 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from forven.db import get_db
-from forven.lab_strategy_pool import list_strategy_pool_candidates
+from axiom.db import get_db
+from axiom.lab_strategy_pool import list_strategy_pool_candidates
 
 
 def _now_iso() -> str:
@@ -76,7 +76,7 @@ def _insert_archived_strategy(*, strategy_id: str, name: str, strategy_type: str
         )
 
 
-def test_strategy_pool_reads_active_and_graveyard_candidates(forven_db):
+def test_strategy_pool_reads_active_and_graveyard_candidates(AXIOM_db):
     _insert_strategy(strategy_id="S_ACTIVE", name="Paper Winner", strategy_type="ADX_TREND", stage="paper")
     _insert_strategy(strategy_id="S_LIVE", name="Live Winner", strategy_type="williams_r", stage="live_graduated")
     _insert_strategy(strategy_id="S_BACK", name="Gauntlet", strategy_type="williams_r", stage="gauntlet")
@@ -98,7 +98,7 @@ def test_strategy_pool_reads_active_and_graveyard_candidates(forven_db):
     assert by_id["S_ARCH"]["source_pool"] == "graveyard"
 
 
-def test_strategy_pool_all_managed_includes_backtesting(forven_db):
+def test_strategy_pool_all_managed_includes_backtesting(AXIOM_db):
     _insert_strategy(strategy_id="S_PAPER", name="Paper", strategy_type="ADX_TREND", stage="paper")
     _insert_strategy(strategy_id="S_BACK", name="Backtesting", strategy_type="williams_r", stage="gauntlet")
 
@@ -111,7 +111,7 @@ def test_strategy_pool_all_managed_includes_backtesting(forven_db):
     assert "S_BACK" in ids
 
 
-def test_strategy_pool_skips_local_backtest_incompatible_candidates(forven_db):
+def test_strategy_pool_skips_local_backtest_incompatible_candidates(AXIOM_db):
     _insert_strategy(
         strategy_id="S_BAD",
         name="Unsupported",
@@ -129,7 +129,7 @@ def test_strategy_pool_skips_local_backtest_incompatible_candidates(forven_db):
 
 
 def test_lab_strategy_pool_module_keeps_production_reads_read_only():
-    source = Path("forven/lab_strategy_pool.py").read_text(encoding="utf-8")
-    assert "from forven.db import get_db" not in source
-    assert "forven.db.get_db" not in source
+    source = Path("Axiom/lab_strategy_pool.py").read_text(encoding="utf-8")
+    assert "from axiom.db import get_db" not in source
+    assert "axiom.db.get_db" not in source
     assert "mode=ro" in source

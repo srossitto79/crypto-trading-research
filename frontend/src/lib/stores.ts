@@ -47,7 +47,7 @@ export const selectedDataset = createPersistedStore<{
 	timeframe: string;
 	source: string;
 	strategy?: string | null;
-} | null>('forven.selectedDataset', null);
+} | null>('axiom.selectedDataset', null);
 
 // Workflow state - tracks progress through Data -> Strategy -> Backtest -> Results
 export const workflowState = writable<{
@@ -69,7 +69,7 @@ export const workspaceContext = createPersistedStore<{
 	symbol: string | null;
 	timeframe: string | null;
 	definitionJson: string | null;
-}>('forven.workspaceContext', {
+}>('axiom.workspaceContext', {
 	strategy: null,
 	symbol: null,
 	timeframe: null,

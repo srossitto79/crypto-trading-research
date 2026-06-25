@@ -1,14 +1,14 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import argparse
 import json
 
-from forven.trading_smoke import collect_trading_plane_smoke
+from axiom.trading_smoke import collect_trading_plane_smoke
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Run the Forven trading-plane smoke against HyperLiquid."
+        description="Run the Axiom trading-plane smoke against HyperLiquid."
     )
     parser.add_argument(
         "--place-test-order",

@@ -1,9 +1,9 @@
 /**
- * API client core for Forven backend
+ * API client core for Axiom backend
  */
 
 /**
- * API client for Forven backend
+ * API client for Axiom backend
  */
 
 const DEFAULT_API_ORIGIN = 'http://127.0.0.1:8003';
@@ -251,12 +251,12 @@ function resolveAuthHeaderValue(envKeys: string[], storageKeys: string[]): strin
 export function buildAuthHeaders(): Record<string, string> {
 	const headers: Record<string, string> = {};
 	const apiKey = resolveAuthHeaderValue(
-		['VITE_FORVEN_API_KEY'],
-		['forven_api_key']
+		['VITE_AXIOM_API_KEY'],
+		['axiom_api_key']
 	);
 	const operatorKey = resolveAuthHeaderValue(
-		['VITE_FORVEN_OPERATOR_KEY'],
-		['forven_operator_key']
+		['VITE_AXIOM_OPERATOR_KEY'],
+		['axiom_operator_key']
 	);
 
 	if (apiKey) headers['X-API-Key'] = apiKey;

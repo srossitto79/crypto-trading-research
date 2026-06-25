@@ -1,4 +1,4 @@
-"""P3-T05 — outcome closure cycle."""
+﻿"""P3-T05 — outcome closure cycle."""
 from __future__ import annotations
 
 import json
@@ -6,9 +6,9 @@ import tempfile
 
 import pytest
 
-from forven import db as forven_db
-from forven import quant_skills as qs
-from forven import skill_outcomes as so
+from axiom import db as AXIOM_db
+from axiom import quant_skills as qs
+from axiom import skill_outcomes as so
 
 
 @pytest.fixture
@@ -17,17 +17,17 @@ def env(tmp_path, monkeypatch):
     skills_dir.mkdir()
     (skills_dir / "_hypotheses").mkdir()
     (skills_dir / "_archived").mkdir()
-    monkeypatch.setattr("forven.quant_skills.SKILLS_DIR", skills_dir)
-    monkeypatch.setattr("forven.quant_skills.HYPOTHESES_DIR", skills_dir / "_hypotheses")
-    monkeypatch.setattr("forven.quant_skills.ARCHIVED_DIR", skills_dir / "_archived")
+    monkeypatch.setattr("axiom.quant_skills.SKILLS_DIR", skills_dir)
+    monkeypatch.setattr("axiom.quant_skills.HYPOTHESES_DIR", skills_dir / "_hypotheses")
+    monkeypatch.setattr("axiom.quant_skills.ARCHIVED_DIR", skills_dir / "_archived")
 
     db_dir = tempfile.mkdtemp()
-    monkeypatch.setenv("FORVEN_HOME", db_dir)
-    if hasattr(forven_db, "_DB_PATH"):
-        forven_db._DB_PATH = None  # type: ignore[attr-defined]
-    if hasattr(forven_db, "_init_db_done"):
-        forven_db._init_db_done = False  # type: ignore[attr-defined]
-    forven_db.init_db()
+    monkeypatch.setenv("AXIOM_HOME", db_dir)
+    if hasattr(AXIOM_db, "_DB_PATH"):
+        AXIOM_db._DB_PATH = None  # type: ignore[attr-defined]
+    if hasattr(AXIOM_db, "_init_db_done"):
+        AXIOM_db._init_db_done = False  # type: ignore[attr-defined]
+    AXIOM_db.init_db()
     yield {"skills_dir": skills_dir, "db_dir": db_dir}
 
 
@@ -51,7 +51,7 @@ def _seed_skill(name: str, confidence: float = 0.5):
 
 def _seed_task_with_citations(strategy_id: str, skills: list[str]) -> int:
     """Insert an agent_tasks row with cited_skills in output_data."""
-    with forven_db.get_db() as conn:
+    with AXIOM_db.get_db() as conn:
         cur = conn.execute(
             "INSERT INTO agent_tasks (agent_id, type, strategy_id, output_data, status) "
             "VALUES (?, ?, ?, ?, ?)",

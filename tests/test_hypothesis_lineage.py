@@ -1,14 +1,14 @@
-"""Phase 5: lineage helpers + parent_strategy_id validation."""
+﻿"""Phase 5: lineage helpers + parent_strategy_id validation."""
 
 
 import pytest
 
-from forven.db import create_strategy_container, get_db
-from forven.hypothesis_lineage import (
+from axiom.db import create_strategy_container, get_db
+from axiom.hypothesis_lineage import (
     build_canonical_coverage_map,
     build_sibling_table,
 )
-from forven.hypotheses import create_hypothesis
+from axiom.hypotheses import create_hypothesis
 
 
 def _hyp(idx: int = 0) -> dict:
@@ -55,7 +55,7 @@ def _make_strategy(
 # ---- sibling table ----
 
 
-def test_sibling_table_returns_active_children(forven_db):
+def test_sibling_table_returns_active_children(AXIOM_db):
     h = _hyp()
     s1 = _make_strategy(h["id"], sid_seed=1)
     s2 = _make_strategy(h["id"], sid_seed=2, symbol="ETH")
@@ -74,7 +74,7 @@ def test_sibling_table_returns_active_children(forven_db):
     assert by_id[s1]["regime_filter"] == "trending"
 
 
-def test_sibling_table_excludes_archived_and_rejected(forven_db):
+def test_sibling_table_excludes_archived_and_rejected(AXIOM_db):
     h = _hyp()
     keep = _make_strategy(h["id"], sid_seed=1)
     _make_strategy(h["id"], sid_seed=2, stage="archived")
@@ -85,7 +85,7 @@ def test_sibling_table_excludes_archived_and_rejected(forven_db):
     assert table[0]["strategy_id"] == keep
 
 
-def test_sibling_table_empty_when_no_children(forven_db):
+def test_sibling_table_empty_when_no_children(AXIOM_db):
     h = _hyp()
     assert build_sibling_table(h["id"]) == []
 
@@ -93,7 +93,7 @@ def test_sibling_table_empty_when_no_children(forven_db):
 # ---- canonical coverage map ----
 
 
-def test_canonical_coverage_map_only_counts_canonicals(forven_db):
+def test_canonical_coverage_map_only_counts_canonicals(AXIOM_db):
     h = _hyp()
     _make_strategy(h["id"], sid_seed=1, symbol="BTC")  # not canonical
     s_canon = _make_strategy(h["id"], sid_seed=2, symbol="ETH", canonical=True)
@@ -108,7 +108,7 @@ def test_canonical_coverage_map_only_counts_canonicals(forven_db):
     assert coverage["ETH/USDT:1h"]["strategy_id"] == s_canon
 
 
-def test_canonical_coverage_map_empty_for_no_canonicals(forven_db):
+def test_canonical_coverage_map_empty_for_no_canonicals(AXIOM_db):
     h = _hyp()
     _make_strategy(h["id"], sid_seed=1)
     _make_strategy(h["id"], sid_seed=2, symbol="ETH")
@@ -118,7 +118,7 @@ def test_canonical_coverage_map_empty_for_no_canonicals(forven_db):
 # ---- create_strategy_container parent validation ----
 
 
-def test_create_strategy_rejects_parent_from_different_hypothesis(forven_db):
+def test_create_strategy_rejects_parent_from_different_hypothesis(AXIOM_db):
     h_a = _hyp(0)
     h_b = _hyp(1)
     parent = _make_strategy(h_a["id"], sid_seed=1)
@@ -137,7 +137,7 @@ def test_create_strategy_rejects_parent_from_different_hypothesis(forven_db):
             )
 
 
-def test_create_strategy_rejects_unknown_parent(forven_db):
+def test_create_strategy_rejects_unknown_parent(AXIOM_db):
     h = _hyp()
     with pytest.raises(ValueError, match="not found"):
         with get_db() as conn:
@@ -154,7 +154,7 @@ def test_create_strategy_rejects_unknown_parent(forven_db):
             )
 
 
-def test_create_strategy_accepts_parent_in_same_hypothesis(forven_db):
+def test_create_strategy_accepts_parent_in_same_hypothesis(AXIOM_db):
     h = _hyp()
     parent = _make_strategy(h["id"], sid_seed=1)
     child = _make_strategy(h["id"], sid_seed=2, parent_strategy_id=parent)

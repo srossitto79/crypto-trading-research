@@ -1,9 +1,9 @@
-import json
+﻿import json
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
-from forven.db import get_db
-from forven.hypotheses import create_hypothesis
+from axiom.db import get_db
+from axiom.hypotheses import create_hypothesis
 
 
 def _hyp():
@@ -27,28 +27,28 @@ def _add_children(hypothesis_id: str, n: int):
             )
 
 
-def test_loop_triggers_on_n_strategy_threshold(forven_db):
-    from forven.hypothesis_verdict import run_verdict_loop
+def test_loop_triggers_on_n_strategy_threshold(AXIOM_db):
+    from axiom.hypothesis_verdict import run_verdict_loop
     hyp = _hyp()
     _add_children(hyp["id"], 3)
     fake = json.dumps({"verdict": "researching", "rationale": "keep trying"})
-    with patch("forven.hypothesis_verdict._call_llm", return_value=fake):
+    with patch("axiom.hypothesis_verdict._call_llm", return_value=fake):
         result = run_verdict_loop()
     assert hyp["id"] in result["processed_ids"]
 
 
-def test_loop_skips_hypothesis_under_threshold(forven_db):
-    from forven.hypothesis_verdict import run_verdict_loop
+def test_loop_skips_hypothesis_under_threshold(AXIOM_db):
+    from axiom.hypothesis_verdict import run_verdict_loop
     hyp = _hyp()
     _add_children(hyp["id"], 1)  # below _N_TRIGGER=2
-    with patch("forven.hypothesis_verdict._call_llm") as m:
+    with patch("axiom.hypothesis_verdict._call_llm") as m:
         result = run_verdict_loop()
     assert hyp["id"] not in result["processed_ids"]
     m.assert_not_called()
 
 
-def test_loop_triggers_on_staleness(forven_db):
-    from forven.hypothesis_verdict import run_verdict_loop
+def test_loop_triggers_on_staleness(AXIOM_db):
+    from axiom.hypothesis_verdict import run_verdict_loop
     hyp = _hyp()
     _add_children(hyp["id"], 1)
     # Backdate last memo to 8 days ago
@@ -59,29 +59,29 @@ def test_loop_triggers_on_staleness(forven_db):
             (stamp, hyp["id"]),
         )
     fake = json.dumps({"verdict": "researching", "rationale": "still trying"})
-    with patch("forven.hypothesis_verdict._call_llm", return_value=fake):
+    with patch("axiom.hypothesis_verdict._call_llm", return_value=fake):
         result = run_verdict_loop()
     assert hyp["id"] in result["processed_ids"]
 
 
-def test_loop_skips_disproven(forven_db):
-    from forven.hypothesis_verdict import run_verdict_loop
-    from forven.hypotheses import update_hypothesis_status
+def test_loop_skips_disproven(AXIOM_db):
+    from axiom.hypothesis_verdict import run_verdict_loop
+    from axiom.hypotheses import update_hypothesis_status
     hyp = _hyp()
     _add_children(hyp["id"], 5)
     update_hypothesis_status(hyp["id"], new_status="disproven",
                              memo={"verdict": "disproven", "rationale": "x"}, by="test")
-    with patch("forven.hypothesis_verdict._call_llm") as m:
+    with patch("axiom.hypothesis_verdict._call_llm") as m:
         result = run_verdict_loop()
     assert hyp["id"] not in result["processed_ids"]
     m.assert_not_called()
 
 
-def test_loop_sweeps_stranded_proven(forven_db):
+def test_loop_sweeps_stranded_proven(AXIOM_db):
     """A hypothesis stuck at status='proven' but manager_state='active'
     (graduation previously failed) is completed by the sweep so its winners
     can become canonical and deploy."""
-    from forven.hypothesis_verdict import run_verdict_loop
+    from axiom.hypothesis_verdict import run_verdict_loop
     hyp = _hyp()
     _add_children(hyp["id"], 3)
     # Simulate the stranded state: status set proven, but never graduated.
@@ -90,7 +90,7 @@ def test_loop_sweeps_stranded_proven(forven_db):
             "UPDATE hypotheses SET status = 'proven', manager_state = 'active' WHERE id = ?",
             (hyp["id"],),
         )
-    with patch("forven.hypothesis_verdict._call_llm") as m:
+    with patch("axiom.hypothesis_verdict._call_llm") as m:
         result = run_verdict_loop()
     assert hyp["id"] in result["swept_ids"]
     m.assert_not_called()  # proven hypotheses are not re-evaluated by the LLM

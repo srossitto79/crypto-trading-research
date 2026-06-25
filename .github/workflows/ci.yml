@@ -63,7 +63,7 @@ jobs:
           python -m pip install -r requirements-ci.txt
 
       - name: Run Ruff
-        run: ruff check forven tests
+        run: ruff check axiom tests
 
       - name: Collect backend tests
         run: python -m pytest --collect-only -q

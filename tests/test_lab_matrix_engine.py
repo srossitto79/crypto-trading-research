@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 from datetime import UTC, datetime, timedelta
@@ -6,8 +6,8 @@ from uuid import uuid4
 
 import pandas as pd
 
-from forven.db import get_db
-from forven.lab_db import (
+from axiom.db import get_db
+from axiom.lab_db import (
     create_lab_experiment,
     create_or_update_model_version,
     enqueue_lab_job,
@@ -15,7 +15,7 @@ from forven.lab_db import (
     replace_regime_segments,
     upsert_snapshot_manifest,
 )
-from forven.lab_matrix_engine import (
+from axiom.lab_matrix_engine import (
     MATRIX_JOB_TYPE,
     StrategyCandidate,
     _build_candidate_payload,
@@ -199,7 +199,7 @@ def test_candidate_payload_uses_true_forward_oos(monkeypatch):
             "oos_metrics": {"robustness": 0.6},
         }
 
-    monkeypatch.setattr("forven.lab_matrix_engine.backtest_strategy", _fake_backtest_strategy)
+    monkeypatch.setattr("axiom.lab_matrix_engine.backtest_strategy", _fake_backtest_strategy)
 
     candidate = _build_candidate_payload(
         regime="TREND_UP",
@@ -232,7 +232,7 @@ def test_candidate_payload_skips_large_non_vectorized_windows(monkeypatch):
         calls["count"] += 1
         return {}
 
-    monkeypatch.setattr("forven.lab_matrix_engine.backtest_strategy", _fake_backtest_strategy)
+    monkeypatch.setattr("axiom.lab_matrix_engine.backtest_strategy", _fake_backtest_strategy)
 
     candidate = _build_candidate_payload(
         regime="TREND_UP",
@@ -259,10 +259,10 @@ def test_load_strategy_candidates_merges_registry_and_managed_sources(monkeypatc
         def generate_signals(self, df):
             return None
 
-    monkeypatch.setattr("forven.lab_matrix_engine.discover", lambda: None)
-    monkeypatch.setattr("forven.lab_matrix_engine.get_all", lambda: {"REG-1": _RegistryStrategy()})
+    monkeypatch.setattr("axiom.lab_matrix_engine.discover", lambda: None)
+    monkeypatch.setattr("axiom.lab_matrix_engine.get_all", lambda: {"REG-1": _RegistryStrategy()})
     monkeypatch.setattr(
-        "forven.lab_matrix_engine.list_strategy_pool_candidates",
+        "axiom.lab_matrix_engine.list_strategy_pool_candidates",
         lambda **_kwargs: [
             {
                 "strategy_id": "MAN-1",
@@ -297,8 +297,8 @@ def test_load_strategy_candidates_respects_source_order_when_truncated(monkeypat
         def generate_signals(self, df):
             return None
 
-    monkeypatch.setattr("forven.lab_matrix_engine.discover", lambda: None)
-    monkeypatch.setattr("forven.lab_matrix_engine.get_all", lambda: {"REG-1": _RegistryStrategy()})
+    monkeypatch.setattr("axiom.lab_matrix_engine.discover", lambda: None)
+    monkeypatch.setattr("axiom.lab_matrix_engine.get_all", lambda: {"REG-1": _RegistryStrategy()})
 
     def _fake_list_strategy_pool_candidates(*, strategy_sources, **_kwargs):
         source = strategy_sources[0]
@@ -329,7 +329,7 @@ def test_load_strategy_candidates_respects_source_order_when_truncated(monkeypat
         return []
 
     monkeypatch.setattr(
-        "forven.lab_matrix_engine.list_strategy_pool_candidates",
+        "axiom.lab_matrix_engine.list_strategy_pool_candidates",
         _fake_list_strategy_pool_candidates,
     )
 
@@ -487,7 +487,7 @@ def test_champion_guardrails_promote_graveyard_after_nested_pending_validation()
     assert reserves == []
 
 
-def test_matrix_job_pools_short_segments_into_regime_windows(forven_db, monkeypatch, tmp_path):
+def test_matrix_job_pools_short_segments_into_regime_windows(AXIOM_db, monkeypatch, tmp_path):
     experiment = create_lab_experiment(
         experiment_id=f"exp_{uuid4().hex[:8]}",
         symbol="BTC/USDT",
@@ -567,7 +567,7 @@ def test_matrix_job_pools_short_segments_into_regime_windows(forven_db, monkeypa
     )
 
     monkeypatch.setattr(
-        "forven.lab_matrix_engine._load_strategy_candidates",
+        "axiom.lab_matrix_engine._load_strategy_candidates",
         lambda *args, **kwargs: [StrategyCandidate(strategy_id="SPOOL", strategy_type="ema_cross", params={})],
     )
 
@@ -597,8 +597,8 @@ def test_matrix_job_pools_short_segments_into_regime_windows(forven_db, monkeypa
             "oos_metrics": {"robustness": 0.8},
         }
 
-    monkeypatch.setattr("forven.lab_matrix_engine.backtest_strategy", _fake_backtest_strategy)
-    monkeypatch.setattr("forven.lab_matrix_engine.load_parquet", lambda *_args, **_kwargs: execution_snapshot.copy())
+    monkeypatch.setattr("axiom.lab_matrix_engine.backtest_strategy", _fake_backtest_strategy)
+    monkeypatch.setattr("axiom.lab_matrix_engine.load_parquet", lambda *_args, **_kwargs: execution_snapshot.copy())
 
     enqueue_lab_job(
         job_type=MATRIX_JOB_TYPE,
@@ -641,9 +641,9 @@ def test_load_strategy_candidates_expands_registry_trade_mode_variants(monkeypat
         def generate_signals(self, df):
             return None
 
-    monkeypatch.setattr("forven.lab_matrix_engine.discover", lambda: None)
-    monkeypatch.setattr("forven.lab_matrix_engine.get_all", lambda: {"REG-VAR": _VariantRegistryStrategy()})
-    monkeypatch.setattr("forven.lab_matrix_engine.list_strategy_pool_candidates", lambda **_kwargs: [])
+    monkeypatch.setattr("axiom.lab_matrix_engine.discover", lambda: None)
+    monkeypatch.setattr("axiom.lab_matrix_engine.get_all", lambda: {"REG-VAR": _VariantRegistryStrategy()})
+    monkeypatch.setattr("axiom.lab_matrix_engine.list_strategy_pool_candidates", lambda **_kwargs: [])
 
     rows = _load_strategy_candidates(strategy_sources=["registry"])
 

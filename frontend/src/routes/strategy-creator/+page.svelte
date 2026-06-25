@@ -126,7 +126,7 @@
 	// Code mode
 	const CUSTOM_TEMPLATE = `import pandas as pd
 import numpy as np
-from forven.strategies.base import BaseStrategy, Signal
+from axiom.strategies.base import BaseStrategy, Signal
 
 
 class MyStrategy(BaseStrategy):
@@ -632,7 +632,7 @@ TYPE_NAME = "my_strategy"
 	});
 </script>
 
-<svelte:head><title>Strategy Creator | Forven</title></svelte:head>
+<svelte:head><title>Strategy Creator | Axiom</title></svelte:head>
 
 <div class="min-h-screen bg-[#050505] px-4 py-8 md:px-8">
 	<div class="mx-auto max-w-7xl">

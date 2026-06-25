@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import importlib
 import pkgutil
@@ -9,13 +9,13 @@ from fastapi import APIRouter
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SOURCE_ROOTS = (
-    REPO_ROOT / "forven",
+    REPO_ROOT / "Axiom",
     REPO_ROOT / "frontend" / "src",
     REPO_ROOT / "tests",
 )
 DUPLICATE_SCAN_ROOTS = (
-    REPO_ROOT / "forven" / "routers",
-    REPO_ROOT / "forven" / "strategies" / "builtin",
+    REPO_ROOT / "Axiom" / "routers",
+    REPO_ROOT / "Axiom" / "strategies" / "builtin",
 )
 def _module_names(package_name: str) -> list[str]:
     package = importlib.import_module(package_name)
@@ -33,16 +33,16 @@ def _scanned_source_files() -> list[Path]:
     return paths
 
 
-@pytest.mark.parametrize("module_name", _module_names("forven.routers"))
-def test_router_modules_import_and_expose_router(module_name: str, forven_db):
-    module = importlib.import_module(f"forven.routers.{module_name}")
+@pytest.mark.parametrize("module_name", _module_names("axiom.routers"))
+def test_router_modules_import_and_expose_router(module_name: str, AXIOM_db):
+    module = importlib.import_module(f"axiom.routers.{module_name}")
 
     assert isinstance(module.router, APIRouter)
 
 
-@pytest.mark.parametrize("module_name", _module_names("forven.strategies.builtin"))
+@pytest.mark.parametrize("module_name", _module_names("axiom.strategies.builtin"))
 def test_builtin_strategy_modules_import(module_name: str):
-    importlib.import_module(f"forven.strategies.builtin.{module_name}")
+    importlib.import_module(f"axiom.strategies.builtin.{module_name}")
 
 
 @pytest.mark.parametrize("source_file", _scanned_source_files(), ids=lambda path: path.name)

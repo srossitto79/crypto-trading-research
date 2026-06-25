@@ -1,6 +1,6 @@
-# Forven Frontend
+# Axiom Frontend
 
-This is the SvelteKit operator UI for Forven.
+This is the SvelteKit operator UI for Axiom.
 
 ## Stack
 

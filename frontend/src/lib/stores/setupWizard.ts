@@ -2,7 +2,7 @@
 
 import { writable } from 'svelte/store';
 
-const LAST_STEP_KEY = 'forven.wizard.last_step';
+const LAST_STEP_KEY = 'axiom.wizard.last_step';
 // Keep in sync with STEPS.length - 1 in SetupWizardModal.svelte.
 const MAX_STEP_INDEX = 4;
 

@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import sqlite3
 from contextlib import contextmanager
@@ -6,9 +6,9 @@ from contextlib import contextmanager
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from forven import api_core
-from forven.api_domains import live_ws
-from forven.routers.websockets import router as websockets_router
+from axiom import api_core
+from axiom.api_domains import live_ws
+from axiom.routers.websockets import router as websockets_router
 
 
 def test_live_websocket_emits_keepalive_ping(monkeypatch):

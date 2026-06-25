@@ -1,11 +1,11 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 
-from forven.db import create_strategy_container, get_db, kv_set
-from forven.gauntlet.settings import build_settings_snapshot
-from forven.gauntlet.status import get_strategy_gauntlet_status
-from forven.gauntlet.store import create_or_get_workflow, get_workflow_detail, update_step_status
+from axiom.db import create_strategy_container, get_db, kv_set
+from axiom.gauntlet.settings import build_settings_snapshot
+from axiom.gauntlet.status import get_strategy_gauntlet_status
+from axiom.gauntlet.store import create_or_get_workflow, get_workflow_detail, update_step_status
 
 
 def _create_strategy() -> str:
@@ -22,16 +22,16 @@ def _create_strategy() -> str:
     return strategy_id
 
 
-def test_settings_snapshot_normalizes_gauntlet_gate_aliases(forven_db):
+def test_settings_snapshot_normalizes_gauntlet_gate_aliases(AXIOM_db):
     kv_set(
-        "forven:pipeline_thresholds",
+        "axiom:pipeline_thresholds",
         {
             "quick_screen": {"min_sharpe": 1.1},
             "gauntlet": {"required_tests": ["walk_forward", "parameter_generator"]},
         },
     )
     kv_set(
-        "forven:pipeline:settings",
+        "axiom:pipeline:settings",
         {
             "gauntlet_auto_quick_screen_enabled": False,
             "gate_sweep_timeframes": ["1h", "4h"],
@@ -48,7 +48,7 @@ def test_settings_snapshot_normalizes_gauntlet_gate_aliases(forven_db):
     assert snapshot["workflow"]["auto_approve_promotions"] is True
 
 
-def test_strategy_gauntlet_status_unifies_workflow_steps_and_robustness_results(forven_db):
+def test_strategy_gauntlet_status_unifies_workflow_steps_and_robustness_results(AXIOM_db):
     strategy_id = _create_strategy()
     workflow = create_or_get_workflow(
         strategy_id=strategy_id,
@@ -89,7 +89,7 @@ def test_strategy_gauntlet_status_unifies_workflow_steps_and_robustness_results(
     assert status["missing_required"] == ["walk_forward"]
 
 
-def test_strategy_gauntlet_status_is_strict_json_serializable_with_nonfinite_metrics(forven_db):
+def test_strategy_gauntlet_status_is_strict_json_serializable_with_nonfinite_metrics(AXIOM_db):
     strategy_id = _create_strategy()
 
     with get_db() as conn:
@@ -116,9 +116,9 @@ def test_strategy_gauntlet_status_is_strict_json_serializable_with_nonfinite_met
     json.dumps(status, allow_nan=False)
 
 
-def test_settings_pipeline_save_updates_policy_thresholds_and_workflow_settings(forven_db):
-    from forven.api_core import PipelineSettingsUpdateBody, get_settings, put_pipeline_settings
-    from forven.policy import load_pipeline_config
+def test_settings_pipeline_save_updates_policy_thresholds_and_workflow_settings(AXIOM_db):
+    from axiom.api_core import PipelineSettingsUpdateBody, get_settings, put_pipeline_settings
+    from axiom.policy import load_pipeline_config
 
     put_pipeline_settings(
         PipelineSettingsUpdateBody(
@@ -144,10 +144,10 @@ def test_settings_pipeline_save_updates_policy_thresholds_and_workflow_settings(
 # =====================================================================================
 
 
-def test_json_dumps_sanitizes_non_finite_floats(forven_db):
+def test_json_dumps_sanitizes_non_finite_floats(AXIOM_db):
     """profit_factor=inf (zero losing trades in a regime slice) must persist as null —
     `Infinity` is invalid JSON and 500s every endpoint that returns the payload."""
-    from forven.gauntlet.store import _json_dumps
+    from axiom.gauntlet.store import _json_dumps
 
     text = _json_dumps({"metrics": {"profit_factor": float("inf"), "sharpe": float("nan"), "ok": 1.5}})
     parsed = json.loads(text)
@@ -156,8 +156,8 @@ def test_json_dumps_sanitizes_non_finite_floats(forven_db):
     assert parsed["metrics"]["ok"] == 1.5
 
 
-def test_rescrub_json_text_repairs_legacy_infinity_rows(forven_db):
-    from forven.gauntlet.store import _rescrub_json_text
+def test_rescrub_json_text_repairs_legacy_infinity_rows(AXIOM_db):
+    from axiom.gauntlet.store import _rescrub_json_text
 
     scrubbed = _rescrub_json_text('{"pf": Infinity, "dd": NaN, "n": 3}')
     assert json.loads(scrubbed) == {"pf": None, "dd": None, "n": 3}
@@ -166,7 +166,7 @@ def test_rescrub_json_text_repairs_legacy_infinity_rows(forven_db):
     assert _rescrub_json_text(None) is None
 
 
-def test_gauntlet_status_payload_is_strict_json_with_poisoned_step(forven_db):
+def test_gauntlet_status_payload_is_strict_json_with_poisoned_step(AXIOM_db):
     """A stored step payload with Infinity (written before the sanitizer) must not
     500 the gauntlet-status endpoint — regression for S00534's Robustness tab."""
     strategy_id = _create_strategy()

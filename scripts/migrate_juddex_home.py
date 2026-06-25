@@ -1,20 +1,20 @@
-"""One-shot cutover: merge ~/.juddex into ~/.forven and (optionally) delete ~/.juddex.
+﻿"""One-shot cutover: merge ~/.juddex into ~/.Axiom and (optionally) delete ~/.juddex.
 
 Background: the pre-rename home was `~/.juddex/` and used DB files named
-`juddex.db` / `juddex_lab.db`. The canonical home is `~/.forven/` with
-`forven.db` / `forven_lab.db`. The automatic migration in `forven.config`
+`juddex.db` / `juddex_lab.db`. The canonical home is `~/.Axiom/` with
+`axiom.db` / `axiom_lab.db`. The automatic migration in `Axiom.config`
 refuses to overwrite files that already exist in the canonical home, so a
-freshly-initialized empty `forven.db` blocks the real data from being picked
+freshly-initialized empty `axiom.db` blocks the real data from being picked
 up.
 
 This script does the cutover explicitly:
 
-  1. Copies DB files with renames (juddex.db -> forven.db, juddex_lab.db ->
-     forven_lab.db). If the canonical DB already exists it is backed up as
+  1. Copies DB files with renames (juddex.db -> axiom.db, juddex_lab.db ->
+     axiom_lab.db). If the canonical DB already exists it is backed up as
      `<name>.pre-juddex-migration.bak` before being replaced. Replacement
      only happens when the legacy DB has at least as many strategies as the
      canonical one (never silently discards newer data).
-  2. Merges every other file/dir from `~/.juddex/` into `~/.forven/`,
+  2. Merges every other file/dir from `~/.juddex/` into `~/.Axiom/`,
      preferring existing canonical files (does not overwrite). This picks up
      anything the app still expects (custom strategies, workspace, chroma,
      config) without clobbering newer state in the canonical home.
@@ -22,7 +22,7 @@ This script does the cutover explicitly:
      Without it, `~/.juddex/` is left intact so you can verify first.
 
 Usage:
-    # 0. Stop the Forven backend (it holds forven.db open).
+    # 0. Stop the Axiom backend (it holds axiom.db open).
     python scripts/migrate_juddex_home.py            # dry-safe: no delete
     python scripts/migrate_juddex_home.py --cleanup  # also removes ~/.juddex
     # 1. Restart the backend.
@@ -38,25 +38,25 @@ from pathlib import Path
 
 HOME = Path.home()
 LEGACY = HOME / ".juddex"
-CANONICAL = HOME / ".forven"
+CANONICAL = HOME / ".Axiom"
 
 DB_RENAMES = {
-    "juddex.db": "forven.db",
-    "juddex.db-journal": "forven.db-journal",
-    "juddex.db-wal": "forven.db-wal",
-    "juddex.db-shm": "forven.db-shm",
-    "juddex_lab.db": "forven_lab.db",
-    "juddex_lab.db-journal": "forven_lab.db-journal",
-    "juddex_lab.db-wal": "forven_lab.db-wal",
-    "juddex_lab.db-shm": "forven_lab.db-shm",
+    "juddex.db": "axiom.db",
+    "juddex.db-journal": "axiom.db-journal",
+    "juddex.db-wal": "axiom.db-wal",
+    "juddex.db-shm": "axiom.db-shm",
+    "juddex_lab.db": "axiom_lab.db",
+    "juddex_lab.db-journal": "axiom_lab.db-journal",
+    "juddex_lab.db-wal": "axiom_lab.db-wal",
+    "juddex_lab.db-shm": "axiom_lab.db-shm",
 }
 
 # Only back-up-and-overwrite these (the main DBs). Sidecar WAL/SHM/journal
 # files are migrated via the same rename map, but only if the primary DB is
 # being replaced — otherwise they'd mismatch the in-place primary DB.
 PRIMARY_DB_PAIRS = [
-    ("juddex.db", "forven.db"),
-    ("juddex_lab.db", "forven_lab.db"),
+    ("juddex.db", "axiom.db"),
+    ("juddex_lab.db", "axiom_lab.db"),
 ]
 
 
@@ -200,7 +200,7 @@ def main() -> int:
     else:
         print(f"\n{LEGACY} left in place. Re-run with --cleanup to remove it after verification.")
 
-    print("\nDone. Restart the Forven backend, then reload The Forge.")
+    print("\nDone. Restart the Axiom backend, then reload The Forge.")
     return 0
 
 

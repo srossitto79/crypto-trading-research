@@ -1,12 +1,12 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
 
 
-def test_active_coins_includes_active_strategy_symbols(forven_db):
-    from forven.daemon import _active_coins
-    from forven.db import get_db
+def test_active_coins_includes_active_strategy_symbols(AXIOM_db):
+    from axiom.daemon import _active_coins
+    from axiom.db import get_db
 
     now = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:

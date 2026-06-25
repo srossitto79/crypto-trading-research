@@ -1,16 +1,16 @@
-"""Tests for tool output truncation + redaction in tool_registry."""
+﻿"""Tests for tool output truncation + redaction in tool_registry."""
 
 import gzip
 
 
-from forven.agents.tool_registry import (
+from axiom.agents.tool_registry import (
     DEFAULT_MAX_BYTES,
     DEFAULT_MAX_CHARS_PER_LINE,
     DEFAULT_MAX_LINES,
     TRUNCATION_LINE_MARKER,
     _process_tool_output,
 )
-from forven.db import get_db
+from axiom.db import get_db
 
 
 def _read_truncation_row(row_id: int) -> dict:
@@ -71,7 +71,7 @@ def test_chars_per_line_cap_fires():
     assert "chars_per_line" in out
 
 
-def test_redaction_runs_before_truncation(forven_db):
+def test_redaction_runs_before_truncation(AXIOM_db):
     """A secret placed at byte 60_000 (past the cap) should still be redacted
     in the persisted full output — proving redact runs before truncation."""
     pad = "x" * 60_000
@@ -100,7 +100,7 @@ def test_redaction_runs_before_truncation(forven_db):
     assert "***REDACTED***" in full
 
 
-def test_truncation_row_metadata(forven_db):
+def test_truncation_row_metadata(AXIOM_db):
     # Many short lines so we trip the byte cap (not the per-line cap).
     text = "\n".join("z" * 100 for _ in range(600))  # ~60 KB, lines under 2000 chars
     out = _process_tool_output(

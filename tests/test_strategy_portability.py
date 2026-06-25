@@ -1,4 +1,4 @@
-"""Strategy container import/export (portability) tests.
+﻿"""Strategy container import/export (portability) tests.
 
 Covers the versioned export envelope, the param-family import path that recreates
 a strategy as a fresh quick_screen container, and the code-class path that bundles
@@ -13,15 +13,15 @@ import sys
 import pytest
 from fastapi import HTTPException
 
-from forven import strategy_lifecycle as lifecycle
-from forven.db import create_strategy_container, get_db
-from forven.strategies import custom as custom_pkg
-from forven.strategies import intake as intake_mod
-from forven.strategies import registry
+from axiom import strategy_lifecycle as lifecycle
+from axiom.db import create_strategy_container, get_db
+from axiom.strategies import custom as custom_pkg
+from axiom.strategies import intake as intake_mod
+from axiom.strategies import registry
 
 
 def _isolate_custom_dir(monkeypatch, tmp_path):
-    """Point forven.strategies.custom at an empty temp dir + reset the registry so
+    """Point Axiom.strategies.custom at an empty temp dir + reset the registry so
     these tests never touch (or import) the repo's real custom strategy files."""
     temp_custom_dir = tmp_path / "custom"
     temp_custom_dir.mkdir(exist_ok=True)
@@ -48,7 +48,7 @@ def _write_custom_strategy(
         "\n".join(
             [
                 "import pandas as pd",
-                "from forven.strategies.base import BaseStrategy, Signal",
+                "from axiom.strategies.base import BaseStrategy, Signal",
                 "",
                 f"class {class_name}(BaseStrategy):",
                 "    @property",
@@ -93,13 +93,13 @@ def _make_macd_container() -> tuple[str, str]:
     return sid, display_id
 
 
-def test_build_container_export_envelope_shape(forven_db, monkeypatch, tmp_path):
+def test_build_container_export_envelope_shape(AXIOM_db, monkeypatch, tmp_path):
     _isolate_custom_dir(monkeypatch, tmp_path)
     sid, _ = _make_macd_container()
 
     env = lifecycle.build_container_export(sid)
 
-    meta = env["forven_export"]
+    meta = env["AXIOM_export"]
     assert meta["kind"] == "strategy_container"
     assert meta["version"] == "1.0"
     assert meta["source_strategy_id"] == sid
@@ -111,7 +111,7 @@ def test_build_container_export_envelope_shape(forven_db, monkeypatch, tmp_path)
     assert "source_code" not in env
 
 
-def test_export_import_round_trip_creates_new_quick_screen(forven_db, monkeypatch, tmp_path):
+def test_export_import_round_trip_creates_new_quick_screen(AXIOM_db, monkeypatch, tmp_path):
     _isolate_custom_dir(monkeypatch, tmp_path)
     sid, _ = _make_macd_container()
 
@@ -139,7 +139,7 @@ def test_export_import_round_trip_creates_new_quick_screen(forven_db, monkeypatc
     assert src["stage"] == "quick_screen"
 
 
-def test_import_warns_history_not_replayed(forven_db, monkeypatch, tmp_path):
+def test_import_warns_history_not_replayed(AXIOM_db, monkeypatch, tmp_path):
     _isolate_custom_dir(monkeypatch, tmp_path)
     sid, _ = _make_macd_container()
     env = lifecycle.build_container_export(sid)
@@ -151,21 +151,21 @@ def test_import_warns_history_not_replayed(forven_db, monkeypatch, tmp_path):
     assert any("not imported" in str(w).lower() for w in result["warnings"])
 
 
-def test_import_rejects_missing_envelope(forven_db):
+def test_import_rejects_missing_envelope(AXIOM_db):
     with pytest.raises(HTTPException) as exc:
         lifecycle.import_strategy_container({"strategy": {}, "configuration": {}})
     assert exc.value.status_code == 400
 
 
-def test_import_rejects_non_object_payload(forven_db):
+def test_import_rejects_non_object_payload(AXIOM_db):
     with pytest.raises(HTTPException) as exc:
         lifecycle.import_strategy_container("not-a-dict")
     assert exc.value.status_code == 400
 
 
-def test_import_rejects_unsupported_version(forven_db):
+def test_import_rejects_unsupported_version(AXIOM_db):
     env = {
-        "forven_export": {"kind": "strategy_container", "version": "9.9"},
+        "AXIOM_export": {"kind": "strategy_container", "version": "9.9"},
         "configuration": {
             "type": "macd",
             "symbol": "BTC",
@@ -178,12 +178,12 @@ def test_import_rejects_unsupported_version(forven_db):
     assert exc.value.status_code == 400
 
 
-def test_import_unregistered_type_without_source_hints_reexport(forven_db, monkeypatch, tmp_path):
+def test_import_unregistered_type_without_source_hints_reexport(AXIOM_db, monkeypatch, tmp_path):
     # A code-class strategy with NO bundled source can't be reconstructed; the
     # error nudges the operator to re-export (exports now bundle code).
     _isolate_custom_dir(monkeypatch, tmp_path)
     env = {
-        "forven_export": {
+        "AXIOM_export": {
             "kind": "strategy_container",
             "version": "1.0",
             "source_strategy_id": "S99999",
@@ -202,12 +202,12 @@ def test_import_unregistered_type_without_source_hints_reexport(forven_db, monke
     assert "re-export" in result["error"].lower()
 
 
-def test_export_bundles_source_code_for_code_class(forven_db, monkeypatch, tmp_path):
+def test_export_bundles_source_code_for_code_class(AXIOM_db, monkeypatch, tmp_path):
     temp_custom_dir = _isolate_custom_dir(monkeypatch, tmp_path)
     type_name = "portability_probe_export"
     strategy_file = temp_custom_dir / f"{type_name}.py"
     _write_custom_strategy(strategy_file, type_name=type_name)
-    sys.modules.pop(f"forven.strategies.custom.{type_name}", None)
+    sys.modules.pop(f"axiom.strategies.custom.{type_name}", None)
 
     reg = intake_mod.register_custom_strategy_file(file_path=str(strategy_file), source="ai_dropzone")
     source_id = reg["strategy_id"]
@@ -222,12 +222,12 @@ def test_export_bundles_source_code_for_code_class(forven_db, monkeypatch, tmp_p
     assert f"TYPE_NAME = '{type_name}'" in sc["content"]
 
 
-def test_code_class_round_trip_registers_on_fresh_machine(forven_db, monkeypatch, tmp_path):
+def test_code_class_round_trip_registers_on_fresh_machine(AXIOM_db, monkeypatch, tmp_path):
     temp_custom_dir = _isolate_custom_dir(monkeypatch, tmp_path)
     type_name = "portability_probe_rt"
     strategy_file = temp_custom_dir / f"{type_name}.py"
     _write_custom_strategy(strategy_file, type_name=type_name, class_name="PortabilityProbeRt")
-    sys.modules.pop(f"forven.strategies.custom.{type_name}", None)
+    sys.modules.pop(f"axiom.strategies.custom.{type_name}", None)
 
     reg = intake_mod.register_custom_strategy_file(file_path=str(strategy_file), source="ai_dropzone")
     source_id = reg["strategy_id"]
@@ -240,7 +240,7 @@ def test_code_class_round_trip_registers_on_fresh_machine(forven_db, monkeypatch
     with get_db() as conn:
         conn.execute("DELETE FROM strategies WHERE id = ?", (source_id,))
     registry.reset()
-    sys.modules.pop(f"forven.strategies.custom.{type_name}", None)
+    sys.modules.pop(f"axiom.strategies.custom.{type_name}", None)
     importlib.invalidate_caches()
     assert not strategy_file.exists()
 
@@ -262,7 +262,7 @@ def test_code_class_round_trip_registers_on_fresh_machine(forven_db, monkeypatch
     assert row["stage"] == "quick_screen"
 
 
-def test_code_class_round_trip_handles_string_strategy_class(forven_db, monkeypatch, tmp_path):
+def test_code_class_round_trip_handles_string_strategy_class(AXIOM_db, monkeypatch, tmp_path):
     # Reproduces the reported "Class validation failed: not a class" failure: a
     # strategy whose STRATEGY_CLASS is the class *name* (a string). Both creating
     # the source and importing it must now succeed.
@@ -275,7 +275,7 @@ def test_code_class_round_trip_handles_string_strategy_class(forven_db, monkeypa
         class_name="PortabilityProbeStr",
         strategy_class_as_string=True,
     )
-    sys.modules.pop(f"forven.strategies.custom.{type_name}", None)
+    sys.modules.pop(f"axiom.strategies.custom.{type_name}", None)
 
     reg = intake_mod.register_custom_strategy_file(file_path=str(strategy_file), source="ai_dropzone")
     source_id = reg["strategy_id"]
@@ -287,7 +287,7 @@ def test_code_class_round_trip_handles_string_strategy_class(forven_db, monkeypa
     with get_db() as conn:
         conn.execute("DELETE FROM strategies WHERE id = ?", (source_id,))
     registry.reset()
-    sys.modules.pop(f"forven.strategies.custom.{type_name}", None)
+    sys.modules.pop(f"axiom.strategies.custom.{type_name}", None)
     importlib.invalidate_caches()
 
     result = lifecycle.import_strategy_container(env)
@@ -303,10 +303,10 @@ def test_code_class_round_trip_handles_string_strategy_class(forven_db, monkeypa
     assert row["source"] == "import"
 
 
-def test_code_class_import_rejects_unsafe_source(forven_db, monkeypatch, tmp_path):
+def test_code_class_import_rejects_unsafe_source(AXIOM_db, monkeypatch, tmp_path):
     _isolate_custom_dir(monkeypatch, tmp_path)
     env = {
-        "forven_export": {"kind": "strategy_container", "version": "1.0", "source_strategy_id": "S1"},
+        "AXIOM_export": {"kind": "strategy_container", "version": "1.0", "source_strategy_id": "S1"},
         "configuration": {"type": "evil_strat", "symbol": "BTC", "timeframe": "1h", "params": {}},
         "source_code": {
             "module_name": "evil_strat",

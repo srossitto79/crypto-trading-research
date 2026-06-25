@@ -7,20 +7,20 @@ This document tracks the migration from tightly-coupled Hyperliquid SDK calls to
 ## Phase 1: Foundation (COMPLETE ✅)
 
 New files created:
-- `forven/exchange/interface.py` - Abstract `ExchangeInterface` with async methods
-- `forven/exchange/hyperliquid_adapter.py` - `HyperliquidExchange` implementation
-- `forven/exchange/mock.py` - `MockExchange` for testing
-- `forven/exchange/sync_wrapper.py` - Sync wrappers for sync contexts
+- `axiom/exchange/interface.py` - Abstract `ExchangeInterface` with async methods
+- `axiom/exchange/hyperliquid_adapter.py` - `HyperliquidExchange` implementation
+- `axiom/exchange/mock.py` - `MockExchange` for testing
+- `axiom/exchange/sync_wrapper.py` - Sync wrappers for sync contexts
 
 Modified files:
-- `forven/exchange/hyperliquid.py` - Added `get_exchange()`, `set_exchange()` module functions
+- `axiom/exchange/hyperliquid.py` - Added `get_exchange()`, `set_exchange()` module functions
 
 Status: Ready for use. All new code can use the interface immediately.
 
 ## Phase 2: LLM Config (COMPLETE ✅)
 
-Fixed the `FORVEN_OPERATOR_KEY` initialization issue:
-- Added `python -m forven auth init-operator-key` CLI command
+Fixed the `AXIOM_OPERATOR_KEY` initialization issue:
+- Added `python -m axiom auth init-operator-key` CLI command
 - Improved 401 error messages to guide users
 - Added startup warnings in `api_core.py`
 - Updated `docs/FIRST_RUN_CHECKLIST.md` with proper setup instructions
@@ -31,7 +31,7 @@ Status: Users no longer need browser console hacks.
 
 ### Completed Files
 
-#### 1. `forven/agents/tools_exchange.py` (MIGRATED ✅)
+#### 1. `axiom/agents/tools_exchange.py` (MIGRATED ✅)
 
 **Pattern Applied:**
 - Made tool functions `async` (already expected by the runner)
@@ -50,7 +50,7 @@ Status: Users no longer need browser console hacks.
 - `_tool_update_trade()` - Complex logic, can be updated when needed
 - `_tool_request_fix()` - Not exchange-related
 
-#### 2. `forven/soak.py` (PARTIALLY MIGRATED ✅)
+#### 2. `axiom/soak.py` (PARTIALLY MIGRATED ✅)
 
 **Pattern Applied:**
 - For sync functions, use `asyncio.run()` to call async interface
@@ -63,31 +63,31 @@ Status: Users no longer need browser console hacks.
 
 #### Medium Priority (Update when touching these files)
 
-1. **`forven/api_domains/trading.py`** (1,148 LOC)
+1. **`axiom/api_domains/trading.py`** (1,148 LOC)
    - Pattern: Use `SyncExchange` wrapper or `asyncio.run()` for sync functions
    - Key imports to replace: `market_order`, `limit_order`, `close_position`, `get_open_orders`, `get_positions`
-   - Replace with: `from forven.exchange.sync_wrapper import get_sync_exchange; exchange = get_sync_exchange()`
+   - Replace with: `from axiom.exchange.sync_wrapper import get_sync_exchange; exchange = get_sync_exchange()`
 
-2. **`forven/api_domains/paper_control.py`** (800 LOC)
+2. **`axiom/api_domains/paper_control.py`** (800 LOC)
    - Pattern: Same as trading.py
    - Key imports: `close_position`, `market_order`, `cancel_order`, `place_protective_stop`, `place_take_profit`
 
 #### High Priority (Critical Path - Core Execution)
 
-3. **`forven/scanner.py`** (5,963 LOC - CORE STRATEGY EXECUTION)
+3. **`axiom/scanner.py`** (5,963 LOC - CORE STRATEGY EXECUTION)
    - Most critical file - handles live order execution
    - Challenge: Many nested functions, complex state management
    - Pattern: Make main execution functions async, use `get_exchange()` directly
    - Key functions: `_execute_opportunity()`, `_place_order()`, risk checks
    - **Recommendation**: Migrate incrementally, test thoroughly with MockExchange first
 
-4. **`forven/exchange/risk.py`** (3,270 LOC - CRITICAL RISK CONTROLS)
+4. **`axiom/exchange/risk.py`** (3,270 LOC - CRITICAL RISK CONTROLS)
    - Handles kill-switches, emergency closes, liquidation protection
    - Pattern: Use `SyncExchange` wrapper since many functions are sync paths
    - Key functions: `emergency_flatten_all()`, `reconcile_positions()`, `is_trading_allowed()`
    - **Recommendation**: Migrate function-by-function, test each with MockExchange
 
-5. **`forven/daemon.py`** (1,994 LOC - MARKET DATA LOOP)
+5. **`axiom/daemon.py`** (1,994 LOC - MARKET DATA LOOP)
    - Handles price feeds and async reconciliation
    - Pattern: Already async in parts, can make async natively
    - Key classes: `HyperLiquidFeed` (consider wrapping as custom Exchange subclass)
@@ -96,9 +96,9 @@ Status: Users no longer need browser console hacks.
 
 #### Low Priority (Utility Files)
 
-6. **`forven/agents/tools_backtesting.py`** - Backtesting tools (test-only, not critical)
-7. **`forven/agents/tools_brain.py`** - Brain agent tools
-8. **`forven/agents/tools_core.py`** - Core tools (mostly file/memory ops)
+6. **`axiom/agents/tools_backtesting.py`** - Backtesting tools (test-only, not critical)
+7. **`axiom/agents/tools_brain.py`** - Brain agent tools
+8. **`axiom/agents/tools_core.py`** - Core tools (mostly file/memory ops)
 9. **Tests** (30 files, 821 LOC) - Use `MockExchange` instead of sync mocks
 
 ---
@@ -111,13 +111,13 @@ Use this for functions that are already in async contexts or can be made async.
 
 ```python
 # OLD
-from forven.exchange.hyperliquid import market_order
+from axiom.exchange.hyperliquid import market_order
 
 def my_function():
     result = market_order(symbol, side, size, testnet=True)
     
 # NEW
-from forven.exchange.hyperliquid import get_exchange
+from axiom.exchange.hyperliquid import get_exchange
 
 async def my_function():
     exchange = get_exchange()
@@ -130,14 +130,14 @@ Use this for sync functions that can't be made async (CLI, callbacks).
 
 ```python
 # OLD
-from forven.exchange.hyperliquid import get_positions
+from axiom.exchange.hyperliquid import get_positions
 
 def my_sync_function():
     positions = get_positions(testnet=True)
 
 # NEW
 import asyncio
-from forven.exchange.hyperliquid import get_exchange
+from axiom.exchange.hyperliquid import get_exchange
 
 def my_sync_function():
     async def fetch():
@@ -153,7 +153,7 @@ Use this for sync code that makes many exchange calls.
 
 ```python
 # OLD
-from forven.exchange.hyperliquid import get_positions, get_account_value, market_order
+from axiom.exchange.hyperliquid import get_positions, get_account_value, market_order
 
 def my_risk_function():
     positions = get_positions()
@@ -161,7 +161,7 @@ def my_risk_function():
     market_order(...)
 
 # NEW
-from forven.exchange.sync_wrapper import get_sync_exchange
+from axiom.exchange.sync_wrapper import get_sync_exchange
 
 def my_risk_function():
     exchange = get_sync_exchange()
@@ -195,8 +195,8 @@ if result.raw_response:
 ### Test with MockExchange
 
 ```python
-from forven.exchange.mock import MockExchange
-from forven.exchange.hyperliquid import set_exchange
+from axiom.exchange.mock import MockExchange
+from axiom.exchange.hyperliquid import set_exchange
 
 # In test setup
 mock = MockExchange(initial_balance=10000.0)
@@ -224,7 +224,7 @@ set_exchange(mock)
 - [ ] Start `daemon.py` - async paths first
 - [ ] Update tests to use MockExchange
 - [ ] Run full test suite: `pytest tests/ -v`
-- [ ] Smoke test: `python -m forven soak` (should report "hyperliquid: ok")
+- [ ] Smoke test: `python -m axiom soak` (should report "hyperliquid: ok")
 - [ ] Manual test: Execute a small paper trade in the UI
 - [ ] Integration test: Backtest → Paper → Review in UI
 
@@ -281,12 +281,12 @@ This file has complex state. Approach:
 
 The migration is complete when:
 
-1. ✅ All files import from `forven.exchange.hyperliquid` using `get_exchange()` or `get_sync_exchange()`
+1. ✅ All files import from `axiom.exchange.hyperliquid` using `get_exchange()` or `get_sync_exchange()`
 2. ✅ No direct imports of SDK functions like `from hyperliquid.exchange import Exchange`
 3. ✅ Tests use `MockExchange` instead of mocking hyperliquid.py
 4. ✅ Full test suite passes: `pytest tests/ -v`
 5. ✅ Live UI demo: Place a paper trade, close it, verify no errors
-6. ✅ Soak check passes: `python -m forven soak`
+6. ✅ Soak check passes: `python -m axiom soak`
 
 ---
 

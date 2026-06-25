@@ -61,7 +61,7 @@ Absent for candles before the indicated "Available From" date.
 | gini_index                | 1d          | 2024-01        | Gini coefficient of on-chain wealth distribution (0–1). Higher = more concentrated. |
 | btc_s_and_p_price_divergence | 1d      | 2024-01        | BTC price divergence from S&P 500 (z-score or ratio). Macro correlation signal. |
 
-### Macro / Sentiment (daily, Forven native collectors)
+### Macro / Sentiment (daily, Axiom native collectors)
 
 These are **opt-in** (`include_macro=True`) and RESEARCH-ONLY. Daily closes carry
 same-day lookahead when merged onto intraday candles — never use in live strategies.

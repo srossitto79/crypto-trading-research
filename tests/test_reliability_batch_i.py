@@ -1,4 +1,4 @@
-"""Batch I: test coverage for reliability surfaces (H-T1, H-T3, H-T4, H-T5).
+﻿"""Batch I: test coverage for reliability surfaces (H-T1, H-T3, H-T4, H-T5).
 
 H-T1: DB connection hardening invariants (WAL, foreign keys, busy_timeout).
 H-T3: Error-path recovery — context manager rollback, lock release on failure.
@@ -15,7 +15,7 @@ import threading
 
 import pytest
 
-from forven.db import (
+from axiom.db import (
     get_db,
     get_db_immediate,
     init_db,
@@ -97,7 +97,7 @@ def test_h_t3_get_db_immediate_rolls_back_on_exception():
 
 def test_h_t3_lock_release_after_partial_acquire_failure(monkeypatch):
     """If os.write fails after flock succeeds the FD is still closed."""
-    from forven import runtime_worker as rw
+    from axiom import runtime_worker as rw
 
     monkeypatch.setattr(rw, "_runtime_worker_lock_fd", None, raising=False)
 
@@ -119,7 +119,7 @@ def test_h_t3_lock_release_after_partial_acquire_failure(monkeypatch):
 def test_h_t4_agent_runner_exception_persists_failed_status(monkeypatch):
     """When the agent runner raises, process_agent_tasks_once must
     stamp status='failed' on the task row so it stops blocking its queue."""
-    from forven import runtime_worker as rw
+    from axiom import runtime_worker as rw
 
     fake_agents = [{"id": "agent-a", "enabled": 1}]
     fake_tasks = [{"id": 999001, "agent_id": "agent-a", "status": "running"}]
@@ -161,9 +161,9 @@ def test_h_t4_agent_runner_exception_persists_failed_status(monkeypatch):
         return fake_tasks[: limit or None]
 
     # Patch the import site — runtime_worker imports at call time
-    import forven.db as forven_db
-    monkeypatch.setattr(forven_db, "claim_pending_agent_tasks", _claim)
-    monkeypatch.setattr(forven_db, "get_db", lambda: _FakeCtx())
+    import axiom.db as AXIOM_db
+    monkeypatch.setattr(AXIOM_db, "claim_pending_agent_tasks", _claim)
+    monkeypatch.setattr(AXIOM_db, "get_db", lambda: _FakeCtx())
 
     async def _raising_runner(agent, task):
         raise RuntimeError("simulated agent failure")

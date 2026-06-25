@@ -1,6 +1,6 @@
-"""Tests for forven.redact — secret scrubbing in tool output."""
+﻿"""Tests for Axiom.redact — secret scrubbing in tool output."""
 
-from forven.redact import REDACTED_MARKER, redact, redact_dict
+from axiom.redact import REDACTED_MARKER, redact, redact_dict
 
 
 def test_openai_key_scrubbed():

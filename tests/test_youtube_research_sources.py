@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import importlib
 import json
@@ -7,7 +7,7 @@ import httpx
 
 
 def _load_module():
-    return importlib.import_module("forven.research_sources.youtube")
+    return importlib.import_module("axiom.research_sources.youtube")
 
 
 class FakeResponse:

@@ -1,4 +1,4 @@
-import hmac
+﻿import hmac
 import os
 import re
 import time
@@ -25,15 +25,15 @@ log = logging.getLogger("server_api")
 
 def _require_api_key(x_api_key: str = Header(default="")):
     """Fail-closed API key check for protected endpoints."""
-    server_key = os.environ.get("FORVEN_COMPUTE_API_KEY", "").strip()
+    server_key = os.environ.get("AXIOM_COMPUTE_API_KEY", "").strip()
     if not server_key:
         raise HTTPException(status_code=503, detail="Compute API key not configured on server")
     if not x_api_key or not hmac.compare_digest(server_key, x_api_key):
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
 
-REMOTE_DATA_ROOT_ENV = "FORVEN_REMOTE_ENGINE_DATA_ROOT"
-DEFAULT_REMOTE_DATA_ROOT = "D:/ForvenData/ohlcv"
+REMOTE_DATA_ROOT_ENV = "AXIOM_REMOTE_ENGINE_DATA_ROOT"
+DEFAULT_REMOTE_DATA_ROOT = "D:/AxiomData/ohlcv"
 
 _INGESTION_RUNS: dict[str, dict[str, Any]] = {}
 _INGESTION_RUNS_LOCK = threading.Lock()
@@ -44,8 +44,8 @@ _DATASET_CACHE_LOCK = threading.Lock()
 _DATASET_CACHE: dict[str, Any] = {"expires_at": 0.0, "rows": []}
 
 app = FastAPI(
-    title="Forven Compute Engine & Data Lake API",
-    description="Dedicated execution and storage environment for Forven backtests.",
+    title="Axiom Compute Engine & Data Lake API",
+    description="Dedicated execution and storage environment for Axiom backtests.",
     version="1.0.0"
 )
 
@@ -215,7 +215,7 @@ def _dataset_from_file(path: Path, fs_symbol: str, timeframe: str) -> dict[str, 
     metadata = pq.read_metadata(path)
     row_count = int(metadata.num_rows or 0)
     keyvals = metadata.metadata or {}
-    source_raw = keyvals.get(b"forven_source", b"remote")
+    source_raw = keyvals.get(b"AXIOM_source", b"remote")
     source = source_raw.decode("utf-8", errors="ignore") or "remote"
 
     start_ts, end_ts = _timestamp_bounds_from_metadata(metadata)
@@ -433,7 +433,7 @@ async def get_market_data(
     log.info("Orchestrator requested data for %s (%s) - Stream starting.", symbol, timeframe)
     
     # In production, this would load from Local 10TB drive using Pandas Parquet:
-    # df = pd.read_parquet(f"D:/ForvenData/{symbol}/{timeframe}.parquet")
+    # df = pd.read_parquet(f"D:/AxiomData/{symbol}/{timeframe}.parquet")
     # return df.loc[start:end].to_dict()
     
     return {
@@ -736,7 +736,7 @@ async def run_remote_backtest(request: BacktestRequest):
     """
     Accepts a strategy type name (e.g. "rsi_momentum") and parameters,
     returns mock backtest metrics.  No code is written to disk.
-    Future real execution should use the subprocess sandbox in forven/sandbox.py.
+    Future real execution should use the subprocess sandbox in Axiom/sandbox.py.
     """
     run_id = f"remote_run_{uuid.uuid4().hex[:8]}"
     log.info("[%s] Received backtest request for %s on %s.", run_id, request.symbol, request.timeframe)
@@ -791,7 +791,7 @@ def health_check():
 
 if __name__ == "__main__":
     print("-" * 60)
-    print("🚀 FORVEN COMPUTE ENGINE & DATA LAKE STARTED")
+    print("🚀 Axiom COMPUTE ENGINE & DATA LAKE STARTED")
     print("Listening for LAN requests on Port 9050...")
     print("This server will now handle all backtest math and Parquet Storage!")
     print("-" * 60)

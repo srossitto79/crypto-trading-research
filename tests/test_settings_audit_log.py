@@ -1,4 +1,4 @@
-from forven.api_core import _diff_settings_section, _append_settings_audit
+﻿from axiom.api_core import _diff_settings_section, _append_settings_audit
 
 
 def test_diff_flat_change():
@@ -44,13 +44,13 @@ def test_append_trims_to_50():
     assert result[0]["id"] == "x.1"  # oldest evicted
 
 
-def test_put_settings_section_writes_audit(forven_db):
+def test_put_settings_section_writes_audit(AXIOM_db):
     """End-to-end: a real PUT appends an entry to the persisted audit log."""
-    import forven.api_core as core
+    import axiom.api_core as core
 
     core._save_settings_payload(core._default_settings_payload())
 
-    from forven.api_core import put_settings_section, get_settings
+    from axiom.api_core import put_settings_section, get_settings
 
     put_settings_section("risk", {"max_daily_loss": 150})
     settings = get_settings()
@@ -59,8 +59,8 @@ def test_put_settings_section_writes_audit(forven_db):
     assert any(e["id"] == "risk.max_daily_loss" and e["to"] == 150 for e in audit)
 
 
-def test_get_settings_audit_log_returns_newest_first(forven_db):
-    from forven.api_core import put_settings_section, get_settings_audit_log
+def test_get_settings_audit_log_returns_newest_first(AXIOM_db):
+    from axiom.api_core import put_settings_section, get_settings_audit_log
 
     put_settings_section("risk", {"max_daily_loss": 111})
     put_settings_section("risk", {"max_daily_loss": 222})
@@ -74,8 +74,8 @@ def test_get_settings_audit_log_returns_newest_first(forven_db):
     assert risk_entries[1]["to"] == 111
 
 
-def test_get_settings_audit_log_respects_limit(forven_db):
-    from forven.api_core import put_settings_section, get_settings_audit_log
+def test_get_settings_audit_log_respects_limit(AXIOM_db):
+    from axiom.api_core import put_settings_section, get_settings_audit_log
 
     for n in range(10):
         put_settings_section("risk", {"max_daily_loss": 100 + n})

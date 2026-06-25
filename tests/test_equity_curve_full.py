@@ -1,4 +1,4 @@
-"""Full-window (IS+OOS) equity curve for the entire-timeframe chart (2026-06-05).
+﻿"""Full-window (IS+OOS) equity curve for the entire-timeframe chart (2026-06-05).
 
 The stored equity_curve is OOS-only (the honest unseen-data window). These cover the
 additional full-window curve built for visualization: it spans the entire backtest,
@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import pandas as pd
 
-import forven.api_core as api_core
-from forven.strategies.backtest import (
+import axiom.api_core as api_core
+from axiom.strategies.backtest import (
     _build_equity_curve_from_trades,
     _downsample_curve,
 )
@@ -59,7 +59,7 @@ def test_downsample_caps_changing_curve_to_max_points():
     assert ds[-1]["timestamp"] == "u49"
 
 
-def test_full_curves_persist_and_reload(forven_db):
+def test_full_curves_persist_and_reload(AXIOM_db):
     eq_oos = [
         {"timestamp": "2026-05-20T00:00:00+00:00", "equity": 1000.0},
         {"timestamp": "2026-06-04T00:00:00+00:00", "equity": 1200.0},
@@ -93,7 +93,7 @@ def test_full_curves_persist_and_reload(forven_db):
     assert arts["equity_curve_full"][0]["timestamp"] < arts["equity_curve"][0]["timestamp"]
 
 
-def test_full_curves_absent_loads_as_none(forven_db):
+def test_full_curves_absent_loads_as_none(AXIOM_db):
     # A pre-existing result with only the OOS curve must still load (no full curve).
     api_core._write_backtest_result_artifacts(
         "oosonly-result", "oosonly-job", [],

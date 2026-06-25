@@ -1,4 +1,4 @@
-"""Tests for agent task recovery and contextvars isolation."""
+﻿"""Tests for agent task recovery and contextvars isolation."""
 
 import asyncio
 import sqlite3
@@ -8,18 +8,18 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 
-from forven.agents import runner
-from forven.agents.runner import (
+from axiom.agents import runner
+from axiom.agents.runner import (
     _current_agent_id,
     _recover_dangling_tasks,
 )
-from forven.db import (
+from axiom.db import (
     get_db,
     reap_long_running_agent_tasks,
     recover_dangling_runtime_tasks,
     recover_stale_running_tasks,
 )
-from forven.system_pause import set_system_mode
+from axiom.system_pause import set_system_mode
 
 
 class TestAgentTaskRecovery:
@@ -32,8 +32,8 @@ class TestAgentTaskRecovery:
             "VALUES ('quant-researcher', 'Quant Researcher', 'researcher', datetime('now'))"
         )
 
-    def test_recovers_running_tasks(self, forven_db):
-        from forven.db import get_db
+    def test_recovers_running_tasks(self, AXIOM_db):
+        from axiom.db import get_db
 
         now = datetime.now(timezone.utc).isoformat()
         with get_db() as conn:
@@ -51,12 +51,12 @@ class TestAgentTaskRecovery:
         assert row["status"] == "failed"
         assert "crashed" in row["error"].lower() or "restarted" in row["error"].lower()
 
-    def test_no_op_when_no_dangling(self, forven_db):
+    def test_no_op_when_no_dangling(self, AXIOM_db):
         # Should not raise
         _recover_dangling_tasks()
 
-    def test_leaves_pending_tasks_alone(self, forven_db):
-        from forven.db import get_db
+    def test_leaves_pending_tasks_alone(self, AXIOM_db):
+        from axiom.db import get_db
 
         now = datetime.now(timezone.utc).isoformat()
         with get_db() as conn:
@@ -73,8 +73,8 @@ class TestAgentTaskRecovery:
             row = conn.execute("SELECT status FROM agent_tasks LIMIT 1").fetchone()
         assert row["status"] == "pending"
 
-    def test_recover_stale_running_tasks_fails_execution_trader_by_default(self, forven_db):
-        from forven.db import get_db
+    def test_recover_stale_running_tasks_fails_execution_trader_by_default(self, AXIOM_db):
+        from axiom.db import get_db
 
         now = "2020-01-01T00:00:00+00:00"
         with get_db() as conn:
@@ -95,8 +95,8 @@ class TestAgentTaskRecovery:
         assert result["agent_failed"] == 1
         assert row["status"] == "failed"
 
-    def test_reaper_uses_task_specific_timeout_window(self, forven_db):
-        from forven.db import get_db
+    def test_reaper_uses_task_specific_timeout_window(self, AXIOM_db):
+        from axiom.db import get_db
 
         now = datetime.now(timezone.utc)
         research_started = (now - timedelta(minutes=20)).isoformat()
@@ -171,7 +171,7 @@ class TestContextVarIsolation:
         assert results["agent-c"] == "agent-c"
 
 
-def test_transient_provider_failure_requeues_agent_task(forven_db, monkeypatch):
+def test_transient_provider_failure_requeues_agent_task(AXIOM_db, monkeypatch):
     now = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
         conn.execute(
@@ -231,7 +231,7 @@ def test_transient_provider_failure_requeues_agent_task(forven_db, monkeypatch):
     assert row["completed_at"] is None
 
 
-def test_requeue_agent_task_tolerates_locked_activity_log(forven_db, monkeypatch):
+def test_requeue_agent_task_tolerates_locked_activity_log(AXIOM_db, monkeypatch):
     now = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
         conn.execute(
@@ -264,7 +264,7 @@ def test_requeue_agent_task_tolerates_locked_activity_log(forven_db, monkeypatch
         raise sqlite3.OperationalError("database is locked")
         yield
 
-    monkeypatch.setattr("forven.db.get_db_best_effort", _locked_best_effort_db)
+    monkeypatch.setattr("axiom.db.get_db_best_effort", _locked_best_effort_db)
 
     requeued = runner._requeue_agent_task(
         task_id,
@@ -291,8 +291,8 @@ def test_requeue_agent_task_tolerates_locked_activity_log(forven_db, monkeypatch
     assert activity_count == 0
 
 
-def test_kv_set_best_effort_tolerates_sqlite_lock(forven_db, monkeypatch):
-    from forven import db as db_mod
+def test_kv_set_best_effort_tolerates_sqlite_lock(AXIOM_db, monkeypatch):
+    from axiom import db as db_mod
 
     @contextmanager
     def _locked_best_effort_db(*args, **kwargs):
@@ -304,7 +304,7 @@ def test_kv_set_best_effort_tolerates_sqlite_lock(forven_db, monkeypatch):
     assert db_mod.kv_set_best_effort("scheduler:last_progress_at", "now") is False
 
 
-def test_agent_task_timeout_requeues_non_execution_work(forven_db, monkeypatch):
+def test_agent_task_timeout_requeues_non_execution_work(AXIOM_db, monkeypatch):
     now = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
         conn.execute(
@@ -363,7 +363,7 @@ def test_agent_task_timeout_requeues_non_execution_work(forven_db, monkeypatch):
     assert row["completed_at"] is None
 
 
-def test_recover_stale_running_tasks_requeues_transient_provider_failures(forven_db):
+def test_recover_stale_running_tasks_requeues_transient_provider_failures(AXIOM_db):
     old = (datetime.now(timezone.utc) - timedelta(minutes=90)).isoformat()
     with get_db() as conn:
         conn.execute(
@@ -423,7 +423,7 @@ def test_recover_stale_running_tasks_requeues_transient_provider_failures(forven
     assert "Recovered after stale running task timeout" in str(brain_row["error"])
 
 
-def test_recover_stale_running_tasks_requeues_one_failed_duplicate_per_strategy(forven_db):
+def test_recover_stale_running_tasks_requeues_one_failed_duplicate_per_strategy(AXIOM_db):
     old = (datetime.now(timezone.utc) - timedelta(minutes=90)).isoformat()
     with get_db() as conn:
         conn.execute(
@@ -461,7 +461,7 @@ def test_recover_stale_running_tasks_requeues_one_failed_duplicate_per_strategy(
     assert [row["status"] for row in rows].count("failed") == 1
 
 
-def test_recover_dangling_runtime_tasks_requeues_brain_and_respects_manual_mode(forven_db):
+def test_recover_dangling_runtime_tasks_requeues_brain_and_respects_manual_mode(AXIOM_db):
     with get_db() as conn:
         conn.execute(
             """

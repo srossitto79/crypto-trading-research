@@ -1,11 +1,11 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
 from uuid import uuid4
 
-import forven.config as cfg
-from forven.lab_db import (
+import axiom.config as cfg
+from axiom.lab_db import (
     assert_lab_write_connection,
     create_lab_experiment,
     enqueue_lab_job,
@@ -13,15 +13,15 @@ from forven.lab_db import (
     init_lab_db,
     list_lab_jobs,
 )
-from forven.lab_models import LabJobState
+from axiom.lab_models import LabJobState
 
 
 def test_init_lab_db_creates_expected_tables():
     init_lab_db()
 
-    assert cfg.FORVEN_LAB_DB.exists()
+    assert cfg.AXIOM_LAB_DB.exists()
 
-    with sqlite3.connect(str(cfg.FORVEN_LAB_DB)) as conn:
+    with sqlite3.connect(str(cfg.AXIOM_LAB_DB)) as conn:
         rows = conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table'"
         ).fetchall()
@@ -44,7 +44,7 @@ def test_init_lab_db_creates_expected_tables():
     }
     assert expected.issubset(table_names)
 
-    with sqlite3.connect(str(cfg.FORVEN_LAB_DB)) as conn:
+    with sqlite3.connect(str(cfg.AXIOM_LAB_DB)) as conn:
         columns = conn.execute("PRAGMA table_info(lab_experiment)").fetchall()
     experiment_columns = {str(row[1]) for row in columns}
     assert {"regime_timeframe", "execution_timeframe"}.issubset(experiment_columns)
@@ -70,8 +70,8 @@ def test_enqueue_and_fetch_lab_job():
     assert any(row.id == job.id for row in listed)
 
 
-def test_lab_write_guard_rejects_non_lab_connection(forven_db):
-    with sqlite3.connect(str(cfg.FORVEN_DB)) as conn:
+def test_lab_write_guard_rejects_non_lab_connection(AXIOM_db):
+    with sqlite3.connect(str(cfg.AXIOM_DB)) as conn:
         try:
             assert_lab_write_connection(conn)
         except RuntimeError as exc:
@@ -81,9 +81,9 @@ def test_lab_write_guard_rejects_non_lab_connection(forven_db):
 
 
 def test_lab_db_module_does_not_use_production_get_db():
-    source = Path("forven/lab_db.py").read_text(encoding="utf-8")
-    assert "from forven.db import get_db" not in source
-    assert "forven.db.get_db" not in source
+    source = Path("Axiom/lab_db.py").read_text(encoding="utf-8")
+    assert "from axiom.db import get_db" not in source
+    assert "axiom.db.get_db" not in source
 
 
 def test_create_lab_experiment_supports_separate_timeframes():

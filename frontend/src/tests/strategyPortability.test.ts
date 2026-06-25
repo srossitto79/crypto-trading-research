@@ -7,7 +7,7 @@ import {
 
 function validEnvelope(overrides: Record<string, unknown> = {}): Record<string, unknown> {
 	return {
-		forven_export: {
+		axiom_export: {
 			kind: 'strategy_container',
 			version: '1.0',
 			exported_at: '2026-06-22T00:00:00+00:00',
@@ -25,15 +25,15 @@ function validEnvelope(overrides: Record<string, unknown> = {}): Record<string, 
 
 describe('buildExportFilename', () => {
 	it('slugifies id + name', () => {
-		expect(buildExportFilename('S00123', 'BTC RSI Momentum')).toBe('forven-S00123-btc-rsi-momentum.json');
+		expect(buildExportFilename('S00123', 'BTC RSI Momentum')).toBe('axiom-S00123-btc-rsi-momentum.json');
 	});
 
 	it('falls back to id only when name is empty', () => {
-		expect(buildExportFilename('S00123')).toBe('forven-S00123.json');
+		expect(buildExportFilename('S00123')).toBe('axiom-S00123.json');
 	});
 
 	it('sanitizes unsafe id characters', () => {
-		expect(buildExportFilename('S 00/123')).toBe('forven-S_00_123.json');
+		expect(buildExportFilename('S 00/123')).toBe('axiom-S_00_123.json');
 	});
 });
 
@@ -74,13 +74,13 @@ describe('parseEnvelope', () => {
 		expect(() => parseEnvelope('{not json')).toThrow(/valid JSON/i);
 	});
 
-	it('throws when forven_export metadata is missing', () => {
+	it('throws when axiom_export metadata is missing', () => {
 		const text = JSON.stringify({ strategy: {}, configuration: {} });
-		expect(() => parseEnvelope(text)).toThrow(/not a Forven strategy export/i);
+		expect(() => parseEnvelope(text)).toThrow(/not an Axiom strategy export/i);
 	});
 
 	it('throws on an unsupported export kind', () => {
-		const text = JSON.stringify({ forven_export: { kind: 'dataset', version: '1.0' } });
+		const text = JSON.stringify({ axiom_export: { kind: 'dataset', version: '1.0' } });
 		expect(() => parseEnvelope(text)).toThrow(/Unsupported export kind/i);
 	});
 

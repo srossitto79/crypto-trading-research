@@ -1,16 +1,16 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from types import SimpleNamespace
 
 
 def test_check_chroma_available_uses_valid_probe_payload(monkeypatch):
-    import forven.vectordb as vectordb
+    import axiom.vectordb as vectordb
 
-    # This test exercises the subprocess probe path. Importing forven.api sets
-    # FORVEN_DISABLE_CHROMA_IN_PROCESS on Windows, which short-circuits the probe
+    # This test exercises the subprocess probe path. Importing Axiom.api sets
+    # AXIOM_DISABLE_CHROMA_IN_PROCESS on Windows, which short-circuits the probe
     # to False; clear it so the probe runs deterministically regardless of which
     # tests ran first.
-    monkeypatch.delenv("FORVEN_DISABLE_CHROMA_IN_PROCESS", raising=False)
+    monkeypatch.delenv("AXIOM_DISABLE_CHROMA_IN_PROCESS", raising=False)
 
     captured: dict[str, object] = {}
     monkeypatch.setattr(vectordb, "_chroma_available", None)
@@ -33,5 +33,5 @@ def test_check_chroma_available_uses_valid_probe_payload(monkeypatch):
     assert vectordb._HEALTH_COLLECTION_NAME in script
     assert f"ids=['{vectordb._HEALTH_DOCUMENT_ID}']" in script
     assert "metadatas=[{}]" not in script
-    assert "'source': 'forven_health_check'" in script
+    assert "'source': 'AXIOM_health_check'" in script
     assert "'_health_check'" not in script

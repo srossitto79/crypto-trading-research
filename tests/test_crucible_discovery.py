@@ -1,17 +1,17 @@
-"""Autonomous crucible-discovery dispatcher.
+﻿"""Autonomous crucible-discovery dispatcher.
 
 Default OFF (operator-approves). When enabled it dispatches ONE benchmarking
 research task carrying the contract that unlocks the discover_*/inspect_* tools.
 """
 import json
 
-from forven.crucible_discovery import run_crucible_discovery
-from forven.db import get_db, kv_set
+from axiom.crucible_discovery import run_crucible_discovery
+from axiom.db import get_db, kv_set
 
 
 def _enable(mode: str = "operator_approves") -> None:
     kv_set(
-        "forven:settings",
+        "axiom:settings",
         {
             "research_settings": {
                 "autonomous_discovery": {
@@ -24,13 +24,13 @@ def _enable(mode: str = "operator_approves") -> None:
     )
 
 
-def test_discovery_disabled_by_default(forven_db):
+def test_discovery_disabled_by_default(AXIOM_db):
     res = run_crucible_discovery()
     assert res["created"] is False
     assert res["reason"] == "disabled"
 
 
-def test_discovery_enabled_dispatches_benchmarking_task(forven_db):
+def test_discovery_enabled_dispatches_benchmarking_task(AXIOM_db):
     _enable()
     res = run_crucible_discovery()
     assert res["created"] is True
@@ -47,7 +47,7 @@ def test_discovery_enabled_dispatches_benchmarking_task(forven_db):
     assert payload["research_contract"]["external_sources_allowed"] is True
 
 
-def test_discovery_dedups_open_task(forven_db):
+def test_discovery_dedups_open_task(AXIOM_db):
     _enable()
     first = run_crucible_discovery()
     assert first["created"] is True
@@ -56,7 +56,7 @@ def test_discovery_dedups_open_task(forven_db):
     assert second["reason"] == "already_open"
 
 
-def test_discovery_autonomous_mode_is_stamped(forven_db):
+def test_discovery_autonomous_mode_is_stamped(AXIOM_db):
     _enable(mode="autonomous")
     res = run_crucible_discovery()
     assert res["created"] is True
@@ -68,7 +68,7 @@ def test_discovery_autonomous_mode_is_stamped(forven_db):
     assert json.loads(row["input_data"])["discovery_mode"] == "autonomous"
 
 
-def test_force_bypasses_disabled_setting(forven_db):
+def test_force_bypasses_disabled_setting(AXIOM_db):
     """Operator demand (force=True) runs even though discovery is disabled by default."""
     res = run_crucible_discovery(force=True)  # NO _enable() — still off in settings
     assert res["created"] is True
@@ -82,7 +82,7 @@ def test_force_bypasses_disabled_setting(forven_db):
     assert payload["research_contract"]["lane"] == "benchmarking"
 
 
-def test_force_still_dedups(forven_db):
+def test_force_still_dedups(AXIOM_db):
     """force=True bypasses the enabled flag but NOT the open-task dedup."""
     first = run_crucible_discovery(force=True)
     assert first["created"] is True
@@ -91,11 +91,11 @@ def test_force_still_dedups(forven_db):
     assert second["reason"] == "already_open"
 
 
-def test_discovery_task_lists_known_crucibles_in_description(forven_db):
+def test_discovery_task_lists_known_crucibles_in_description(AXIOM_db):
     """Audit B-16: 'Do not duplicate existing crucibles' is only satisfiable if
     the agent can SEE them — active and recently-disproven titles are inlined."""
-    from forven.db import get_db as _get_db
-    from forven.hypotheses import create_hypothesis
+    from axiom.db import get_db as _get_db
+    from axiom.hypotheses import create_hypothesis
 
     active = create_hypothesis(
         title="Liquidation Cascade Reversal",

@@ -1,4 +1,4 @@
-"""Crypto-only scope: the autonomous loops must not mint stock/ETF/index/forex
+﻿"""Crypto-only scope: the autonomous loops must not mint stock/ETF/index/forex
 hypotheses — they can never reach the (Hyperliquid-only) scanner and just burn
 research/backtest cycles before dying at the data layer.
 """
@@ -7,7 +7,7 @@ from __future__ import annotations
 import importlib
 import json
 
-from forven.symbol_mapping import AssetClass, detect_asset_class
+from axiom.symbol_mapping import AssetClass, detect_asset_class
 
 
 def test_detect_asset_class_bare_crypto_bases():
@@ -44,10 +44,10 @@ def _payload(**overrides):
     return payload
 
 
-def test_create_hypothesis_rejects_non_crypto_targets(forven_db):
-    from forven.system_pause import set_system_mode
+def test_create_hypothesis_rejects_non_crypto_targets(AXIOM_db):
+    from axiom.system_pause import set_system_mode
 
-    tools_research = importlib.import_module("forven.agents.tools_research")
+    tools_research = importlib.import_module("axiom.agents.tools_research")
     set_system_mode("auto")
 
     result = json.loads(tools_research._tool_create_hypothesis(_payload()))
@@ -56,10 +56,10 @@ def test_create_hypothesis_rejects_non_crypto_targets(forven_db):
     assert "AAPL" in result["error"]
 
 
-def test_create_hypothesis_accepts_crypto_targets(forven_db):
-    from forven.system_pause import set_system_mode
+def test_create_hypothesis_accepts_crypto_targets(AXIOM_db):
+    from axiom.system_pause import set_system_mode
 
-    tools_research = importlib.import_module("forven.agents.tools_research")
+    tools_research = importlib.import_module("axiom.agents.tools_research")
     set_system_mode("auto")
 
     result = json.loads(

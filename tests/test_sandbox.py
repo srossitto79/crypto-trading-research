@@ -1,10 +1,10 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
-from forven import sandbox
+from axiom import sandbox
 
 
 def test_sandbox_repo_root_points_to_project_root():
-    assert (sandbox.REPO_ROOT / "forven").is_dir()
+    assert (sandbox.REPO_ROOT / "Axiom").is_dir()
 
 
 def test_run_code_uses_shell_false_for_posix_execution(monkeypatch):

@@ -27,7 +27,7 @@ describe('SettingsSubsection', () => {
 				label: 'Risk Management',
 				description: 'Controls when new trades are blocked.',
 				deepLinkTo: '/risk-monitor',
-				usedBy: ['forven.risk_sentinel'],
+				usedBy: ['axiom.risk_sentinel'],
 			},
 		});
 		await flush();
@@ -48,13 +48,13 @@ describe('SettingsSubsection', () => {
 			props: {
 				label: 'X',
 				description: '.',
-				usedBy: ['forven.risk_sentinel'],
+				usedBy: ['axiom.risk_sentinel'],
 			},
 		});
 		await flush();
 
 		// Closed by default — reader name should not yet appear.
-		expect(target.textContent).not.toContain('forven.risk_sentinel');
+		expect(target.textContent).not.toContain('axiom.risk_sentinel');
 
 		const toggle = target.querySelector('button[aria-expanded]') as
 			| HTMLButtonElement
@@ -66,7 +66,7 @@ describe('SettingsSubsection', () => {
 		await flush();
 
 		expect(toggle!.getAttribute('aria-expanded')).toBe('true');
-		expect(target.textContent).toContain('forven.risk_sentinel');
+		expect(target.textContent).toContain('axiom.risk_sentinel');
 	});
 
 	it('omits the deep-link anchor when deepLinkTo is undefined', async () => {

@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import sqlite3
@@ -6,10 +6,10 @@ from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 
-from forven.api_domains import paper as paper_domain
-from forven.brain import transition_stage
-from forven.db import get_db
-from forven.sim import data_pump
+from axiom.api_domains import paper as paper_domain
+from axiom.brain import transition_stage
+from axiom.db import get_db
+from axiom.sim import data_pump
 
 
 def _insert_strategy(
@@ -45,7 +45,7 @@ def _insert_strategy(
     return now
 
 
-def test_collect_compat_paper_sessions_ignores_trades_from_prior_strategy_incarnation(forven_db, monkeypatch):
+def test_collect_compat_paper_sessions_ignores_trades_from_prior_strategy_incarnation(AXIOM_db, monkeypatch):
     created_at = _insert_strategy("S-PAPER-NEW", stage="paper")
     created_ts = datetime.fromisoformat(created_at)
     old_trade_open = (created_ts - timedelta(days=2)).isoformat()
@@ -103,7 +103,7 @@ def test_collect_compat_paper_sessions_ignores_trades_from_prior_strategy_incarn
     assert sessions[0]["id"].startswith("compat:strategy:S-PAPER-NEW:")
 
 
-def test_collect_compat_paper_sessions_surfaces_hedged_positions(forven_db, monkeypatch):
+def test_collect_compat_paper_sessions_surfaces_hedged_positions(AXIOM_db, monkeypatch):
     created_at = _insert_strategy("S-PAPER-HEDGE", stage="paper")
     created_ts = datetime.fromisoformat(created_at)
     open_time = (created_ts + timedelta(hours=1)).isoformat()
@@ -192,11 +192,11 @@ def test_get_cached_candles_prefers_numeric_timestamp_column(tmp_path, monkeypat
     assert float(frame.iloc[0]["close"]) == 100.2
 
 
-def test_force_transition_records_audit_and_warning_activity(forven_db, monkeypatch):
+def test_force_transition_records_audit_and_warning_activity(AXIOM_db, monkeypatch):
     _insert_strategy("S-FORCE-AUDIT", stage="rejected")
     activity_events: list[tuple[str, str, str]] = []
     monkeypatch.setattr(
-        "forven.brain.log_activity",
+        "axiom.brain.log_activity",
         lambda level, source, message, *args, **kwargs: activity_events.append((level, source, message)),
     )
 

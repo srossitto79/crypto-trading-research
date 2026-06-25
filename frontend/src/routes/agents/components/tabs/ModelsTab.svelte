@@ -6,7 +6,7 @@
 	 * through the shared page-level store so the Roster / Routing pickers update
 	 * the moment a checkbox flips.
 	 */
-	import { updateSettingsSection, type ForvenAgentModelOption } from '$lib/api';
+	import { updateSettingsSection, type AxiomAgentModelOption } from '$lib/api';
 	import { addToast } from '$lib/stores/processTracker';
 	import { agentsConfig, connectedProviderIds } from '../agentsConfigStore';
 	import DirtyBar from '../DirtyBar.svelte';
@@ -73,7 +73,7 @@
 	}
 
 	$: shownKeys = pending ?? storeKeys;
-	$: grouped = modelOptions.reduce<Record<string, ForvenAgentModelOption[]>>((acc, opt) => {
+	$: grouped = modelOptions.reduce<Record<string, AxiomAgentModelOption[]>>((acc, opt) => {
 		(acc[opt.provider] ??= []).push(opt);
 		return acc;
 	}, {});

@@ -4,7 +4,7 @@
 		getFactoryResetCategories,
 		performFactoryReset,
 		type FactoryResetCategory,
-	} from '$lib/api/forven';
+	} from '$lib/api/axiom';
 
 	// Accepted for parity with the other section components (the settings shell passes
 	// it); the Danger Zone is a custom destructive-action panel and does not read the

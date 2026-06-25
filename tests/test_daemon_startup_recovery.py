@@ -1,10 +1,10 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 
-from forven import daemon
-from forven.db import get_db
-from forven.exchange.risk import reconcile_exchange_positions
+from axiom import daemon
+from axiom.db import get_db
+from axiom.exchange.risk import reconcile_exchange_positions
 
 
 def test_startup_recovery_preflight_blocks_on_reconciliation_issues(monkeypatch):
@@ -139,7 +139,7 @@ def test_daemon_pid_probe_tolerates_windows_access_denied(monkeypatch):
     assert daemon._is_pid_running(12345) is True
 
 
-def test_reconcile_can_adopt_missing_exchange_position_by_stop_order_id(forven_db, monkeypatch):
+def test_reconcile_can_adopt_missing_exchange_position_by_stop_order_id(AXIOM_db, monkeypatch):
     with get_db() as conn:
         conn.execute(
             """
@@ -174,7 +174,7 @@ def test_reconcile_can_adopt_missing_exchange_position_by_stop_order_id(forven_d
         )
 
     monkeypatch.setattr(
-        "forven.exchange.hyperliquid.get_positions",
+        "axiom.exchange.hyperliquid.get_positions",
         lambda testnet=True: {
             "positions": [
                 {
@@ -189,7 +189,7 @@ def test_reconcile_can_adopt_missing_exchange_position_by_stop_order_id(forven_d
         },
     )
     monkeypatch.setattr(
-        "forven.exchange.hyperliquid.get_open_orders",
+        "axiom.exchange.hyperliquid.get_open_orders",
         lambda testnet=True: [
             {
                 "coin": "BTC",
@@ -201,7 +201,7 @@ def test_reconcile_can_adopt_missing_exchange_position_by_stop_order_id(forven_d
             }
         ],
     )
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 68613.0})
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 68613.0})
 
     recon = reconcile_exchange_positions(
         testnet=True,
@@ -236,7 +236,7 @@ def test_reconcile_can_adopt_missing_exchange_position_by_stop_order_id(forven_d
     assert portfolio_position is not None
 
 
-def test_reconcile_can_adopt_missing_exchange_position_by_entry_order_id(forven_db, monkeypatch):
+def test_reconcile_can_adopt_missing_exchange_position_by_entry_order_id(AXIOM_db, monkeypatch):
     with get_db() as conn:
         conn.execute(
             """
@@ -271,7 +271,7 @@ def test_reconcile_can_adopt_missing_exchange_position_by_entry_order_id(forven_
         )
 
     monkeypatch.setattr(
-        "forven.exchange.hyperliquid.get_positions",
+        "axiom.exchange.hyperliquid.get_positions",
         lambda testnet=True: {
             "positions": [
                 {
@@ -286,10 +286,10 @@ def test_reconcile_can_adopt_missing_exchange_position_by_entry_order_id(forven_
             ]
         },
     )
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_open_orders", lambda testnet=True: [])
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 68613.0})
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_open_orders", lambda testnet=True: [])
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 68613.0})
     monkeypatch.setattr(
-        "forven.exchange.hyperliquid.place_protective_stop",
+        "axiom.exchange.hyperliquid.place_protective_stop",
         lambda asset, position_direction, size, stop_loss_price, testnet=True: {
             "status": "ok",
             "stop_order_id": "entry-match-stop-1",
@@ -318,7 +318,7 @@ def test_reconcile_can_adopt_missing_exchange_position_by_entry_order_id(forven_
     assert recovered_signal["exchange_stop_order_id"] == "entry-match-stop-1"
 
 
-def test_reconcile_requires_operator_when_recovery_match_is_ambiguous(forven_db, monkeypatch):
+def test_reconcile_requires_operator_when_recovery_match_is_ambiguous(AXIOM_db, monkeypatch):
     with get_db() as conn:
         for trade_id in ("E0101", "E0102"):
             conn.execute(
@@ -354,7 +354,7 @@ def test_reconcile_requires_operator_when_recovery_match_is_ambiguous(forven_db,
             )
 
     monkeypatch.setattr(
-        "forven.exchange.hyperliquid.get_positions",
+        "axiom.exchange.hyperliquid.get_positions",
         lambda testnet=True: {
             "positions": [
                 {
@@ -368,8 +368,8 @@ def test_reconcile_requires_operator_when_recovery_match_is_ambiguous(forven_db,
             ]
         },
     )
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_open_orders", lambda testnet=True: [])
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 68613.0})
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_open_orders", lambda testnet=True: [])
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 68613.0})
 
     recon = reconcile_exchange_positions(
         testnet=True,
@@ -389,7 +389,7 @@ def test_reconcile_requires_operator_when_recovery_match_is_ambiguous(forven_db,
     assert recovered_count == 0
 
 
-def test_startup_recovery_preflight_adopts_exchange_position_before_entries_resume(forven_db, monkeypatch):
+def test_startup_recovery_preflight_adopts_exchange_position_before_entries_resume(AXIOM_db, monkeypatch):
     with get_db() as conn:
         conn.execute(
             """
@@ -456,9 +456,9 @@ def test_startup_recovery_preflight_adopts_exchange_position_before_entries_resu
         "get_account_value",
         lambda testnet=True, require_connection=False: {"accountValue": 986.2},
     )
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_positions", lambda testnet=True: positions_payload)
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_open_orders", lambda testnet=True: open_orders_payload)
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 68613.0})
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_positions", lambda testnet=True: positions_payload)
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_open_orders", lambda testnet=True: open_orders_payload)
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 68613.0})
 
     recovery = daemon.run_startup_recovery_preflight({})
 
@@ -484,7 +484,7 @@ def test_startup_recovery_preflight_adopts_exchange_position_before_entries_resu
     assert portfolio_position is not None
 
 
-def test_startup_recovery_preflight_restores_missing_portfolio_positions(forven_db, monkeypatch):
+def test_startup_recovery_preflight_restores_missing_portfolio_positions(AXIOM_db, monkeypatch):
     with get_db() as conn:
         conn.execute(
             """
@@ -550,9 +550,9 @@ def test_startup_recovery_preflight_restores_missing_portfolio_positions(forven_
         "get_account_value",
         lambda testnet=True, require_connection=False: {"accountValue": 1002.33},
     )
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_positions", lambda testnet=True: positions_payload)
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_open_orders", lambda testnet=True: open_orders_payload)
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 70000.0})
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_positions", lambda testnet=True: positions_payload)
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_open_orders", lambda testnet=True: open_orders_payload)
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 70000.0})
 
     recovery = daemon.run_startup_recovery_preflight({})
 
@@ -567,7 +567,7 @@ def test_startup_recovery_preflight_restores_missing_portfolio_positions(forven_
     assert restored_position is not None
 
 
-def test_startup_recovery_preflight_preserves_pending_close_trade_until_exchange_flat(forven_db, monkeypatch):
+def test_startup_recovery_preflight_preserves_pending_close_trade_until_exchange_flat(AXIOM_db, monkeypatch):
     with get_db() as conn:
         conn.execute(
             """
@@ -641,9 +641,9 @@ def test_startup_recovery_preflight_preserves_pending_close_trade_until_exchange
         "get_account_value",
         lambda testnet=True, require_connection=False: {"accountValue": 1002.33},
     )
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_positions", lambda testnet=True: positions_payload)
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_open_orders", lambda testnet=True: open_orders_payload)
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 70000.0})
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_positions", lambda testnet=True: positions_payload)
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_open_orders", lambda testnet=True: open_orders_payload)
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 70000.0})
 
     recovery = daemon.run_startup_recovery_preflight({})
 
@@ -666,7 +666,7 @@ def test_startup_recovery_preflight_preserves_pending_close_trade_until_exchange
     assert restored_position is not None
 
 
-def test_startup_recovery_preflight_blocks_ambiguous_match_candidates(forven_db, monkeypatch):
+def test_startup_recovery_preflight_blocks_ambiguous_match_candidates(AXIOM_db, monkeypatch):
     with get_db() as conn:
         for trade_id in ("E0301", "E0302"):
             conn.execute(
@@ -724,9 +724,9 @@ def test_startup_recovery_preflight_blocks_ambiguous_match_candidates(forven_db,
         "get_account_value",
         lambda testnet=True, require_connection=False: {"accountValue": 986.2},
     )
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_positions", lambda testnet=True: positions_payload)
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_open_orders", lambda testnet=True: [])
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 68613.0})
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_positions", lambda testnet=True: positions_payload)
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_open_orders", lambda testnet=True: [])
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 68613.0})
 
     recovery = daemon.run_startup_recovery_preflight({})
 
@@ -736,7 +736,7 @@ def test_startup_recovery_preflight_blocks_ambiguous_match_candidates(forven_db,
     assert recovery["recovery_discrepancy_count"] == 1
 
 
-def test_startup_recovery_preflight_restores_prior_stop_for_recovered_position(forven_db, monkeypatch):
+def test_startup_recovery_preflight_restores_prior_stop_for_recovered_position(AXIOM_db, monkeypatch):
     with get_db() as conn:
         conn.execute(
             """
@@ -794,11 +794,11 @@ def test_startup_recovery_preflight_restores_prior_stop_for_recovered_position(f
         "get_account_value",
         lambda testnet=True, require_connection=False: {"accountValue": 986.2},
     )
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_positions", lambda testnet=True: positions_payload)
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_open_orders", lambda testnet=True: [])
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 68613.0})
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_positions", lambda testnet=True: positions_payload)
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_open_orders", lambda testnet=True: [])
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 68613.0})
     monkeypatch.setattr(
-        "forven.exchange.hyperliquid.place_protective_stop",
+        "axiom.exchange.hyperliquid.place_protective_stop",
         lambda asset, position_direction, size, stop_loss_price, testnet=True: placed.append(
             {
                 "asset": asset,
@@ -834,7 +834,7 @@ def test_startup_recovery_preflight_restores_prior_stop_for_recovered_position(f
     assert recovered_signal["recovery_stop_source"] == "prior_signal_stop"
 
 
-def test_startup_recovery_preflight_places_emergency_stop_for_recovered_position(forven_db, monkeypatch):
+def test_startup_recovery_preflight_places_emergency_stop_for_recovered_position(AXIOM_db, monkeypatch):
     positions_payload = {
         "positions": [
             {
@@ -859,11 +859,11 @@ def test_startup_recovery_preflight_places_emergency_stop_for_recovered_position
         "get_account_value",
         lambda testnet=True, require_connection=False: {"accountValue": 986.2},
     )
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_positions", lambda testnet=True: positions_payload)
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_open_orders", lambda testnet=True: [])
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 68613.0})
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_positions", lambda testnet=True: positions_payload)
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_open_orders", lambda testnet=True: [])
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 68613.0})
     monkeypatch.setattr(
-        "forven.exchange.hyperliquid.place_protective_stop",
+        "axiom.exchange.hyperliquid.place_protective_stop",
         lambda asset, position_direction, size, stop_loss_price, testnet=True: placed.append(
             {
                 "asset": asset,
@@ -899,7 +899,7 @@ def test_startup_recovery_preflight_places_emergency_stop_for_recovered_position
     assert recovered_signal["recovery_stop_source"] == "emergency_risk_clamp"
 
 
-def test_startup_recovery_preflight_repairs_missing_stop_for_existing_open_trade(forven_db, monkeypatch):
+def test_startup_recovery_preflight_repairs_missing_stop_for_existing_open_trade(AXIOM_db, monkeypatch):
     with get_db() as conn:
         conn.execute(
             """
@@ -956,11 +956,11 @@ def test_startup_recovery_preflight_repairs_missing_stop_for_existing_open_trade
         "get_account_value",
         lambda testnet=True, require_connection=False: {"accountValue": 1002.33},
     )
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_positions", lambda testnet=True: positions_payload)
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_open_orders", lambda testnet=True: [])
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 70000.0})
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_positions", lambda testnet=True: positions_payload)
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_open_orders", lambda testnet=True: [])
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 70000.0})
     monkeypatch.setattr(
-        "forven.exchange.hyperliquid.place_protective_stop",
+        "axiom.exchange.hyperliquid.place_protective_stop",
         lambda asset, position_direction, size, stop_loss_price, testnet=True: placed.append(
             {
                 "asset": asset,
@@ -996,7 +996,7 @@ def test_startup_recovery_preflight_repairs_missing_stop_for_existing_open_trade
     assert repaired_signal["recovery_stop_source"] == "prior_signal_stop"
 
 
-def test_startup_recovery_preflight_blocks_unprotected_recovered_position(forven_db, monkeypatch):
+def test_startup_recovery_preflight_blocks_unprotected_recovered_position(AXIOM_db, monkeypatch):
     with get_db() as conn:
         conn.execute(
             """
@@ -1053,11 +1053,11 @@ def test_startup_recovery_preflight_blocks_unprotected_recovered_position(forven
         "get_account_value",
         lambda testnet=True, require_connection=False: {"accountValue": 986.2},
     )
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_positions", lambda testnet=True: positions_payload)
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_open_orders", lambda testnet=True: [])
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 68613.0})
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_positions", lambda testnet=True: positions_payload)
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_open_orders", lambda testnet=True: [])
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 68613.0})
     monkeypatch.setattr(
-        "forven.exchange.hyperliquid.place_protective_stop",
+        "axiom.exchange.hyperliquid.place_protective_stop",
         lambda asset, position_direction, size, stop_loss_price, testnet=True: {"error": "exchange unavailable"},
     )
 
@@ -1080,7 +1080,7 @@ def test_startup_recovery_preflight_blocks_unprotected_recovered_position(forven
     assert recovered_signal["recovery_stop_restore_error"] == "exchange unavailable"
 
 
-def test_startup_recovery_preflight_resolves_inverse_orphan_when_exchange_is_flat(forven_db, monkeypatch):
+def test_startup_recovery_preflight_resolves_inverse_orphan_when_exchange_is_flat(AXIOM_db, monkeypatch):
     with get_db() as conn:
         conn.execute(
             """
@@ -1124,9 +1124,9 @@ def test_startup_recovery_preflight_resolves_inverse_orphan_when_exchange_is_fla
         "get_account_value",
         lambda testnet=True, require_connection=False: {"accountValue": 1002.33},
     )
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_positions", lambda testnet=True: {"positions": []})
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_open_orders", lambda testnet=True: [])
-    monkeypatch.setattr("forven.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 70000.0})
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_positions", lambda testnet=True: {"positions": []})
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_open_orders", lambda testnet=True: [])
+    monkeypatch.setattr("axiom.exchange.hyperliquid.get_all_mids", lambda testnet=True: {"BTC": 70000.0})
 
     recovery = daemon.run_startup_recovery_preflight({})
 

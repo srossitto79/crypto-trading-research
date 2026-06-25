@@ -1,11 +1,11 @@
-"""Regression tests for H-S8 (workspace path traversal + symlink resistance)."""
+﻿"""Regression tests for H-S8 (workspace path traversal + symlink resistance)."""
 
 from __future__ import annotations
 
 import os
 import pytest
 
-from forven.workspace import WorkspacePathError, safe_workspace_path
+from axiom.workspace import WorkspacePathError, safe_workspace_path
 
 
 def test_simple_relative_path_resolves(tmp_path):

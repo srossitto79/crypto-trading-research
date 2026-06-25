@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import SettingsSearch from '$lib/components/settings/shell/SettingsSearch.svelte';
-	import { getSettingsAuditLog, getForvenDashboard, type SettingsAuditEntry } from '$lib/api';
+	import { getSettingsAuditLog, getAxiomDashboard, type SettingsAuditEntry } from '$lib/api';
 	import { openWizard } from '$lib/stores/setupWizard';
 
 	export let settings: Record<string, unknown> = {};
@@ -23,7 +23,7 @@
 
 		if (!dashboard) {
 			try {
-				dashboard = (await getForvenDashboard()) as Record<string, unknown>;
+				dashboard = (await getAxiomDashboard()) as Record<string, unknown>;
 			} catch {
 				dashboard = null;
 			}

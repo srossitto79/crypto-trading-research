@@ -1,8 +1,8 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from unittest.mock import patch
 
-from forven.agents.tools_research import (
+from axiom.agents.tools_research import (
     _tool_discover_forum_threads,
     _tool_inspect_forum_thread,
 )
@@ -19,13 +19,13 @@ def _all_pass_contract():
 
 
 def _with_registry(monkeypatch, cfg):
-    monkeypatch.setattr("forven.agents.tools_research._current_research_contract", _all_pass_contract)
-    monkeypatch.setattr("forven.agents.tools_research._resolve_source_registry", lambda t: cfg)
+    monkeypatch.setattr("axiom.agents.tools_research._current_research_contract", _all_pass_contract)
+    monkeypatch.setattr("axiom.agents.tools_research._resolve_source_registry", lambda t: cfg)
 
 
 def test_discover_blocked_when_forum_not_allowed(monkeypatch):
     monkeypatch.setattr(
-        "forven.agents.tools_research._current_research_contract",
+        "axiom.agents.tools_research._current_research_contract",
         lambda: {"lane": "benchmarking", "external_sources_allowed": True, "allowed_external_source_types": ["blog"]},
     )
     res = json_loads(_tool_discover_forum_threads({"query": "x"}))
@@ -49,7 +49,7 @@ def test_discover_blocked_when_no_sites(monkeypatch):
 
 def test_discover_happy_path(monkeypatch):
     _with_registry(monkeypatch, {"sites": ["elitetrader.com"], "rate_limit_per_min": 20})
-    with patch("forven.research_sources.forum.search_forum_threads") as m:
+    with patch("axiom.research_sources.forum.search_forum_threads") as m:
         m.return_value = {"ok": True, "source": "forum", "query": "x", "count": 1, "results": [{"url": "u"}]}
         res = json_loads(_tool_discover_forum_threads({"query": "x", "limit": 5}))
     assert res["ok"] is True
@@ -59,17 +59,17 @@ def test_discover_happy_path(monkeypatch):
 
 def test_discover_sites_override_registry(monkeypatch):
     _with_registry(monkeypatch, {"sites": ["elitetrader.com"], "rate_limit_per_min": 20})
-    with patch("forven.research_sources.forum.search_forum_threads") as m:
+    with patch("axiom.research_sources.forum.search_forum_threads") as m:
         m.return_value = {"ok": True, "source": "forum", "query": "x", "count": 0, "results": []}
         json_loads(_tool_discover_forum_threads({"query": "x", "sites": ["quantconnect.com"]}))
     assert m.call_args.kwargs["sites"] == ["quantconnect.com"]
 
 
 def test_discover_registry_error(monkeypatch):
-    from forven.research_sources._registry import RegistryError
-    monkeypatch.setattr("forven.agents.tools_research._current_research_contract", _all_pass_contract)
+    from axiom.research_sources._registry import RegistryError
+    monkeypatch.setattr("axiom.agents.tools_research._current_research_contract", _all_pass_contract)
     def _raise(_t): raise RegistryError("sites malformed")
-    monkeypatch.setattr("forven.agents.tools_research._resolve_source_registry", _raise)
+    monkeypatch.setattr("axiom.agents.tools_research._resolve_source_registry", _raise)
     res = json_loads(_tool_discover_forum_threads({"query": "x"}))
     assert res["ok"] is False
     assert "forum registry error" in res["error"]
@@ -77,7 +77,7 @@ def test_discover_registry_error(monkeypatch):
 
 def test_inspect_happy_path(monkeypatch):
     _with_registry(monkeypatch, {"sites": ["elitetrader.com"], "rate_limit_per_min": 20})
-    with patch("forven.research_sources.forum.inspect_forum_thread") as m:
+    with patch("axiom.research_sources.forum.inspect_forum_thread") as m:
         m.return_value = {"ok": True, "source": "forum", "url": "u", "title": "T", "posts": [], "content": "body", "site": "elitetrader.com"}
         res = json_loads(_tool_inspect_forum_thread({"url": "https://www.elitetrader.com/et/threads/x.1/"}))
     assert res["ok"] is True
@@ -86,7 +86,7 @@ def test_inspect_happy_path(monkeypatch):
 
 def test_inspect_blocked_when_not_benchmarking(monkeypatch):
     monkeypatch.setattr(
-        "forven.agents.tools_research._current_research_contract",
+        "axiom.agents.tools_research._current_research_contract",
         lambda: {"lane": "exploration", "external_sources_allowed": True, "allowed_external_source_types": ["forum"]},
     )
     res = json_loads(_tool_inspect_forum_thread({"url": "https://x"}))
@@ -94,10 +94,10 @@ def test_inspect_blocked_when_not_benchmarking(monkeypatch):
 
 
 def test_inspect_registry_error(monkeypatch):
-    from forven.research_sources._registry import RegistryError
-    monkeypatch.setattr("forven.agents.tools_research._current_research_contract", _all_pass_contract)
+    from axiom.research_sources._registry import RegistryError
+    monkeypatch.setattr("axiom.agents.tools_research._current_research_contract", _all_pass_contract)
     def _raise(_t): raise RegistryError("sites malformed")
-    monkeypatch.setattr("forven.agents.tools_research._resolve_source_registry", _raise)
+    monkeypatch.setattr("axiom.agents.tools_research._resolve_source_registry", _raise)
     res = json_loads(_tool_inspect_forum_thread({"url": "https://x"}))
     assert res["ok"] is False
     assert "forum registry error" in res["error"]

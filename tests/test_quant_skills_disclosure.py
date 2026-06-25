@@ -1,12 +1,12 @@
-"""P3-T04 — three-level progressive disclosure tools."""
+﻿"""P3-T04 — three-level progressive disclosure tools."""
 from __future__ import annotations
 
 import tempfile
 
 import pytest
 
-from forven import db as forven_db
-from forven import quant_skills as qs
+from axiom import db as AXIOM_db
+from axiom import quant_skills as qs
 
 
 @pytest.fixture
@@ -15,17 +15,17 @@ def isolated_skills(tmp_path, monkeypatch):
     skills_dir.mkdir()
     (skills_dir / "_hypotheses").mkdir()
     (skills_dir / "_archived").mkdir()
-    monkeypatch.setattr("forven.quant_skills.SKILLS_DIR", skills_dir)
-    monkeypatch.setattr("forven.quant_skills.HYPOTHESES_DIR", skills_dir / "_hypotheses")
-    monkeypatch.setattr("forven.quant_skills.ARCHIVED_DIR", skills_dir / "_archived")
+    monkeypatch.setattr("axiom.quant_skills.SKILLS_DIR", skills_dir)
+    monkeypatch.setattr("axiom.quant_skills.HYPOTHESES_DIR", skills_dir / "_hypotheses")
+    monkeypatch.setattr("axiom.quant_skills.ARCHIVED_DIR", skills_dir / "_archived")
 
     db_dir = tempfile.mkdtemp()
-    monkeypatch.setenv("FORVEN_HOME", db_dir)
-    if hasattr(forven_db, "_DB_PATH"):
-        forven_db._DB_PATH = None  # type: ignore[attr-defined]
-    if hasattr(forven_db, "_init_db_done"):
-        forven_db._init_db_done = False  # type: ignore[attr-defined]
-    forven_db.init_db()
+    monkeypatch.setenv("AXIOM_HOME", db_dir)
+    if hasattr(AXIOM_db, "_DB_PATH"):
+        AXIOM_db._DB_PATH = None  # type: ignore[attr-defined]
+    if hasattr(AXIOM_db, "_init_db_done"):
+        AXIOM_db._init_db_done = False  # type: ignore[attr-defined]
+    AXIOM_db.init_db()
     yield skills_dir
 
 

@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import importlib
 import inspect
@@ -6,18 +6,18 @@ import inspect
 import pandas as pd
 from fastapi import APIRouter
 
-from forven.strategies.builtin import bollinger_s00120 as bollinger_module
-from forven.routers import verdict as verdict_router
-from forven.strategies.backtest import _run_signal_walk, _vectorized_signals
-from forven.strategies.builtin.donchian import DonchianStrategy
-from forven.strategies.builtin.ema_cross import EMACrossStrategy
-from forven.strategies.builtin.orb import ORBStrategy
-from forven.strategies.builtin.parabolic_sar import (
+from axiom.strategies.builtin import bollinger_s00120 as bollinger_module
+from axiom.routers import verdict as verdict_router
+from axiom.strategies.backtest import _run_signal_walk, _vectorized_signals
+from axiom.strategies.builtin.donchian import DonchianStrategy
+from axiom.strategies.builtin.ema_cross import EMACrossStrategy
+from axiom.strategies.builtin.orb import ORBStrategy
+from axiom.strategies.builtin.parabolic_sar import (
     ParabolicSARStrategy,
     parabolic_sar_series,
 )
-from forven.strategies.builtin.stress_test import StressTestStrategy
-from forven.strategies.builtin.vwap_pullback_eth_15m import (
+from axiom.strategies.builtin.stress_test import StressTestStrategy
+from axiom.strategies.builtin.vwap_pullback_eth_15m import (
     Eth15mVWAPPullbackStrategy,
 )
 

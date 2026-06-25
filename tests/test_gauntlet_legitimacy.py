@@ -1,6 +1,6 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
-from forven.gauntlet.legitimacy import validate_robustness_payload
+from axiom.gauntlet.legitimacy import validate_robustness_payload
 
 
 def test_regime_split_with_one_regime_is_not_legitimate():

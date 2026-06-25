@@ -1,4 +1,4 @@
-"""Tests for the yt-dlp fallback layer in forven.research_sources.youtube.
+﻿"""Tests for the yt-dlp fallback layer in Axiom.research_sources.youtube.
 
 The primary scraper (already covered in test_youtube_research_sources.py) does
 the happy-path metadata + caption lookup. These tests verify behaviour when the
@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
-from forven.research_sources import youtube
+from axiom.research_sources import youtube
 
 
 SCRAPER_OK_TRANSCRIPT = [
