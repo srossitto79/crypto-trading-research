@@ -80,7 +80,7 @@ _DEFAULT_JOB_IDS = {
 _SUPERSEDED_CRUCIBLE_AGENT_JOB_IDS = {
     "Axiom-ideation-daily",
 }
-_LEGACY_DEFAULT_JOB_PREFIXES = ("juddex-",)
+_LEGACY_DEFAULT_JOB_PREFIXES = ("juddex-", "forven-")
 # P1-5: Unified timeout source of truth.
 # Agent task timeout MUST exceed evolution testing timeout to prevent orphaned runs.
 _EVOLUTION_TESTING_TIMEOUT_SECONDS = 20 * 60  # 20 min — evolution backtests

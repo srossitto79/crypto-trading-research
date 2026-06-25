@@ -1232,7 +1232,7 @@ def get_collection_health() -> dict:
             "consecutive_failures": cf,
             "last_success": entry.get("last_success_ts"),
             "last_run": entry.get("last_run_ts"),
-            "last_error": entry.get("last_error"),
+            "last_error": entry.get("last_error") if cf > 0 else None,
             "total_rows": int(entry.get("total_rows", 0) or 0),
         })
 
