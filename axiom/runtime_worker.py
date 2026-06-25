@@ -1028,6 +1028,20 @@ async def _run_brain_task(task: dict) -> None:
             ),
         )
 
+    # Post result back to Discord for operator-initiated requests.
+    # send_sync uses the REST API so it works without a gateway connection.
+    _discord_sources = {"discord_command", "discord_auto_actionable"}
+    _delivery_channel = str(payload.get("channel") or "").strip()
+    if _delivery_channel and source in _discord_sources:
+        try:
+            from axiom.bot import send_sync
+            _reply = _brain_response_text(response)
+            if len(_reply) > 1990:
+                _reply = _reply[:1987] + "…"
+            send_sync("general", _reply, channel_id=_delivery_channel)
+        except Exception:
+            log.debug("Discord reply for brain task %s skipped", task.get("id"), exc_info=True)
+
     try:
         from axiom.vectordb import store_narrative
 

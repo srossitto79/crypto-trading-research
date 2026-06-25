@@ -763,6 +763,23 @@ class AxiomBot(commands.Bot):
 
     async def setup_hook(self):
         """Called when bot is starting — start background tasks."""
+        # discord.py 2.x no longer auto-registers @commands.command() methods
+        # defined on Bot subclasses. Register them explicitly here with proper
+        # self-binding so the callbacks receive the bot instance.
+        _self = self
+
+        @self.command(name="brain")
+        async def _brain(ctx, *, message: str = ""):
+            await _self.cmd_brain(ctx, message=message)
+
+        @self.command(name="assign")
+        async def _assign(ctx, *, message: str = ""):
+            await _self.cmd_assign(ctx, message=message)
+
+        @self.command(name="engineer", aliases=["fullstack"])
+        async def _engineer(ctx, *, message: str = ""):
+            await _self.cmd_engineer(ctx, message=message)
+
         if not self.agent_id and _bot_owns_runtime_loops():
             self.scheduler_loop.start()
             self.task_processor_loop.start()
@@ -1145,7 +1162,6 @@ class AxiomBot(commands.Bot):
 
                 await self.process_commands(message)
 
-    @commands.command(name="brain")
     async def cmd_brain(self, ctx, *, message: str = ""):
         """Queue a Brain cycle from a direct operator message."""
         if not _is_authorized_operator(ctx.author.id):
@@ -1183,7 +1199,6 @@ class AxiomBot(commands.Bot):
 
         await ctx.send("Queued brain task ✅")
 
-    @commands.command(name="assign")
     async def cmd_assign(self, ctx, *, message: str = ""):
         """Assign a direct task to an agent: `!assign <agent-id>: <task>`"""
         if not _is_authorized_operator(ctx.author.id):
@@ -1238,7 +1253,6 @@ class AxiomBot(commands.Bot):
         )
         await ctx.send(f"Queued task for `{agent_id}` ✅")
 
-    @commands.command(name="engineer", aliases=["fullstack"])
     async def cmd_engineer(self, ctx, *, message: str = ""):
         """Shortcut to assign a task to the full-stack engineer."""
         if not _is_authorized_operator(ctx.author.id):
