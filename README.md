@@ -32,7 +32,7 @@
 Requirements: **Python 3.11+**, **Node.js**, and **git**.
 
 ```bash
-git clone https://github.com/srossitto79/crypto-trading-research.git
+git clone https://github.com/srossitto79/axiom.git
 cd Forven
 ```
 
@@ -76,7 +76,7 @@ Add your Hyperliquid **testnet** credentials in the dashboard under `/settings`.
 
 ## Community
 
-- **GitHub:** https://github.com/srossitto79/crypto-trading-research
+- **GitHub:** https://github.com/srossitto79/axiom
 - **Discord:** https://discord.gg/vzSQTneq6a
 - **Reddit:** https://www.reddit.com/r/Forven/
 - **X:** https://x.com/forvenapp

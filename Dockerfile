@@ -3,7 +3,7 @@ FROM python:3.12-slim
 
 LABEL org.opencontainers.image.title="Forven Backend"
 LABEL org.opencontainers.image.description="Algorithmic trading operations framework – paper-trade backend"
-LABEL org.opencontainers.image.source="https://github.com/srossitto79/crypto-trading-research"
+LABEL org.opencontainers.image.source="https://github.com/srossitto79/axiom"
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \

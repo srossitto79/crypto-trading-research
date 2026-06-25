@@ -11,7 +11,7 @@ Use this checklist when cloning Forven onto a new machine.
 
 ## 2. Clone the repo
 
-- [ ] `git clone https://github.com/srossitto79/crypto-trading-research.git`
+- [ ] `git clone https://github.com/srossitto79/axiom.git`
 - [ ] `cd Forven`
 
 ## 3. Choose a bootstrap path

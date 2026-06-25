@@ -3,7 +3,7 @@ import os
 import threading
 import time
 import urllib.parse
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 from pathlib import Path
@@ -1028,23 +1028,41 @@ def get_data_health():
 def _probe_lan_health() -> list[dict]:
     """Probe the LAN metrics API and return per-category stream health entries.
 
-    Makes ONE call to /assets/bitcoin/metrics and splits the result into
-    four category rows: lan_onchain, lan_orderbook, lan_liquidations,
-    lan_sentiment. Falls back to 'recovering' (cache exists) or 'down' on
-    connection failure.
+    Makes ONE call to /metrics/latest and splits the freshest rows into four
+    category rows: lan_onchain, lan_orderbook, lan_liquidations, lan_sentiment.
+    Falls back to 'recovering' (cache exists) or 'down' on connection failure.
     """
     import os
+    from collections.abc import Callable
+
     import requests as _requests
-    from forven.lan_enricher import _SKIP_COLS
+
+    from forven.lan_enricher import _MAX_STALENESS_MULT, _SKIP_COLS
 
     base_url = os.environ.get("LAN_METRICS_URL", "http://192.168.0.210:8001").rstrip("/")
     now_iso = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(timezone.utc)
 
-    _LAN_CATEGORIES: list[tuple[str, object]] = [
-        ("lan_liquidations", lambda m: m.startswith("liq_")),
-        ("lan_orderbook",    lambda m: m.startswith("l2_")),
-        ("lan_sentiment",    lambda m: m in ("news_sentiment", "news_volume")),
-        ("lan_onchain",      lambda m: not m.startswith(("liq_", "l2_")) and m not in ("news_sentiment", "news_volume")),
+    liquidation_metrics = {"long_liq_usd", "short_liq_usd", "liq_imbalance"}
+    sentiment_metrics = {"news_sentiment", "news_volume"}
+
+    def _is_liquidation(metric: str) -> bool:
+        return metric.startswith("liq_") or metric in liquidation_metrics
+
+    def _is_orderbook(metric: str) -> bool:
+        return metric.startswith("l2_")
+
+    def _is_sentiment(metric: str) -> bool:
+        return metric in sentiment_metrics
+
+    def _is_onchain(metric: str) -> bool:
+        return not (_is_liquidation(metric) or _is_orderbook(metric) or _is_sentiment(metric))
+
+    _LAN_CATEGORIES: list[tuple[str, Callable[[str], bool]]] = [
+        ("lan_liquidations", _is_liquidation),
+        ("lan_orderbook", _is_orderbook),
+        ("lan_sentiment", _is_sentiment),
+        ("lan_onchain", _is_onchain),
     ]
 
     def _has_cache() -> bool:
@@ -1066,9 +1084,9 @@ def _probe_lan_health() -> list[dict]:
             return None
 
     try:
-        r = _requests.get(f"{base_url}/assets/bitcoin/metrics", timeout=5)
+        r = _requests.get(f"{base_url}/metrics/latest", params={"assets": "bitcoin"}, timeout=5)
         r.raise_for_status()
-        items = r.json()
+        rows = r.json()
     except Exception as exc:
         status = "recovering" if _has_cache() else "down"
         error = str(exc)[:200]
@@ -1085,29 +1103,72 @@ def _probe_lan_health() -> list[dict]:
             for name, _ in _LAN_CATEGORIES
         ]
 
-    metric_names: list[str] = []
-    for item in items:
-        if isinstance(item, str):
-            name = item
-        elif isinstance(item, dict):
-            name = str(item.get("metric") or item.get("name") or "")
-        else:
-            continue
-        if name and name not in _SKIP_COLS:
-            metric_names.append(name)
+    def _parse_metric_dt(raw: object) -> datetime | None:
+        if raw is None:
+            return None
+        try:
+            text = str(raw)
+            if text.endswith("Z"):
+                text = f"{text[:-1]}+00:00"
+            parsed = datetime.fromisoformat(text)
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc)
+        except Exception:
+            return None
 
-    last_cache = _last_cache_mtime() or now_iso
+    def _collection_interval_seconds(row: dict) -> float:
+        try:
+            return float(row.get("collection_interval") or row.get("interval_seconds") or 3600)
+        except (TypeError, ValueError):
+            return 3600.0
+
+    category_rows: dict[str, list[tuple[str, datetime, bool]]] = {
+        name: [] for name, _ in _LAN_CATEGORIES
+    }
+    for row in rows if isinstance(rows, list) else []:
+        if not isinstance(row, dict):
+            continue
+        metric = str(row.get("metric") or row.get("name") or "")
+        if not metric or metric in _SKIP_COLS:
+            continue
+        if row.get("value") is None:
+            continue
+        metric_dt = _parse_metric_dt(row.get("datetime") or row.get("timestamp"))
+        if metric_dt is None:
+            continue
+        interval_s = _collection_interval_seconds(row)
+        is_fresh = (now - metric_dt) <= timedelta(seconds=interval_s * _MAX_STALENESS_MULT)
+        for stream_name, matcher in _LAN_CATEGORIES:
+            if matcher(metric):
+                category_rows[stream_name].append((metric, metric_dt, is_fresh))
+                break
+
     entries: list[dict] = []
-    for stream_name, matcher in _LAN_CATEGORIES:
-        count = sum(1 for m in metric_names if matcher(m))
+    for stream_name, _ in _LAN_CATEGORIES:
+        rows_for_category = category_rows[stream_name]
+        fresh_rows = [row for row in rows_for_category if row[2]]
+        last_success = max((row[1] for row in rows_for_category), default=None)
+        if fresh_rows:
+            status = "healthy"
+            consecutive_failures = 0
+            last_error = None
+        elif rows_for_category:
+            status = "recovering"
+            consecutive_failures = 1
+            last_error = "latest LAN metric is stale"
+        else:
+            status = "never_ran"
+            consecutive_failures = 0
+            last_error = None
         entries.append({
             "stream": stream_name,
-            "status": "healthy" if count > 0 else "never_ran",
-            "consecutive_failures": 0,
-            "last_success": last_cache if count > 0 else None,
+            "status": status,
+            "consecutive_failures": consecutive_failures,
+            "last_success": last_success.isoformat() if last_success else None,
             "last_run": now_iso,
-            "last_error": None,
-            "total_rows": count,
+            "last_error": last_error,
+            "total_rows": len(fresh_rows),
         })
     return entries
 

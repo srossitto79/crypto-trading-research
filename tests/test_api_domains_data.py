@@ -6,6 +6,17 @@ from fastapi import HTTPException
 from forven.api_domains import data as data_domain
 
 
+class _LanHealthResponse:
+    def __init__(self, payload):
+        self._payload = payload
+
+    def raise_for_status(self):
+        return None
+
+    def json(self):
+        return self._payload
+
+
 def test_get_data_ingestion_runs_local_merges_and_normalizes(monkeypatch):
     monkeypatch.setattr(data_domain, "_remote_data_engine_config", lambda: (False, ""))
     monkeypatch.setattr(
@@ -97,6 +108,69 @@ def test_get_data_health_includes_stream_freshness(monkeypatch):
     assert "streams" in payload
     assert payload["streams"]["funding"]["last_success_ts"] == "2026-04-23T00:00:00+00:00"
     assert payload["streams"]["oi"] == {"status": "never_ran"}
+
+
+def test_probe_lan_health_uses_latest_rows_and_liquidation_names(monkeypatch):
+    def fake_get(url, **kwargs):
+        assert url.endswith("/metrics/latest")
+        assert kwargs["params"] == {"assets": "bitcoin"}
+        return _LanHealthResponse([
+            {
+                "metric": "long_liq_usd",
+                "datetime": data_domain.datetime.now(data_domain.timezone.utc).isoformat(),
+                "collection_interval": 3600,
+                "value": 123,
+            },
+            {
+                "metric": "short_liq_usd",
+                "datetime": data_domain.datetime.now(data_domain.timezone.utc).isoformat(),
+                "collection_interval": 3600,
+                "value": 456,
+            },
+            {
+                "metric": "l2_bid_depth",
+                "datetime": data_domain.datetime.now(data_domain.timezone.utc).isoformat(),
+                "collection_interval": 3600,
+                "value": 1,
+            },
+            {
+                "metric": "active_addresses",
+                "datetime": data_domain.datetime.now(data_domain.timezone.utc).isoformat(),
+                "collection_interval": 3600,
+                "value": 1,
+            },
+        ])
+
+    monkeypatch.setattr("requests.get", fake_get)
+
+    streams = {row["stream"]: row for row in data_domain._probe_lan_health()}
+
+    assert streams["lan_liquidations"]["status"] == "healthy"
+    assert streams["lan_liquidations"]["total_rows"] == 2
+    assert streams["lan_orderbook"]["status"] == "healthy"
+    assert streams["lan_onchain"]["status"] == "healthy"
+    assert streams["lan_sentiment"]["status"] == "never_ran"
+
+
+def test_probe_lan_health_marks_stale_latest_rows_recovering(monkeypatch):
+    def fake_get(url, **kwargs):
+        return _LanHealthResponse([
+            {
+                "metric": "news_sentiment",
+                "datetime": "2000-01-01T00:00:00+00:00",
+                "collection_interval": 3600,
+                "value": 0.2,
+            },
+        ])
+
+    monkeypatch.setattr("requests.get", fake_get)
+
+    streams = {row["stream"]: row for row in data_domain._probe_lan_health()}
+
+    assert streams["lan_sentiment"]["status"] == "recovering"
+    assert streams["lan_sentiment"]["consecutive_failures"] == 1
+    assert streams["lan_sentiment"]["last_error"] == "latest LAN metric is stale"
+    assert streams["lan_sentiment"]["total_rows"] == 0
 
 
 def test_get_dataset_detail_stub_translates_missing_file(monkeypatch):
