@@ -1,8 +1,7 @@
 # Code of Conduct
 
-Axiom's community spaces (GitHub issues, Discord, Reddit) are meant to be
-welcoming, respectful, and harassment-free for everyone, regardless of
-background or experience level.
+Axiom's community spaces (GitHub issues) are meant to be welcoming, respectful,
+and harassment-free for everyone, regardless of background or experience level.
 
 We ask all participants to:
 
@@ -18,6 +17,5 @@ The full text is available at
 ## Reporting
 
 If you experience or witness unacceptable behavior, please contact the maintainer
-privately at **srossitto79@gmail.com**, or reach out via the
-[Discord](https://discord.gg/vzSQTneq6a) moderators. Reports will be handled
-confidentially and in good faith.
+privately at **srossitto79@gmail.com**. Reports will be handled confidentially
+and in good faith.

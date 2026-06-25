@@ -3,9 +3,3 @@ contact_links:
   - name: Security vulnerability
     url: https://github.com/srossitto79/axiom/security/advisories/new
     about: Please report security issues privately — see SECURITY.md. Do not open a public issue.
-  - name: Discord
-    url: https://discord.gg/vzSQTneq6a
-    about: Questions, ideas, and general discussion.
-  - name: Reddit (r/Axiom)
-    url: https://www.reddit.com/r/Axiom/
-    about: Community discussion and announcements.

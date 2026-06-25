@@ -45,6 +45,6 @@ The most security-relevant configuration choices are documented in
   static denylist is **not a sandbox** and not a complete trust boundary. Only
   register strategy code you trust, and keep the API on localhost.
 
-Based on Forven by Judder.
+Axiom is a fork of [Forven](https://github.com/judder659/forven) by Judder.
 
 Thank you for helping keep Axiom and its users safe.

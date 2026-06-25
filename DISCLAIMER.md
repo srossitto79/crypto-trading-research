@@ -30,6 +30,6 @@ Crypto and crypto-derivatives trading is restricted or prohibited for some perso
 
 To the maximum extent permitted by law, Axiom is provided **WITHOUT WARRANTY OF ANY KIND**, express or implied (see sections 15–16 of the AGPL-3.0 text in [`LICENSE`](LICENSE)). The authors and contributors accept **no liability** for any loss or damage of any kind arising from your use of the software. This file is an additional notice under AGPL-3.0 section 7(a); it does not modify the license itself.
 
-Based on Forven by Judder.
+Axiom is a fork of [Forven](https://github.com/judder659/forven) by Judder.
 
 By using Axiom you acknowledge and accept these terms.
