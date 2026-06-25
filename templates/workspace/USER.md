@@ -1,7 +1,7 @@
 ---
 name: Operator
 timezone: UTC
-exchange: HyperLiquid (perpetuals)
+exchange: Binance (perpetuals)
 asset_universe: Crypto only
 risk_per_trade_pct: 2
 preferences:
@@ -22,7 +22,7 @@ Building a self-learning autonomous crypto trading system, with Axiom as the int
 
 ## Trading Parameters
 
-- **Exchange:** HyperLiquid (perpetuals)
+- **Exchange:** Binance (perpetuals)
 - **Asset universe:** Crypto only
 - **Risk per trade:** 2% max under the active testnet/paper profile (the stricter mainnet profile caps it at 1%). Anything above the active cap must be flagged for explicit approval.
 - **Strategy:** Unrestricted — sentiment, volume scanners, on-chain, order flow, funding/carry, whatever survives the gauntlet.

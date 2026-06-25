@@ -1417,10 +1417,19 @@ def _research_contract_for(hypothesis: dict[str, Any]) -> dict[str, Any]:
     if lane not in {"exploration", "exploitation", "benchmarking"}:
         lane = "benchmarking"
     try:
+        try:
+            from axiom.data import scan_datasets
+            datasets = [
+                f"{row['symbol']} {row['timeframe']}"
+                for row in scan_datasets()
+                if row.get("symbol") and row.get("timeframe")
+            ]
+        except Exception:
+            datasets = []
         return build_research_contract(
             lane=lane,
             settings=get_effective_research_settings(),
-            available_datasets=[],
+            available_datasets=datasets,
         ).to_dict()
     except Exception:
         return {}

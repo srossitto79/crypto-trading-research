@@ -170,11 +170,26 @@ def _merge_lan(df: pd.DataFrame, lan_df: pd.DataFrame) -> pd.DataFrame:
     lan_df = lan_df.copy()
     lan_df["timestamp"] = pd.to_datetime(lan_df["timestamp"], utc=True)
 
-    # Drop LAN columns that already exist in the left df to avoid conflicts.
+    # For duplicate columns, keep whichever source has more non-null values.
+    # This ensures a sparse existing column (e.g. OI with 1% coverage) gets
+    # replaced by a richer LAN series rather than silently discarding it.
     existing = set(left.columns) - {"timestamp"}
-    drop = [c for c in lan_df.columns if c in existing]
-    if drop:
-        lan_df = lan_df.drop(columns=drop)
+    drop_from_lan = []
+    drop_from_left = []
+    for col in lan_df.columns:
+        if col not in existing:
+            continue
+        left_coverage = int(left[col].notna().sum())
+        lan_coverage = int(lan_df[col].notna().sum())
+        if left_coverage >= lan_coverage:
+            drop_from_lan.append(col)
+        else:
+            drop_from_left.append(col)
+            log.debug("LAN column %s preferred over existing (LAN %d vs existing %d non-null)", col, lan_coverage, left_coverage)
+    if drop_from_lan:
+        lan_df = lan_df.drop(columns=drop_from_lan)
+    if drop_from_left:
+        left = left.drop(columns=drop_from_left)
 
     # Drop per-call skip cols that snuck through.
     lan_df = lan_df.drop(columns=[c for c in _SKIP_COLS if c in lan_df.columns], errors="ignore")
@@ -353,15 +368,19 @@ class LanEnricher:
             log.debug("LAN /assets/%s/metrics: %s", asset, exc)
             return []
 
+        # API returns either a list directly or {"asset": ..., "metrics": [...]}
+        if isinstance(items, dict):
+            items = items.get("metrics") or []
+
         result: list[str] = []
         for item in items:
             if isinstance(item, str):
                 name = item
                 first_ts = last_ts = None
             elif isinstance(item, dict):
-                name = item.get("metric") or item.get("name") or ""
-                first_ts = item.get("first_timestamp")
-                last_ts = item.get("last_timestamp")
+                name = item.get("metric") or item.get("metric_name") or item.get("name") or ""
+                first_ts = item.get("first_timestamp") or item.get("first_ts")
+                last_ts = item.get("last_timestamp") or item.get("last_ts")
             else:
                 continue
 

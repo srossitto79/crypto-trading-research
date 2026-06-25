@@ -155,6 +155,25 @@ open_ = np.concatenate(([close[0]], close[:-1]))
 high = np.maximum(open_, close) + 0.5
 low = np.minimum(open_, close) - 0.5
 volume = np.linspace(1000.0, 2000.0, num=100)
+
+# Dynamically fetch enrichment columns from the LAN enricher so the dummy frame
+# always reflects what a real backtest DataFrame contains. Fallback to a minimal
+# set when the enricher is unreachable (e.g. in CI or offline environments).
+_ENRICHMENT_FALLBACK = [
+    "funding_rate", "open_interest", "long_short_ratio",
+    "liq_long_volume", "liq_short_volume", "liq_total_volume",
+    "l2_imbalance_5_avg", "l2_spread_bps_avg",
+]
+try:
+    from axiom.lan_enricher import get_lan_enricher as _get_lan_enricher
+    _enrich_cols = _get_lan_enricher().available_metrics("BTCUSDT") or []
+    for _fb in _ENRICHMENT_FALLBACK:
+        if _fb not in _enrich_cols:
+            _enrich_cols.append(_fb)
+except Exception:
+    _enrich_cols = list(_ENRICHMENT_FALLBACK)
+
+_enrich_data = {{col: np.ones(100) for col in _enrich_cols}}
 dummy_df = pd.DataFrame(
     {{
         "open": open_,
@@ -162,6 +181,7 @@ dummy_df = pd.DataFrame(
         "low": low,
         "close": close,
         "volume": volume,
+        **_enrich_data,
     }},
     index=index,
 )

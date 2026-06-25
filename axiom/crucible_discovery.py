@@ -138,10 +138,19 @@ def run_crucible_discovery(*, settings: dict[str, Any] | None = None, force: boo
     from axiom.research_contract import build_research_contract, get_effective_research_settings
 
     try:
+        try:
+            from axiom.data import scan_datasets
+            datasets = [
+                f"{row['symbol']} {row['timeframe']}"
+                for row in scan_datasets()
+                if row.get("symbol") and row.get("timeframe")
+            ]
+        except Exception:
+            datasets = []
         contract = build_research_contract(
             lane="benchmarking",
             settings=get_effective_research_settings(),
-            available_datasets=[],
+            available_datasets=datasets,
         ).to_dict()
     except Exception as exc:  # pragma: no cover — defence in depth
         log.warning("could not build discovery research_contract: %s", exc)
