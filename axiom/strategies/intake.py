@@ -21,6 +21,25 @@ log = logging.getLogger("axiom.strategies.intake")
 # file happens to import on this machine.
 _BANNED_IMPORT_ROOTS: frozenset[str] = frozenset({"ta"})
 
+_VALID_TYPE_NAME_RE = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
+
+
+def _coerce_type_name(raw: str | None, modname: str) -> str:
+    """Normalize an LLM-generated TYPE_NAME to a safe lowercase identifier.
+
+    Lowercases, collapses runs of non-alphanumeric characters to a single
+    underscore, strips leading digits. Falls back to ``custom_<modname>``
+    when the result is still invalid after normalization.
+    """
+    candidate = re.sub(r"[^a-z0-9]+", "_", str(raw or "").strip().lower()).strip("_")
+    # Drop a leading digit run that would make the name a non-identifier.
+    candidate = re.sub(r"^[0-9_]+", "", candidate)
+    candidate = candidate[:64]
+    if not candidate or not _VALID_TYPE_NAME_RE.match(candidate):
+        safe_mod = re.sub(r"[^a-z0-9]+", "_", modname.lower()).strip("_")
+        return f"custom_{safe_mod}"
+    return candidate
+
 
 # Supported intervals for the STORED strategy timeframe. A declared "_timeframe"
 # outside this set (typo / no-data interval) falls back to "1h" so it can never
@@ -280,6 +299,15 @@ def scan_custom_strategies(*, register: bool = False) -> dict:
             ))
             continue
 
+        # Coerce arbitrary/LLM-injected TYPE_NAME values to a safe identifier.
+        coerced_type_name = _coerce_type_name(type_name, modname)
+        if coerced_type_name != type_name:
+            log.warning(
+                "Intake: TYPE_NAME %r for %s is not a valid identifier — coerced to %r",
+                type_name, modname, coerced_type_name,
+            )
+            type_name = coerced_type_name
+
         # Validate class
         validation_errors = registry._registry_type_validation_errors(strategy_cls)
         if validation_errors:
@@ -353,10 +381,22 @@ def scan_custom_strategies(*, register: bool = False) -> dict:
                     ))
                     continue
 
-            # Create DB container. ``certified`` may have been downgraded by the
-            # lookahead probe above, so derive the stage from the (possibly
-            # downgraded) local flag rather than cert.certified alone — a leak
-            # forces research_only even when certification itself passed.
+            # Re-certify now that the module is in the registry so that
+            # is_known_runtime_type() returns True for novel custom type names.
+            # Without this, any strategy whose TYPE_NAME doesn't match a known
+            # param-family prefix is flagged unregistered_runtime_type=True and
+            # lands in research_only before it ever gets a quick_screen run.
+            cert = certify_execution_strategy(type_name, default_params)
+            certified = cert.certified
+            cert_error = cert.primary_blocking_reason()
+            # Preserve the lookahead downgrade — a data-leak forces research_only
+            # regardless of whether certification itself passed.
+            if lookahead_reason:
+                certified = False
+                if not cert_error:
+                    cert_error = lookahead_reason
+
+            # Derive stage from the (possibly re-downgraded) local flag.
             initial_stage = "quick_screen" if certified else "research_only"
             try:
                 from axiom.db import create_strategy_container, get_db
@@ -529,6 +569,16 @@ def register_custom_strategy_file(
         raise ValueError(f"{file_name} is missing STRATEGY_CLASS")
     if not type_name:
         raise ValueError(f"{file_name} is missing TYPE_NAME")
+
+    # Coerce arbitrary/LLM-injected TYPE_NAME values to a safe identifier.
+    coerced_type_name = _coerce_type_name(type_name, modname)
+    if coerced_type_name != type_name:
+        log.warning(
+            "Targeted intake: TYPE_NAME %r in %s is not a valid identifier — coerced to %r",
+            type_name, file_name, coerced_type_name,
+        )
+        type_name = coerced_type_name
+
     if type_name in known_types:
         raise ValueError(f"TYPE_NAME '{type_name}' is already registered")
 
@@ -581,7 +631,18 @@ def register_custom_strategy_file(
     except Exception as exc:
         raise ValueError(f"Registration failed for {file_name}: {exc}") from exc
 
-    stored_params = cert.canonical_params if (certified and not lookahead_blocked) else default_params
+    # Re-certify now that the module is loaded so is_known_runtime_type() sees
+    # the freshly-registered type. Without this, novel custom type names are
+    # always flagged unregistered_runtime_type=True and stored_params falls
+    # back to raw default_params even when the strategy is otherwise valid.
+    cert = certify_execution_strategy(type_name, default_params)
+    certified = cert.certified and not lookahead_blocked
+    if not cert.primary_blocking_reason() and lookahead_reason:
+        cert_error = lookahead_reason
+    else:
+        cert_error = cert.primary_blocking_reason()
+
+    stored_params = cert.canonical_params if certified else default_params
     with get_db() as conn:
         strategy_id, _display, _base = create_strategy_container(
             conn=conn,

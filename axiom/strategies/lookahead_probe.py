@@ -109,7 +109,7 @@ def _normalize_to_bool_arrays(payload: object, index: pd.Index) -> dict[str, np.
                 s = s.reindex(index)
         except Exception:
             pass
-        return s.fillna(False).to_numpy(dtype=bool, na_value=False)
+        return s.fillna(False).to_numpy(dtype=bool)
 
     if isinstance(payload, DirectionalSignals):
         return {
