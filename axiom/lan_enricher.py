@@ -228,12 +228,25 @@ def _get_matrix_day(asset: str, interval: str, date_str: str) -> Optional[pd.Dat
 def _merge_lan(df: pd.DataFrame, lan_df: pd.DataFrame) -> pd.DataFrame:
     """Left-merge LAN enrichment onto df via merge_asof on timestamp."""
     had_ts_index = isinstance(df.index, pd.DatetimeIndex)
+    original_index_name = df.index.name if had_ts_index else None
 
     left = _ensure_utc_ts(df)
     lan_df = lan_df.copy()
     # Pin both sides to ns UTC so merge_asof doesn't raise "incompatible merge keys"
     # when the LAN API returns us-precision timestamps and the candle frame is ns.
     lan_df["timestamp"] = pd.to_datetime(lan_df["timestamp"], utc=True).astype("datetime64[ns, UTC]")
+    lan_df = lan_df.sort_values("timestamp").drop_duplicates("timestamp", keep="last")
+    # LAN API uses close timestamps; Axiom OHLCV uses open timestamps.
+    # Without correction, a backward merge_asof would match each bar to the
+    # PREVIOUS bar's LAN data (one period old). Shift LAN timestamps back by
+    # one inferred interval to convert close→open before joining.
+    if len(lan_df) >= 3:
+        _diffs = lan_df["timestamp"].diff().dropna()
+        _mode = _diffs.mode()
+        _bucket = _mode.iloc[0] if not _mode.empty else _diffs.median()
+        if pd.notna(_bucket) and pd.Timedelta(0) < _bucket <= pd.Timedelta(days=1):
+            lan_df = lan_df.copy()
+            lan_df["timestamp"] = lan_df["timestamp"] - _bucket
 
     # Drop OHLCV and other protected columns from LAN BEFORE the coverage check.
     # _SKIP_COLS are columns the LAN API returns that Axiom already owns.
@@ -290,10 +303,19 @@ def _merge_lan(df: pd.DataFrame, lan_df: pd.DataFrame) -> pd.DataFrame:
         return df
 
     merged = merged.sort_values("_row_idx").drop(columns=["_row_idx"])
+
+    # Forward-fill (then backward-fill) new LAN columns so bars before the first
+    # LAN timestamp and any gaps in coverage don't stay NaN.
+    _new_lan_cols = [c for c in merged.columns if c not in set(left_sorted.columns) - {"_row_idx"}]
+    if _new_lan_cols:
+        merged[_new_lan_cols] = merged[_new_lan_cols].ffill().bfill()
+
     merged = merged.reset_index(drop=True)
 
     if had_ts_index:
         merged = merged.set_index("timestamp")
+        if original_index_name is not None:
+            merged.index.name = original_index_name
 
     return merged
 
@@ -490,10 +512,16 @@ class LanEnricher:
             log.debug("LanEnricher: no asset mapping for %s", symbol)
             return df
 
+        # The LAN API provides data at hourly (or coarser) resolution. Sub-hourly
+        # OHLCV timeframes must use "1h" for the LAN cache/API lookup so the API
+        # doesn't return empty (no 1m/5m/15m feature data exists).
+        _SUB_HOURLY = {"1m", "3m", "5m", "15m", "30m"}
+        lan_interval = "1h" if timeframe in _SUB_HOURLY else timeframe
+
         try:
             if live:
                 return _enrich_live(df, asset)
-            return _enrich_historical(df, asset, timeframe)
+            return _enrich_historical(df, asset, lan_interval)
         except Exception as exc:
             log.warning("LanEnricher skipped for %s/%s: %s", symbol, timeframe, exc)
             return df

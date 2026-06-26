@@ -40,6 +40,7 @@ from axiom.market_cache import (
 from axiom.market_data import (
     fetch_hyperliquid_candles,
     fetch_hyperliquid_funding_rate,
+    fetch_binance_candles,
     dataframe_to_ohlcv_rows,
     ohlcv_rows_to_dataframe,
 )
@@ -1553,8 +1554,8 @@ def fetch_candles(coin: str, bars: int = 300, interval: str = "1h") -> pd.DataFr
         if cached is not None and not cached.empty:
             return cached
 
-        # Fallback to API if cache miss
-        df = fetch_hyperliquid_candles(
+        # Fallback to Binance API if cache miss
+        df = fetch_binance_candles(
             normalized_coin,
             bars=required_bars,
             interval=resolved_interval,
@@ -1575,7 +1576,7 @@ def fetch_candles(coin: str, bars: int = 300, interval: str = "1h") -> pd.DataFr
     if not _scanner_bool_setting("scanner_allow_direct_market_fetch", True):
         raise RuntimeError(f"Candle cache unavailable/stale for {normalized_coin}")
 
-    df = fetch_hyperliquid_candles(
+    df = fetch_binance_candles(
         normalized_coin,
         bars=max(required_bars, _CANDLE_CACHE_BARS),
         interval=resolved_interval,

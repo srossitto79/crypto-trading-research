@@ -8974,7 +8974,7 @@ def _estimate_backtest_bars(
     if delta_seconds <= 0:
         return max(220, default_bars)
     estimated = int(delta_seconds / float(minutes_per_bar * 60)) + 2
-    return max(220, min(estimated, 100_000))
+    return max(220, min(estimated, 500_000))
 
 
 def _get_strategy_row_by_id(strategy_id: str) -> dict | None:

@@ -179,6 +179,30 @@ def post_hyperliquid_info(body: dict, *, timeout: int = 15) -> dict:
         return json.loads(response.read())
 
 
+_HL_CANDLE_PAGE_SIZE = 5000  # Hyperliquid returns at most ~5000 candles per request
+_HL_CANDLE_MAX_PAGES = 50   # hard cap: 50 × 5000 = 250k bars max (~6 months of 1m)
+
+
+def _fetch_hl_candle_page(
+    hl_coin: str,
+    normalized_interval: str,
+    start_ms: int,
+    end_ms: int,
+) -> list:
+    """Single paginated call to Hyperliquid candleSnapshot."""
+    payload = {
+        "type": "candleSnapshot",
+        "req": {
+            "coin": hl_coin,
+            "interval": normalized_interval,
+            "startTime": start_ms,
+            "endTime": end_ms,
+        },
+    }
+    raw = post_hyperliquid_info(payload)
+    return raw if isinstance(raw, list) else []
+
+
 def fetch_hyperliquid_candles(
     coin: str,
     *,
@@ -187,7 +211,12 @@ def fetch_hyperliquid_candles(
     end_time: int | None = None,
     clean: bool = False,
 ) -> pd.DataFrame:
-    """Fetch OHLCV candles from HyperLiquid and return a normalized dataframe."""
+    """Fetch OHLCV candles from HyperLiquid and return a normalized dataframe.
+
+    Paginates automatically when more than _HL_CANDLE_PAGE_SIZE bars are
+    requested, working backwards in time until the full window is covered or
+    _HL_CANDLE_MAX_PAGES is reached.
+    """
     normalized_coin = str(coin or "").strip().upper()
     if not normalized_coin:
         raise ValueError("coin is required")
@@ -205,22 +234,39 @@ def fetch_hyperliquid_candles(
 
     requested_bars = max(int(bars), 1)
     end_ms = int(end_time) if end_time else int(time.time() * 1000)
-    start_ms = end_ms - (requested_bars * interval_ms)
 
-    payload = {
-        "type": "candleSnapshot",
-        "req": {
-            "coin": hl_coin,
-            "interval": normalized_interval,
-            "startTime": start_ms,
-            "endTime": end_ms,
-        },
-    }
-    raw = post_hyperliquid_info(payload)
-    if not isinstance(raw, list) or not raw:
+    # Paginate backwards when the requested window exceeds the per-request cap.
+    all_rows: list = []
+    page_end_ms = end_ms
+    remaining = requested_bars
+    pages = 0
+
+    while remaining > 0 and pages < _HL_CANDLE_MAX_PAGES:
+        chunk_bars = min(remaining, _HL_CANDLE_PAGE_SIZE)
+        chunk_start_ms = page_end_ms - (chunk_bars * interval_ms)
+        raw = _fetch_hl_candle_page(hl_coin, normalized_interval, chunk_start_ms, page_end_ms)
+        if not raw:
+            break
+        all_rows = raw + all_rows  # prepend — raw is already oldest-first
+        pages += 1
+        returned = len(raw)
+        remaining -= returned
+        page_end_ms = chunk_start_ms
+        # Stop early if this page returned significantly fewer rows than expected
+        # (data likely unavailable for that period).
+        if returned < chunk_bars // 2:
+            break
+
+    if not all_rows:
         raise RuntimeError(f"No candle data returned for {normalized_coin} {normalized_interval}")
 
-    df = pd.DataFrame(raw)
+    if pages >= _HL_CANDLE_MAX_PAGES and remaining > 0:
+        log.warning(
+            "fetch_hyperliquid_candles: hit %d-page limit for %s %s (%d bars requested, %d fetched)",
+            _HL_CANDLE_MAX_PAGES, normalized_coin, normalized_interval, requested_bars, len(all_rows),
+        )
+
+    df = pd.DataFrame(all_rows)
     required = {"t", "o", "h", "l", "c", "v"}
     missing = required - set(df.columns)
     if missing:
@@ -228,13 +274,14 @@ def fetch_hyperliquid_candles(
 
     df["t"] = pd.to_datetime(df["t"].astype(float), unit="ms", utc=True)
     df = df.set_index("t").sort_index()
+    df = df[~df.index.duplicated(keep="last")]
     for column in ("o", "h", "l", "c", "v"):
         df[column] = df[column].astype(float)
-        
+
     # Prevent lookahead bias / repainting by dropping the unclosed active candle
     reference_ts = pd.Timestamp(end_ms, unit="ms", tz="UTC") if end_time else pd.Timestamp.now("UTC")
     df = df[df.index + pd.Timedelta(interval_ms, unit="ms") <= reference_ts]
-    
+
     normalized = df.rename(
         columns={
             "o": "open",
@@ -245,12 +292,95 @@ def fetch_hyperliquid_candles(
         }
     )
     normalized = normalized[["open", "high", "low", "close", "volume"]]
-    
+
     if clean:
         # Pass the requested interval through so cleaning re-grids 15m/4h/1d
         # series on their own grid instead of pandas' inferred/1h fallback.
         normalized = clean_ohlcv(normalized, interval=normalized_interval)
     return normalized
+
+
+_BINANCE_FUTURES_BASE = "https://fapi.binance.com"
+_BINANCE_CANDLE_PAGE_SIZE = 1500  # max rows per klines request
+_BINANCE_CANDLE_MAX_PAGES = 334   # 334 × 1500 ≈ 500k bars ceiling
+
+
+def fetch_binance_candles(
+    coin: str,
+    *,
+    bars: int = 300,
+    interval: str = "1h",
+    end_time: int | None = None,
+    clean: bool = False,
+) -> pd.DataFrame:
+    """Fetch OHLCV from Binance UM Futures public REST API with automatic pagination.
+
+    No API key required. Handles any symbol format (BTC-USDT, BTCUSDT, BTC/USDT).
+    """
+    from axiom.symbol_mapping import to_binance
+    bn_symbol = to_binance(str(coin or "").strip())
+    if not bn_symbol:
+        raise ValueError("coin is required")
+
+    normalized_interval = str(interval or "1h").strip().lower()
+    interval_ms = INTERVAL_TO_MS.get(normalized_interval)
+    if interval_ms is None:
+        raise ValueError(f"unsupported interval: {interval!r}")
+
+    requested_bars = max(int(bars), 1)
+    end_ms = int(end_time) if end_time else int(time.time() * 1000)
+
+    all_rows: list = []
+    page_start = end_ms - requested_bars * interval_ms
+    pages = 0
+
+    while len(all_rows) < requested_bars and page_start < end_ms and pages < _BINANCE_CANDLE_MAX_PAGES:
+        limit = min(requested_bars - len(all_rows), _BINANCE_CANDLE_PAGE_SIZE)
+        url = (
+            f"{_BINANCE_FUTURES_BASE}/fapi/v1/klines"
+            f"?symbol={bn_symbol}&interval={normalized_interval}"
+            f"&startTime={page_start}&endTime={end_ms}&limit={limit}"
+        )
+        req = urllib.request.Request(url, headers={"User-Agent": "axiom/1.0"})
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                raw = json.loads(resp.read())
+        except Exception as exc:
+            log.warning("Binance candle fetch failed for %s %s: %s", bn_symbol, normalized_interval, exc)
+            break
+
+        if not isinstance(raw, list) or not raw:
+            break
+
+        all_rows.extend(raw)
+        pages += 1
+        page_start = int(raw[-1][0]) + interval_ms
+        if len(raw) < limit:
+            break
+
+    if pages >= _BINANCE_CANDLE_MAX_PAGES and len(all_rows) < requested_bars:
+        log.warning(
+            "fetch_binance_candles: hit %d-page limit for %s %s (%d bars requested, %d fetched)",
+            _BINANCE_CANDLE_MAX_PAGES, bn_symbol, normalized_interval, requested_bars, len(all_rows),
+        )
+
+    if not all_rows:
+        raise RuntimeError(f"No candle data returned for {bn_symbol} {normalized_interval}")
+
+    df = pd.DataFrame(
+        [[int(r[0]), float(r[1]), float(r[2]), float(r[3]), float(r[4]), float(r[5])] for r in all_rows],
+        columns=["timestamp", "open", "high", "low", "close", "volume"],
+    )
+    df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
+    df = df.set_index("timestamp").sort_index()
+    df = df[~df.index.duplicated(keep="last")]
+
+    reference_ts = pd.Timestamp(end_ms, unit="ms", tz="UTC") if end_time else pd.Timestamp.now("UTC")
+    df = df[df.index + pd.Timedelta(interval_ms, unit="ms") <= reference_ts]
+
+    if clean:
+        df = clean_ohlcv(df, interval=normalized_interval)
+    return df
 
 
 def fetch_hyperliquid_funding_rate(coin: str) -> float | None:
