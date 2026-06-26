@@ -511,6 +511,8 @@ def build_agent_context(
     # Agent's own role definition
     parts.append(f"# YOUR ROLE\n{role_md}")
 
+    parts.append(f"# CURRENT DATE\n{datetime.now(timezone.utc).strftime('%Y-%m-%d')} (UTC)")
+
     parts.append(_format_untrusted_content_policy())
     parts.append(_format_worker_operating_rules())
     parts.append(_format_risk_policy())

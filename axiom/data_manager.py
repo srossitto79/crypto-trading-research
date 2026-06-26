@@ -1796,7 +1796,11 @@ class DataManager:
         try:
             from axiom.data import _data_engine_read_enabled
 
-            if _data_engine_read_enabled():
+            # Skip the DataHub path when exclude_streams is set: DataHub.enrich()
+            # has no exclude_streams parameter and would unconditionally add funding
+            # and OI from the Binance parquet, overwriting the Hyperliquid hourly
+            # rates already joined by backtest._enrich_with_market_data (~8x error).
+            if _data_engine_read_enabled() and not excluded:
                 from axiom.dataeng.hub import get_data_hub
 
                 result = get_data_hub().enrich(df, symbol, timeframe)

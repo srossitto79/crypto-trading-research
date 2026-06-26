@@ -4760,13 +4760,13 @@ def _precompute_indicators(df: pd.DataFrame, strategy_type: str, params: dict) -
     elif strategy_type == "ema_cross":
 
 
-        d["ema_fast"] = d["close"].ewm(span=int(p.get("ema_fast", 20)), adjust=False).mean()
+        d["ema_fast"] = d["close"].ewm(span=int(p.get("ema_fast") or p.get("fast", 20)), adjust=False).mean()
 
 
-        d["ema_slow"] = d["close"].ewm(span=int(p.get("ema_slow", 50)), adjust=False).mean()
+        d["ema_slow"] = d["close"].ewm(span=int(p.get("ema_slow") or p.get("slow", 50)), adjust=False).mean()
 
 
-        d["ema_regime"] = d["close"].ewm(span=int(p.get("ema_regime", 200)), adjust=False).mean()
+        d["ema_regime"] = d["close"].ewm(span=int(p.get("ema_regime") or p.get("long") or p.get("regime", 200)), adjust=False).mean()
 
 
         d["adx_val"] = _resolved_adx_series()
@@ -10119,7 +10119,12 @@ def _run_signal_walk(checker, df, params: dict, warmup: int, leverage: float,
 
     runtime_params = _strategy_runtime_params(params, strategy_obj)
 
-
+    _missing_ohlcv = [c for c in ("open", "high", "low", "close", "volume") if c not in df.columns]
+    if _missing_ohlcv:
+        raise RuntimeError(
+            f"Backtest DataFrame is missing required OHLCV columns {_missing_ohlcv}. "
+            f"Available columns: {list(df.columns)[:30]}"
+        )
 
 
 
@@ -10130,7 +10135,19 @@ def _run_signal_walk(checker, df, params: dict, warmup: int, leverage: float,
     # Optional fast path for dynamic/custom strategies that expose vectorized signals.
 
 
-    vectorized_signals = _resolve_strategy_vectorized_signals(strategy_obj, df)
+    try:
+        vectorized_signals = _resolve_strategy_vectorized_signals(strategy_obj, df)
+    except Exception as exc:
+        # generate_signals raised an exception (KeyError: 'close', TypeError, etc.).
+        # Fall through to the bar-by-bar generate_signal slow path so the strategy
+        # gets a second chance if generate_signal is separately implemented.
+        log.debug(
+            "vectorized signals unavailable for %s (%s: %s); using slow path",
+            getattr(strategy_obj, "strategy_type", "?"),
+            type(exc).__name__,
+            exc,
+        )
+        vectorized_signals = None
 
 
     if vectorized_signals is not None:
@@ -10233,6 +10250,16 @@ def _run_signal_walk(checker, df, params: dict, warmup: int, leverage: float,
                 raise
 
 
+        except (KeyError, ValueError, IndexError) as exc:
+            # Non-RuntimeError from _precompute_regimes / _build_regime_gate_masks
+            # (e.g. missing column in regime computation). Fall through to built-in
+            # vectorized path or slow path rather than propagating a cryptic error.
+            log.debug(
+                "Vectorized custom signal path failed for %s (%s: %s); falling back",
+                getattr(strategy_obj, "strategy_type", "?"),
+                type(exc).__name__,
+                exc,
+            )
 
 
 
@@ -10455,12 +10482,12 @@ def _run_signal_walk(checker, df, params: dict, warmup: int, leverage: float,
             continue
         try:
             price = float(d["open"].iloc[fill_idx])
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, KeyError):
             continue
         if price <= 0:
             try:
                 price = float(d["close"].iloc[fill_idx])
-            except (TypeError, ValueError):
+            except (TypeError, ValueError, KeyError):
                 continue
         if price <= 0:
             continue

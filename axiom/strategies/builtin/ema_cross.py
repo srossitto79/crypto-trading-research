@@ -23,7 +23,10 @@ class EMACrossStrategy(BaseStrategy):
 
     @property
     def name(self) -> str:
-        return f"EMA{self.params.get('ema_fast', 20)}/{self.params.get('ema_slow', 50)} Cross ({self.asset})"
+        p = self.params
+        fast = int(p.get("ema_fast") or p.get("fast", 20))
+        slow = int(p.get("ema_slow") or p.get("slow", 50))
+        return f"EMA{fast}/{slow} Cross ({self.asset})"
 
     @property
     def asset(self) -> str:
@@ -44,18 +47,24 @@ class EMACrossStrategy(BaseStrategy):
 
     def describe(self) -> str:
         p = self.params
-        return (f"Buys when {p['ema_fast']}-bar EMA crosses above {p['ema_slow']}-bar EMA. "
-                f"Uses {p['ema_regime']}-bar trend filter.")
+        fast = int(p.get("ema_fast") or p.get("fast", 20))
+        slow = int(p.get("ema_slow") or p.get("slow", 50))
+        regime = int(p.get("ema_regime") or p.get("long") or p.get("regime", 200))
+        return (f"Buys when {fast}-bar EMA crosses above {slow}-bar EMA. "
+                f"Uses {regime}-bar trend filter.")
 
     def generate_signal(self, df: pd.DataFrame) -> Signal:
         from axiom.scanner import adx, atr
         p = self.params
         close = df["close"]
-        
-        ema_fast = close.ewm(span=p["ema_fast"], adjust=False).mean()
-        ema_slow = close.ewm(span=p["ema_slow"], adjust=False).mean()
-        ema_regime = close.ewm(span=p["ema_regime"], adjust=False).mean()
-        adx_val = adx(df, p["adx_period"])
+        fast = int(p.get("ema_fast") or p.get("fast", 20))
+        slow = int(p.get("ema_slow") or p.get("slow", 50))
+        regime = int(p.get("ema_regime") or p.get("long") or p.get("regime", 200))
+
+        ema_fast = close.ewm(span=fast, adjust=False).mean()
+        ema_slow = close.ewm(span=slow, adjust=False).mean()
+        ema_regime = close.ewm(span=regime, adjust=False).mean()
+        adx_val = adx(df, p.get("adx_period", 14))
         atr_14 = atr(df, 14)
 
         curr_close = float(close.iloc[-1])
@@ -68,7 +77,7 @@ class EMACrossStrategy(BaseStrategy):
         curr_atr = float(atr_14.iloc[-1])
 
         regime_ok = curr_close > curr_ema_regime
-        adx_ok = curr_adx >= p["adx_min"]
+        adx_ok = curr_adx >= p.get("adx_min", 20)
         cross_up = prev_ema_fast <= prev_ema_slow and curr_ema_fast > curr_ema_slow
         cross_down = prev_ema_fast >= prev_ema_slow and curr_ema_fast < curr_ema_slow
         entry = cross_up and regime_ok and adx_ok
@@ -86,17 +95,20 @@ class EMACrossStrategy(BaseStrategy):
 
         p = self.params
         close = df["close"]
-        ema_fast = close.ewm(span=p["ema_fast"], adjust=False).mean()
-        ema_slow = close.ewm(span=p["ema_slow"], adjust=False).mean()
-        ema_regime = close.ewm(span=p["ema_regime"], adjust=False).mean()
-        adx_val = adx(df, p["adx_period"])
+        fast = int(p.get("ema_fast") or p.get("fast", 20))
+        slow = int(p.get("ema_slow") or p.get("slow", 50))
+        regime = int(p.get("ema_regime") or p.get("long") or p.get("regime", 200))
+        ema_fast = close.ewm(span=fast, adjust=False).mean()
+        ema_slow = close.ewm(span=slow, adjust=False).mean()
+        ema_regime = close.ewm(span=regime, adjust=False).mean()
+        adx_val = adx(df, p.get("adx_period", 14))
 
         ema_fast_prev = ema_fast.shift(1)
         ema_slow_prev = ema_slow.shift(1)
         cross_up = (ema_fast_prev <= ema_slow_prev) & (ema_fast > ema_slow)
         cross_down = (ema_fast_prev >= ema_slow_prev) & (ema_fast < ema_slow)
         regime_ok = close > ema_regime
-        adx_ok = adx_val >= p["adx_min"]
+        adx_ok = adx_val >= p.get("adx_min", 20)
 
         entry_signals = cross_up & regime_ok & adx_ok
         exit_signals = cross_down

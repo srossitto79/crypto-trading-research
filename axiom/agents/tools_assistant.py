@@ -218,9 +218,30 @@ def _tool_assistant_create_strategy(
     timeframe: str = "1h",
     notes: str = "",
 ) -> str:
+    from axiom.agents.tools_brain import _current_brain_payload
     from axiom.brain import create_strategy, resolve_brain_provider_model
     from axiom.hypotheses import create_hypothesis
     from axiom.strategies.certification import certify_execution_strategy
+    from axiom.system_mode_policy import autonomous_hypothesis_generation_allowed
+    from axiom.system_pause import get_system_mode
+
+    # Operator chat sessions are always allowed to create strategies.
+    # Autonomous brain cycles (keepalive, agent_callback, etc.) must respect the mode gate
+    # — without this check the brain bypasses the semi-auto hypothesis-creation block.
+    _brain_source = str((_current_brain_payload()).get("source") or "").strip().lower()
+    if _brain_source != "ui_chat":
+        _mode = get_system_mode()
+        if not autonomous_hypothesis_generation_allowed(_mode):
+            return _json.dumps({
+                "ok": False,
+                "error_code": "generation_paused",
+                "error": (
+                    f"Autonomous hypothesis generation is disabled in "
+                    f"system_mode={_mode!r}. Ask the operator to create this "
+                    "strategy via chat, or switch to auto mode."
+                ),
+                "system_mode": _mode,
+            })
 
     strategy_type = str(strategy_type or "").strip()
     symbol = str(symbol or "").strip().upper()

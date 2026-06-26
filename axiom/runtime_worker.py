@@ -1508,10 +1508,14 @@ def ensure_brain_keepalive() -> bool:
     """
     try:
         from axiom.db import create_pending_task, get_db
-        from axiom.system_pause import is_autonomy_paused
-
-        if is_autonomy_paused():
+        # SRos this will spawn new strategies, we have to check if generation is paused not the autonomy
+        # from axiom.system_pause import is_autonomy_paused
+        # if is_autonomy_paused():
+        #     return False        
+        from axiom.system_pause import is_generation_paused
+        if is_generation_paused():
             return False
+        
         with get_db() as conn:
             pending = conn.execute(
                 "SELECT COUNT(*) AS n FROM tasks "

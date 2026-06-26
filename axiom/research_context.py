@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any, Mapping, Sequence
 
 from axiom.research_contract import ResearchContract, build_research_contract, default_research_settings
@@ -266,6 +267,8 @@ def build_research_context(
     omitted; novelty/inspiration is governed by the research contract instead.
     """
     sections = [f"# YOUR ROLE\n{_clean_text(role_md)}"]
+
+    sections.append(f"# CURRENT DATE\n{datetime.now(timezone.utc).strftime('%Y-%m-%d')} (UTC)")
 
     sections.append(_format_untrusted_content_policy())
     sections.append(_format_worker_operating_rules())

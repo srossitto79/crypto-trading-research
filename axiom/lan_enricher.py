@@ -108,36 +108,15 @@ def _get_session():
 # Backtest path helpers
 # ---------------------------------------------------------------------------
 
-def _fetch_matrix_day(asset: str, interval: str, date_str: str) -> Optional[pd.DataFrame]:
-    """Fetch /features/matrix for one calendar day."""
-    url = f"{_base_url()}/features/matrix"
-    params = {
-        "asset": asset,
-        "interval": interval,
-        "start": f"{date_str}T00:00:00",
-        "end": f"{date_str}T23:59:59",
-        "shift": 0,
-        "clean": "false",
-        "include_incomplete": "false",
-    }
-    try:
-        r = _get_session().get(url, params=params, timeout=15)
-        r.raise_for_status()
-        data = r.json()
-    except Exception as exc:
-        log.debug("LAN /features/matrix %s %s %s: %s", asset, interval, date_str, exc)
-        return None
-
+def _parse_matrix_response(data: object) -> Optional[pd.DataFrame]:
+    """Parse a /features/matrix JSON response into a normalised DataFrame."""
     if not data:
         return None
     try:
-        # API returns {asset, interval, rows, columns, data: [...]} envelope.
-        # Fall back to treating the payload itself as a list for older API versions.
         rows = data.get("data", data) if isinstance(data, dict) else data
         if not rows:
             return None
         df = pd.DataFrame(rows)
-        # API uses "date" as the timestamp key; normalise to "timestamp".
         if "date" in df.columns and "timestamp" not in df.columns:
             df = df.rename(columns={"date": "timestamp"})
         if df.empty or "timestamp" not in df.columns:
@@ -149,8 +128,50 @@ def _fetch_matrix_day(asset: str, interval: str, date_str: str) -> Optional[pd.D
         return None
 
 
+def _fetch_matrix_range(
+    asset: str, interval: str, start_date: date, end_date: date
+) -> Optional[pd.DataFrame]:
+    """Fetch /features/matrix for a date range in a single HTTP call."""
+    url = f"{_base_url()}/features/matrix"
+    params = {
+        "asset": asset,
+        "interval": interval,
+        "start": f"{start_date.strftime('%Y-%m-%d')}T00:00:00",
+        "end": f"{end_date.strftime('%Y-%m-%d')}T23:59:59",
+        "shift": 0,
+        "clean": "false",
+        "include_incomplete": "false",
+    }
+    try:
+        r = _get_session().get(url, params=params, timeout=60)
+        r.raise_for_status()
+        data = r.json()
+    except Exception as exc:
+        log.debug("LAN /features/matrix %s %s %s→%s: %s", asset, interval, start_date, end_date, exc)
+        return None
+    return _parse_matrix_response(data)
+
+
+def _cache_range(asset: str, interval: str, df: pd.DataFrame) -> None:
+    """Split a multi-day matrix DataFrame and write one parquet per calendar day."""
+    if df is None or df.empty or "timestamp" not in df.columns:
+        return
+    df = df.copy()
+    df["_date"] = df["timestamp"].dt.date
+    for day, group in df.groupby("_date"):
+        date_str = day.strftime("%Y-%m-%d")
+        path = _cache_path(asset, interval, date_str)
+        if _cache_valid(path, date_str):
+            continue  # already cached (e.g. today hit by another call)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            group.drop(columns=["_date"]).to_parquet(path, index=False)
+        except Exception as exc:
+            log.debug("LAN cache write failed %s: %s", path, exc)
+
+
 def _get_matrix_day(asset: str, interval: str, date_str: str) -> Optional[pd.DataFrame]:
-    """Return cached-or-fresh matrix for one calendar day."""
+    """Return cached-or-fresh matrix for one calendar day (single-day fallback)."""
     path = _cache_path(asset, interval, date_str)
 
     if _cache_valid(path, date_str):
@@ -159,7 +180,11 @@ def _get_matrix_day(asset: str, interval: str, date_str: str) -> Optional[pd.Dat
         except Exception:
             pass  # corrupt cache — re-fetch
 
-    df = _fetch_matrix_day(asset, interval, date_str)
+    df = _fetch_matrix_range(
+        asset, interval,
+        datetime.strptime(date_str, "%Y-%m-%d").date(),
+        datetime.strptime(date_str, "%Y-%m-%d").date(),
+    )
     if df is not None and not df.empty:
         path.parent.mkdir(parents=True, exist_ok=True)
         try:
@@ -184,6 +209,15 @@ def _merge_lan(df: pd.DataFrame, lan_df: pd.DataFrame) -> pd.DataFrame:
     # when the LAN API returns us-precision timestamps and the candle frame is ns.
     lan_df["timestamp"] = pd.to_datetime(lan_df["timestamp"], utc=True).astype("datetime64[ns, UTC]")
 
+    # Drop OHLCV and other protected columns from LAN BEFORE the coverage check.
+    # _SKIP_COLS are columns the LAN API returns that Axiom already owns.
+    # Filtering here prevents the coverage check from ever dropping them from
+    # `left` — if we let the coverage check run first and LAN has more rows
+    # (e.g. because the backtest frame was tail-trimmed), it would drop OHLCV
+    # from `left` and then _SKIP_COLS would also remove them from `lan_df`,
+    # leaving the merged frame with no OHLCV at all.
+    lan_df = lan_df.drop(columns=[c for c in _SKIP_COLS if c in lan_df.columns], errors="ignore")
+
     # For duplicate columns, keep whichever source has more non-null values.
     # This ensures a sparse existing column (e.g. OI with 1% coverage) gets
     # replaced by a richer LAN series rather than silently discarding it.
@@ -204,9 +238,6 @@ def _merge_lan(df: pd.DataFrame, lan_df: pd.DataFrame) -> pd.DataFrame:
         lan_df = lan_df.drop(columns=drop_from_lan)
     if drop_from_left:
         left = left.drop(columns=drop_from_left)
-
-    # Drop per-call skip cols that snuck through.
-    lan_df = lan_df.drop(columns=[c for c in _SKIP_COLS if c in lan_df.columns], errors="ignore")
 
     if lan_df.columns.tolist() == ["timestamp"]:
         # Nothing left to join.
@@ -246,7 +277,12 @@ def _merge_lan(df: pd.DataFrame, lan_df: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 
 def _enrich_historical(df: pd.DataFrame, asset: str, interval: str) -> pd.DataFrame:
-    """Stitch day-cached /features/matrix rows onto df."""
+    """Stitch day-cached /features/matrix rows onto df.
+
+    Cached days are read directly from parquet (zero HTTP calls on warm cache).
+    Uncached days are collected into contiguous ranges and fetched in a single
+    HTTP call per gap, then split by day and written to cache before reading.
+    """
     left = _ensure_utc_ts(df)
     ts = left["timestamp"] if "timestamp" in left.columns else pd.Series([], dtype="datetime64[ns, UTC]")
     if ts.empty:
@@ -255,14 +291,46 @@ def _enrich_historical(df: pd.DataFrame, asset: str, interval: str) -> pd.DataFr
     start_date = ts.min().date()
     end_date = ts.max().date()
 
-    frames: list[pd.DataFrame] = []
+    # Partition the date range into cached days and contiguous uncached gaps.
+    all_dates: list[date] = []
     cur: date = start_date
     while cur <= end_date:
-        date_str = cur.strftime("%Y-%m-%d")
-        day_df = _get_matrix_day(asset, interval, date_str)
-        if day_df is not None and not day_df.empty:
-            frames.append(day_df)
+        all_dates.append(cur)
         cur += timedelta(days=1)
+
+    uncached_gaps: list[tuple[date, date]] = []  # (gap_start, gap_end)
+    gap_start: Optional[date] = None
+    for d in all_dates:
+        path = _cache_path(asset, interval, d.strftime("%Y-%m-%d"))
+        if not _cache_valid(path, d.strftime("%Y-%m-%d")):
+            if gap_start is None:
+                gap_start = d
+        else:
+            if gap_start is not None:
+                uncached_gaps.append((gap_start, d - timedelta(days=1)))
+                gap_start = None
+    if gap_start is not None:
+        uncached_gaps.append((gap_start, all_dates[-1]))
+
+    # Fetch each contiguous uncached gap with one HTTP call and cache by day.
+    for gap_s, gap_e in uncached_gaps:
+        log.debug("LAN batch fetch %s/%s %s → %s", asset, interval, gap_s, gap_e)
+        gap_df = _fetch_matrix_range(asset, interval, gap_s, gap_e)
+        if gap_df is not None and not gap_df.empty:
+            _cache_range(asset, interval, gap_df)
+
+    # Read all days from cache (now warm).
+    frames: list[pd.DataFrame] = []
+    for d in all_dates:
+        date_str = d.strftime("%Y-%m-%d")
+        path = _cache_path(asset, interval, date_str)
+        if path.exists():
+            try:
+                day_df = pd.read_parquet(path)
+                if day_df is not None and not day_df.empty:
+                    frames.append(day_df)
+            except Exception:
+                pass  # corrupt cache day — skip
 
     if not frames:
         return df

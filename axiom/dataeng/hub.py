@@ -399,6 +399,14 @@ def _parquet_has_columns(path: Path, columns: list[str]) -> bool:
 def _enrich_with_duckdb(df: pd.DataFrame, specs: list[_EnrichmentSpec]) -> pd.DataFrame:
     output_columns = [column for spec in specs for column in spec.output_columns]
     base = df.drop(columns=[column for column in output_columns if column in df.columns], errors="ignore").copy()
+    # Promote a DatetimeIndex to a column so DuckDB can see it.
+    # Backtest frames use a DatetimeIndex after _normalize_backtest_frame; without
+    # this, base["timestamp"] raises KeyError on pandas 2.x.
+    if "timestamp" not in base.columns and isinstance(base.index, pd.DatetimeIndex):
+        orig_index_name = base.index.name
+        base = base.reset_index()
+        if orig_index_name != "timestamp":
+            base = base.rename(columns={orig_index_name: "timestamp"})
     base["timestamp"] = _timestamp_ns(base["timestamp"])
 
     select_parts = ["b.*"]
