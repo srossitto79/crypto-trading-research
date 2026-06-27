@@ -408,7 +408,11 @@ def _tool_run_code(code: str) -> str:
         "Use this when the operator has already written and certified the file.\n"
         "Code must extend BaseStrategy, export STRATEGY_CLASS and TYPE_NAME, and implement "
         "generate_signal(df) returning a scalar Signal. Agent-generated strategies must include "
-        "hypothesis_id so the container is registered against its parent hypothesis."
+        "hypothesis_id so the container is registered against its parent hypothesis.\n"
+        "SIGNAL API: Signal is a dataclass — Signal(entry_signal=bool, exit_signal=bool, "
+        "price=float, direction='long'|'short'). Sentinels: Signal.LONG/SHORT/HOLD/EXIT. "
+        "No SignalType enum, no self.position state (generate_signal is stateless), use "
+        "'direction' not 'side'."
     ),
     input_schema={
         "type": "object",
@@ -593,6 +597,16 @@ def _tool_register_strategy(params: dict) -> str:
         "  • export TYPE_NAME = '<type_name>' and STRATEGY_CLASS = <ClassName>\n"
         "  • implement generate_signal(self, df) returning a scalar Signal or dict\n"
         "  • guard optional enrichment columns with: if 'col' in df.columns:\n\n"
+        "SIGNAL API (this is the ONLY signal interface — do NOT invent others):\n"
+        "  from axiom.strategies.base import BaseStrategy, Signal\n"
+        "  Signal is a dataclass: Signal(entry_signal: bool, exit_signal: bool,\n"
+        "    price: float, direction: 'long'|'short', confidence: float=0..1).\n"
+        "  Entry example:  return Signal(entry_signal=True, direction='short', price=float(df['close'].iloc[-1]))\n"
+        "  Exit example:   return Signal(exit_signal=True, price=float(df['close'].iloc[-1]))\n"
+        "  Sentinels:      return Signal.LONG / Signal.SHORT / Signal.HOLD / Signal.EXIT\n"
+        "  There is NO SignalType enum, NO Signal.BUY/SELL/EXIT_SHORT semantics beyond those aliases,\n"
+        "  and NO self.position state — generate_signal is STATELESS (decide from df only).\n"
+        "  Use 'direction', not 'side'. Read params via self.params or self.p.\n\n"
         "Use a NEW type_name each time you change logic (e.g. liq_z_v1, liq_z_v2). "
         "Parameter-only changes do NOT require a new type_name — just re-run the backtest."
     ),

@@ -44,6 +44,21 @@ class ParamAccessor:
         return key in self._params
 
 
+def _normalize_direction(value) -> str:
+    """Map the many direction spellings agent code emits onto ``long``/``short``.
+
+    Agent templates ported from backtrader/backtesting.py use ``buy``/``sell`` (or
+    ``side=``) instead of Axiom's ``long``/``short`` ``direction``. Normalize them
+    so a strategy never silently trades the wrong way (or breaks downstream code
+    that branches on ``direction``)."""
+    text = str(value if value is not None else "long").strip().lower()
+    if text in {"buy", "long", "bull", "bullish"}:
+        return "long"
+    if text in {"sell", "short", "bear", "bearish"}:
+        return "short"
+    return text or "long"
+
+
 @dataclass
 class Signal:
     """Standardized signal output from any strategy."""
@@ -55,6 +70,14 @@ class Signal:
     confidence: float = 0.0
     indicators: dict = field(default_factory=dict)
     regime_tag: str | None = None
+    # Compatibility alias: agent code ported from other frameworks passes
+    # ``side=`` instead of ``direction=``. When set it overrides direction.
+    side: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.side is not None:
+            self.direction = self.side
+        self.direction = _normalize_direction(self.direction)
 
     @classmethod
     def from_condition(cls, condition, *args, **kwargs) -> "Signal":
@@ -106,6 +129,23 @@ class Signal:
 Signal.HOLD = Signal()
 Signal.LONG = Signal(entry_signal=True, direction="long")
 Signal.SHORT = Signal(entry_signal=True, direction="short")
+
+# Backtrader / backtesting.py-style aliases for agent-generated code. Axiom's real
+# model is (entry_signal/exit_signal + direction); these map onto it so ported
+# templates using BUY/SELL/EXIT_* don't fail with AttributeError. (Previously the
+# brain reported "Signal.BUY/SELL/EXIT_SHORT doesn't exist" against this API.)
+Signal.BUY = Signal.LONG
+Signal.SELL = Signal.SHORT
+Signal.EXIT = Signal(exit_signal=True)
+Signal.EXIT_LONG = Signal(exit_signal=True, direction="long")
+Signal.EXIT_SHORT = Signal(exit_signal=True, direction="short")
+# "Go flat" == close any open position. Maps to a plain exit.
+Signal.FLAT = Signal(exit_signal=True)
+
+# Some agent code imports a (hallucinated) ``SignalType`` enum. Alias it to Signal
+# so both ``from axiom.strategies.base import SignalType`` and ``SignalType.LONG`` /
+# ``SignalType.BUY`` resolve to the real sentinels above.
+SignalType = Signal
 
 
 def _latest_value(value, default=None):
@@ -163,6 +203,37 @@ class DirectionalSignals:
         )
 
 
+class _FlatPosition:
+    """Benign stand-in for agent code that reads ``self.position``.
+
+    Axiom strategies are STATELESS: open-position / PnL state lives in the backtest
+    and execution engines, not the Strategy instance. Agent templates ported from
+    backtrader/backtesting.py routinely read ``self.position`` (``self.position.size``,
+    ``if self.position:``, ``self.position == 0``). Rather than crash with
+    AttributeError (the reported LiqAvg-family bug), expose a flat sentinel that
+    reads as "no position" in all the common forms."""
+
+    size = 0.0
+    price = 0.0
+
+    def __bool__(self) -> bool:
+        return False
+
+    def __len__(self) -> int:
+        return 0
+
+    def __float__(self) -> float:
+        return 0.0
+
+    def __eq__(self, other: object) -> bool:
+        try:
+            return float(other) == 0.0  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            return NotImplemented
+
+    __hash__ = None  # type: ignore[assignment]
+
+
 class BaseStrategy(ABC):
     """Base class for all trading strategies.
 
@@ -188,6 +259,10 @@ class BaseStrategy(ABC):
             raise TypeError("default_params must resolve to a dict")
         self.params = {**default_params, **(params or {})}
         self.p = ParamAccessor(self.params)
+        # Flat-position sentinel so agent code that reads self.position (ported from
+        # stateful frameworks) degrades to "no position" instead of crashing. A
+        # subclass that genuinely tracks its own position can just reassign it.
+        self.position = _FlatPosition()
 
     @property
     @abstractmethod
