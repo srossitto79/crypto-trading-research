@@ -17,6 +17,28 @@ from .tool_registry import register_tool
 log = logging.getLogger("axiom.agents.runner")
 
 
+
+def _get_hypothesis_tf(hypothesis_id: str) -> str | None:
+    if not hypothesis_id:
+        return None
+    try:
+        from axiom.db import get_db
+        with get_db() as conn:
+            row = conn.execute(
+                "SELECT data FROM hypotheses WHERE id = ?",
+                (hypothesis_id,),
+            ).fetchone()
+        if row:
+            import json
+            raw = row[0]
+            data = json.loads(raw) if isinstance(raw, str) else (dict(raw) if raw else {})
+            tfs = data.get("target_timeframes", []) if isinstance(data, dict) else []
+            return str(tfs[0]).strip() if tfs else None
+    except Exception:
+        pass
+    return None
+
+
 def _parse_json_object(raw: object) -> dict:
     if isinstance(raw, dict):
         return dict(raw)
@@ -951,7 +973,7 @@ def _tool_backtesting(tool_name: str, params: dict) -> str:
                     notes=params.get("notes", ""),
                     params=params.get("params"),
                     symbol=params.get("symbol", ""),
-                    timeframe=params.get("timeframe", "1h"),
+                    timeframe=params.get("timeframe") or _get_hypothesis_tf(hypothesis_id) or "1h",
                 )
             else:
                 # Custom strategies: send full rule-blob configuration
@@ -966,7 +988,7 @@ def _tool_backtesting(tool_name: str, params: dict) -> str:
                     notes=params.get("notes", ""),
                     params=params.get("params"),
                     symbol=params.get("symbol", ""),
-                    timeframe=params.get("timeframe", "1h"),
+                    timeframe=params.get("timeframe") or _get_hypothesis_tf(hypothesis_id) or "1h",
                 )
             # Ensure consistent ID return format for backward compatibility
             if isinstance(result, dict) and "id" not in result and "strategy_id" in result:
@@ -980,7 +1002,7 @@ def _tool_backtesting(tool_name: str, params: dict) -> str:
                 parameters=params.get("parameters"),
                 fee_bps=params.get("fee_bps", 4.5),
                 slippage_bps=params.get("slippage_bps", 2.0),
-                timeframe=params.get("timeframe", "1h"),
+                timeframe=params.get("timeframe") or _get_hypothesis_tf(params.get("hypothesis_id", "")) or "1h",
                 request_source="agent_tool",
                 origin_agent_id=str(_current_agent_id_var.get() or "").strip() or None,
                 origin_task_id=str(_current_task_display_id_var.get() or "").strip() or None,

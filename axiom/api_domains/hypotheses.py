@@ -1038,6 +1038,9 @@ def _enqueue_generate_strategies(
         f"columns available for this asset are listed in your context (LAN Metrics section). "
         f"Guard each column with `if 'col' in df.columns:`. Use versioned type names "
         f"(e.g. liq_z_v1) — create a new name each time you change logic.\n"
+        f"\n"
+        f"⚠️ Please take target_timeframes and why_now into account when designing strategies — they describe data availability constraints.\n"
+        f"\n"
         f"3. Stop. Do not record data gaps. Do not edit hypothesis fields. Do not "
         f"go outside this hypothesis."
         + existing_files_note
@@ -1460,6 +1463,9 @@ def _enqueue_operator_manual_research(
         f"columns available for this asset are listed in your context (LAN Metrics section). "
         f"Guard each column with `if 'col' in df.columns:`. Use versioned type names "
         f"(e.g. liq_z_v1) — create a new name each time you change logic.\n"
+        f"\n"
+        f"⚠️ Please take target_timeframes and why_now into account when designing strategies — they describe data availability constraints.\n"
+        f"\n"
         f"4. Stop. Do not go outside this hypothesis."
     )
     try:
