@@ -52,8 +52,28 @@ log = logging.getLogger("axiom.bot")
 _BRAIN_RATE_LIMIT_BACKOFF_SECONDS = (60, 120, 300)
 _BRAIN_TRANSIENT_BACKOFF_SECONDS = (120, 300, 900)
 _MAX_BRAIN_PROVIDER_RETRIES = 3
-_BRAIN_TASK_TIMEOUT_SECONDS = 180
 _TASK_WORKER_HEARTBEAT_KEY = "bot:task_worker:last_seen"
+
+
+def _resolve_brain_task_timeout_seconds() -> int:
+    """Wall-clock budget for one Brain cycle (settings + env, shared clamp).
+
+    Mirrors the runtime_worker resolver: the Brain runs the same agentic loop as
+    any other agent task and gets the same default budget instead of a hardcoded
+    180s that killed it mid-work. Runaway stays bounded by MAX_TOOL_ROUNDS and the
+    per-step 120s caps.
+    """
+    from axiom.task_timeouts import resolve_brain_task_timeout_seconds
+
+    try:
+        raw_settings = kv_get("axiom:settings", {}) or {}
+    except Exception:
+        raw_settings = {}
+    settings = dict(raw_settings) if isinstance(raw_settings, dict) else {}
+    env_default = os.environ.get("AXIOM_BRAIN_TASK_TIMEOUT_SECONDS")
+    if env_default and "brain_task_timeout_seconds" not in settings:
+        settings["brain_task_timeout_seconds"] = env_default
+    return resolve_brain_task_timeout_seconds(settings=settings)
 
 
 def _bot_owns_runtime_loops() -> bool:
@@ -1902,6 +1922,7 @@ class AxiomBot(commands.Bot):
             delivery_channel = payload.get("channel")
 
             try:
+                brain_timeout_s = _resolve_brain_task_timeout_seconds()
                 message = payload.get("message", "Run your cycle.")
                 source = str(payload.get("source") or "").strip()
                 is_chat = source == "ui_chat"
@@ -1995,7 +2016,7 @@ class AxiomBot(commands.Bot):
                     try:
                         response = await asyncio.wait_for(
                             _call_with_tools(provider, model, messages, context, tools=chat_tools or None),
-                            timeout=_BRAIN_TASK_TIMEOUT_SECONDS,
+                            timeout=brain_timeout_s,
                         )
                     finally:
                         reset_tool_context(brain_context_tokens)
@@ -2091,7 +2112,7 @@ class AxiomBot(commands.Bot):
                     try:
                         response = await asyncio.wait_for(
                             _call_with_tools(provider, model, messages, context, tools=brain_tools),
-                            timeout=_BRAIN_TASK_TIMEOUT_SECONDS,
+                            timeout=brain_timeout_s,
                         )
                     finally:
                         reset_tool_context(brain_context_tokens)
@@ -2142,7 +2163,7 @@ class AxiomBot(commands.Bot):
 
             except Exception as e:
                 if isinstance(e, asyncio.TimeoutError):
-                    error_detail = f"Brain task timeout after {_BRAIN_TASK_TIMEOUT_SECONDS:.2f}s"
+                    error_detail = f"Brain task timeout after {brain_timeout_s:.2f}s"
                 else:
                     error_detail = f"{type(e).__name__}: {e}" if str(e) else type(e).__name__
                 log.error("Brain task %d failed: %s", task["id"], error_detail, exc_info=True)

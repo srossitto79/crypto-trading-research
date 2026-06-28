@@ -45,7 +45,6 @@ except (TypeError, ValueError):
 _BRAIN_RATE_LIMIT_BACKOFF_SECONDS = (60, 120, 300)
 _BRAIN_TRANSIENT_BACKOFF_SECONDS = (120, 300, 900)
 _MAX_BRAIN_PROVIDER_RETRIES = 3
-_BRAIN_TASK_TIMEOUT_SECONDS = 180
 # Brain keepalive: the Brain is driven by an agent-callback chain with no
 # periodic scheduler job, and a timed-out agent-callback cycle deliberately
 # SUPPRESSES its retry (to avoid replaying side-effecting tools). That can leave
@@ -175,6 +174,23 @@ def _resolve_agent_task_timeout_seconds(task: dict) -> int:
         settings["agent_task_timeout_seconds"] = env_default
     task_type = str(task.get("type") or "").strip().lower()
     return resolve_agent_task_timeout_seconds(task_type, settings=settings)
+
+
+def _resolve_brain_task_timeout_seconds() -> int:
+    """Wall-clock budget for one Brain cycle (settings + env, shared clamp)."""
+    from axiom.task_timeouts import resolve_brain_task_timeout_seconds
+
+    try:
+        from axiom.db import kv_get
+
+        raw_settings = kv_get("axiom:settings", {}) or {}
+    except Exception:
+        raw_settings = {}
+    settings = dict(raw_settings) if isinstance(raw_settings, dict) else {}
+    env_default = os.environ.get("AXIOM_BRAIN_TASK_TIMEOUT_SECONDS")
+    if env_default and "brain_task_timeout_seconds" not in settings:
+        settings["brain_task_timeout_seconds"] = env_default
+    return resolve_brain_task_timeout_seconds(settings=settings)
 
 
 def _parse_agent_task_input_data(task: dict) -> dict:
@@ -1578,17 +1594,18 @@ async def process_brain_tasks_once(limit: int | None = None) -> int:
         ensure_brain_keepalive()
         return 0
 
+    brain_timeout_s = _resolve_brain_task_timeout_seconds()
     for task in claimed:
         import time as _time
         start_ts = _time.monotonic()
         payload = _task_payload_dict(task)
         is_agent_callback = str(payload.get("source") or "").strip() == "agent_callback"
         try:
-            await asyncio.wait_for(_run_brain_task(task), timeout=_BRAIN_TASK_TIMEOUT_SECONDS)
+            await asyncio.wait_for(_run_brain_task(task), timeout=brain_timeout_s)
         except Exception as exc:
             elapsed = _time.monotonic() - start_ts
             if isinstance(exc, asyncio.TimeoutError):
-                error_detail = f"Brain task timeout after {_BRAIN_TASK_TIMEOUT_SECONDS:.2f}s"
+                error_detail = f"Brain task timeout after {brain_timeout_s:.2f}s"
             else:
                 error_detail = f"{type(exc).__name__}: {exc}" if str(exc) else type(exc).__name__
             # H-O2: structured context so log queries can filter on
@@ -1601,7 +1618,7 @@ async def process_brain_tasks_once(limit: int | None = None) -> int:
                     "task_id": task.get("id"),
                     "task_type": "brain_invoke",
                     "elapsed_s": round(elapsed, 2),
-                    "timeout_s": _BRAIN_TASK_TIMEOUT_SECONDS,
+                    "timeout_s": brain_timeout_s,
                     "timed_out": isinstance(exc, asyncio.TimeoutError),
                 },
             )

@@ -8,6 +8,12 @@ from typing import Any
 
 DEFAULT_AGENT_TASK_TIMEOUT_SECONDS = 900
 DEFAULT_BACKTEST_AGENT_TASK_TIMEOUT_SECONDS = 1800
+# The Brain runs the same agentic loop (up to MAX_TOOL_ROUNDS iterations, each a
+# model call + a tool call that can each take ~120s) as any other agent task, so
+# it gets the same default budget. The previous hardcoded 180s was less than two
+# single-step timeouts combined and killed the Brain mid-work; runaway is already
+# bounded by MAX_TOOL_ROUNDS and the per-step 120s caps, not by this wall clock.
+DEFAULT_BRAIN_TASK_TIMEOUT_SECONDS = DEFAULT_AGENT_TASK_TIMEOUT_SECONDS
 MIN_TASK_TIMEOUT_SECONDS = 60
 MAX_TASK_TIMEOUT_SECONDS = 7200
 MAX_STALE_RECOVERY_MINUTES = 240
@@ -47,6 +53,23 @@ def resolve_agent_task_timeout_seconds(
     if lowered in {"backtest", "simulation", "robustness"}:
         return backtest_timeout
     return default_timeout
+
+
+def resolve_brain_task_timeout_seconds(
+    *,
+    settings: Mapping[str, Any] | None = None,
+) -> int:
+    """Resolve the wall-clock budget for one Brain cycle.
+
+    Honours ``brain_task_timeout_seconds`` in settings, then falls back to the
+    shared agent-task default. Clamped to the same [MIN, MAX] bounds as every
+    other task timeout so it can never be configured below a single step.
+    """
+    config = settings if isinstance(settings, Mapping) else {}
+    return coerce_timeout_seconds(
+        config.get("brain_task_timeout_seconds"),
+        DEFAULT_BRAIN_TASK_TIMEOUT_SECONDS,
+    )
 
 
 def max_agent_task_timeout_seconds(settings: Mapping[str, Any] | None = None) -> int:

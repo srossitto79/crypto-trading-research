@@ -279,7 +279,10 @@ def _build_adapter(
                 return await fn()
         else:
             async def _a(p: dict) -> str:
-                return await fn(**_extract_kwargs(sig, p))
+                kw, err = _bind_kwargs(sig, p)
+                if err is not None:
+                    return err
+                return await fn(**kw)
     elif run_in_thread:
         if takes_single_dict:
             async def _a(p: dict) -> str:
@@ -289,7 +292,9 @@ def _build_adapter(
                 return await asyncio.to_thread(fn)
         else:
             async def _a(p: dict) -> str:
-                kw = _extract_kwargs(sig, p)
+                kw, err = _bind_kwargs(sig, p)
+                if err is not None:
+                    return err
                 return await asyncio.to_thread(fn, **kw)
     else:
         # Sync handler called in-loop (no thread). Rare — only if explicitly
@@ -302,19 +307,45 @@ def _build_adapter(
                 return fn()
         else:
             async def _a(p: dict) -> str:
-                return fn(**_extract_kwargs(sig, p))
+                kw, err = _bind_kwargs(sig, p)
+                if err is not None:
+                    return err
+                return fn(**kw)
 
     return _a
 
 
-def _extract_kwargs(sig: inspect.Signature, params: dict) -> dict:
-    """Extract keyword arguments from *params* based on *sig*."""
+def _bind_kwargs(sig: inspect.Signature, params: dict) -> tuple[dict, str | None]:
+    """Extract keyword arguments for a handler from the model-supplied *params*.
+
+    Returns ``(kwargs, error)``. When the model omits a REQUIRED handler argument
+    (no default) we return a clean, actionable error string instead of letting
+    Python raise a cryptic ``TypeError: ... missing N required positional
+    arguments`` deep in the dispatcher. That raw TypeError reaches the model as
+    an "unhandled exception" and reads like an internal bug; the handler's own
+    "Error: 'code' is required" guard never runs because argument binding fails
+    first. A named-arg message is something the model can actually recover from
+    (it knows to resend the field), which is the whole point of this audit.
+    """
     kwargs: dict[str, Any] = {}
+    missing: list[str] = []
     for pname, param in sig.parameters.items():
+        if param.kind in (
+            inspect.Parameter.VAR_POSITIONAL,
+            inspect.Parameter.VAR_KEYWORD,
+        ):
+            continue
         if pname in params:
             kwargs[pname] = params[pname]
-        # else: use the function's default (or let TypeError bubble if required)
-    return kwargs
+        elif param.default is inspect.Parameter.empty:
+            missing.append(pname)
+    if missing:
+        return kwargs, (
+            "Error: missing required argument(s): "
+            + ", ".join(f"'{name}'" for name in missing)
+            + ". Re-call the tool with these field(s) included in the input."
+        )
+    return kwargs, None
 
 
 # ---------------------------------------------------------------------------
