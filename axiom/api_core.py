@@ -8957,6 +8957,7 @@ def _estimate_backtest_bars(
     duration_days_override: int | None = None,
 ) -> int:
     settings = get_settings()
+    MAX_BARS = 15000
     if duration_days_override and int(duration_days_override) > 0:
         duration_days = int(duration_days_override)
     else:
@@ -8965,21 +8966,21 @@ def _estimate_backtest_bars(
     default_bars = (duration_days * 24 * 60) // minutes_per_bar
 
     if not start or not end:
-        return max(220, default_bars)
+        return min(max(220, default_bars), MAX_BARS)
     try:
         start_dt = datetime.fromisoformat(str(start).replace("Z", "+00:00"))
         end_dt = datetime.fromisoformat(str(end).replace("Z", "+00:00"))
     except Exception:
-        return max(220, default_bars)
+        return min(max(220, default_bars), MAX_BARS)
     if start_dt.tzinfo is None:
         start_dt = start_dt.replace(tzinfo=timezone.utc)
     if end_dt.tzinfo is None:
         end_dt = end_dt.replace(tzinfo=timezone.utc)
     delta_seconds = (end_dt - start_dt).total_seconds()
     if delta_seconds <= 0:
-        return max(220, default_bars)
+        return min(max(220, default_bars), MAX_BARS)
     estimated = int(delta_seconds / float(minutes_per_bar * 60)) + 2
-    return max(220, min(estimated, 500_000))
+    return max(220, min(estimated, MAX_BARS))
 
 
 def _get_strategy_row_by_id(strategy_id: str) -> dict | None:

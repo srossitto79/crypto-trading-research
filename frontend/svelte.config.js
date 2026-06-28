@@ -41,9 +41,13 @@ const config = {
 				'connect-src': [
 					'self',
 					'http://localhost:*',
+					'http://192.168.0.200:*',
+					'http://192.168.0.210:*',
 					'http://127.0.0.1:*',
 					'ws://localhost:*',
 					'ws://127.0.0.1:*',
+					'ws://192.168.0.200:*',
+					'ws://192.168.0.210:*',
 					'wss://stream.binance.com:9443'
 				],
 				'object-src': ['none'],

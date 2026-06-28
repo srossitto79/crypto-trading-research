@@ -27,6 +27,7 @@ Usage:
 from __future__ import annotations
 
 import datetime as dt
+import ast
 import json
 import logging
 import os
@@ -301,24 +302,143 @@ def _extract_referenced_columns(
 ) -> set:
     """Return the enrichment metric names a strategy references.
 
-    Tokenises the strategy source, the params blob and the type name, then
-    intersects with the metric universe derived from the ranges file. OHLCV/base
-    columns are never in the universe, so an OHLCV-only strategy yields an empty
-    set (→ no window constraint).
+    Inspects strategy source for dataframe-style column access, plus selected
+    params/spec fields, then intersects with the metric universe derived from the
+    ranges file. OHLCV/base columns are never in the universe, so an OHLCV-only
+    strategy yields an empty set (→ no window constraint).
+
+    ``strategy_type`` is accepted for API compatibility only. Type/display names
+    are intentionally not scanned: a strategy named after a metric is not proof
+    that the metric column is used.
     """
     universe = _metric_universe()
     if not universe:
         return set()
 
-    text_parts = [str(strategy_code or ""), str(strategy_type or "")]
+    columns: set[str] = set()
+    if strategy_code:
+        columns |= _extract_columns_from_strategy_code(str(strategy_code), universe)
     if params:
-        try:
-            text_parts.append(json.dumps(params, default=str))
-        except (TypeError, ValueError):
-            text_parts.append(str(params))
-    blob = "\n".join(text_parts).lower()
+        columns |= _extract_columns_from_params(params, universe)
+    return columns
 
-    tokens = set(re.findall(r"[a-z_][a-z0-9_]*", blob))
+
+_DATAFRAME_NAMES = frozenset({
+    "df",
+    "data",
+    "candles",
+    "frame",
+    "d",
+    "row",
+    "series",
+    "market_data",
+})
+_COLUMN_CONTAINER_WORDS = ("col", "cols", "column", "columns", "feature", "features", "metric", "metrics")
+_PARAM_METADATA_KEYS = frozenset({
+    "id",
+    "name",
+    "display_name",
+    "strategy",
+    "strategy_id",
+    "strategy_name",
+    "strategy_type",
+    "type",
+    "runtime_type",
+    "source",
+    "source_ref",
+    "description",
+    "notes",
+})
+
+
+def _is_dataframe_like(node: ast.AST) -> bool:
+    if isinstance(node, ast.Name):
+        return node.id.lower() in _DATAFRAME_NAMES
+    if isinstance(node, ast.Attribute):
+        return node.attr.lower() == "columns" or _is_dataframe_like(node.value)
+    if isinstance(node, ast.Call):
+        return _is_dataframe_like(node.func)
+    return False
+
+
+def _string_value(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value.strip().lower()
+    return None
+
+
+def _collect_metric_strings(node: ast.AST, universe: frozenset) -> set[str]:
+    found: set[str] = set()
+    value = _string_value(node)
+    if value in universe:
+        found.add(value)
+    for child in ast.iter_child_nodes(node):
+        found |= _collect_metric_strings(child, universe)
+    return found
+
+
+def _extract_columns_from_strategy_code(strategy_code: str, universe: frozenset) -> set[str]:
+    columns: set[str] = set()
+    try:
+        tree = ast.parse(strategy_code)
+    except SyntaxError:
+        # Degraded but conservative: if the code cannot parse, retain the old
+        # token fallback for source code only. Type/name tokens are still ignored.
+        tokens = set(re.findall(r"[a-z_][a-z0-9_]*", strategy_code.lower()))
+        return tokens & set(universe)
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Subscript):
+            value = _string_value(node.slice)
+            if value in universe and _is_dataframe_like(node.value):
+                columns.add(value)
+        elif isinstance(node, ast.Attribute):
+            if node.attr.lower() in universe and _is_dataframe_like(node.value):
+                columns.add(node.attr.lower())
+        elif isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+            if node.func.attr == "get" and node.args and _is_dataframe_like(node.func.value):
+                value = _string_value(node.args[0])
+                if value in universe:
+                    columns.add(value)
+        elif isinstance(node, ast.Compare):
+            # Covers patterns like: "funding_rate" in df.columns.
+            if any(_is_dataframe_like(part) for part in [node.left, *node.comparators]):
+                columns |= _collect_metric_strings(node, universe)
+        elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+            targets = list(getattr(node, "targets", []) or [])
+            target = getattr(node, "target", None)
+            if target is not None:
+                targets.append(target)
+            target_names = " ".join(
+                getattr(t, "id", "") or getattr(t, "attr", "") for t in targets
+            ).lower()
+            if any(word in target_names for word in _COLUMN_CONTAINER_WORDS):
+                value_node = getattr(node, "value", None)
+                if value_node is not None:
+                    columns |= _collect_metric_strings(value_node, universe)
+    return columns
+
+
+def _extract_columns_from_params(params: dict, universe: frozenset) -> set[str]:
+    text_parts: list[str] = []
+
+    def _walk(value: object, key: str | None = None) -> None:
+        key_norm = str(key or "").strip().lower()
+        if key_norm in _PARAM_METADATA_KEYS:
+            return
+        if isinstance(value, dict):
+            for child_key, child_value in value.items():
+                _walk(child_value, str(child_key))
+            return
+        if isinstance(value, (list, tuple, set)):
+            for item in value:
+                _walk(item, key)
+            return
+        if isinstance(value, str):
+            text_parts.append(value)
+
+    _walk(params)
+    tokens = set(re.findall(r"[a-z_][a-z0-9_]*", "\n".join(text_parts).lower()))
     return tokens & set(universe)
 
 

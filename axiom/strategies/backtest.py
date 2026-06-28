@@ -6,6 +6,7 @@ backtesting and live scanning.
 
 import json
 import importlib
+import inspect
 import logging
 import os
 import pkgutil
@@ -986,6 +987,29 @@ def _resolve_strategy_class(strategy_type: str | None):
     except (ImportError, AttributeError, SyntaxError, OSError):
         pass
     return None
+
+
+def _read_strategy_source_for_auto_trim(strategy_cls) -> str | None:
+    """Best-effort source lookup for enrichment column detection."""
+    if strategy_cls is None:
+        return None
+    try:
+        source = inspect.getsource(strategy_cls)
+        if source.strip():
+            return source
+    except (OSError, TypeError):
+        pass
+    module = sys.modules.get(str(getattr(strategy_cls, "__module__", "") or ""))
+    module_file = getattr(module, "__file__", None)
+    if not module_file:
+        return None
+    try:
+        path = Path(module_file).resolve()
+        if path.suffix.lower() != ".py" or not path.exists():
+            return None
+        return path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return None
 
 
 def load_multi_exchange_candles(
@@ -3538,17 +3562,7 @@ def backtest_strategy(
     if not start_date or not end_date:
         try:
             from axiom.auto_trim import maybe_select_window
-            _code = None
-            try:
-                _modname = original_strategy_type.replace("-", "_").replace("/", "_")
-                _p1 = Path(__file__).resolve().parent.parent / "strategies" / "custom" / f"{_modname}.py"
-                _p2 = Path(__file__).resolve().parent.parent / "strategies" / "custom" / f"manual_{_modname}.py"
-                if _p1.exists():
-                    _code = _p1.read_text(encoding="utf-8", errors="replace")
-                elif _p2.exists():
-                    _code = _p2.read_text(encoding="utf-8", errors="replace")
-            except Exception:
-                _code = None
+            _code = _read_strategy_source_for_auto_trim(strategy_cls)
             _sel_start, _sel_end, _data_availability = maybe_select_window(
                 strategy_type=original_strategy_type,
                 params=params,
