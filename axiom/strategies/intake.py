@@ -463,6 +463,7 @@ def register_custom_strategy_file(
     hypothesis_id: str | None = None,
     session_id: str | None = None,
     origin_task_id: str | None = None,
+    default_params_override: dict | None = None,
 ) -> dict:
     """Register one custom strategy module for the AI Drop Zone workflow.
 
@@ -643,6 +644,9 @@ def register_custom_strategy_file(
         cert_error = cert.primary_blocking_reason()
 
     stored_params = cert.canonical_params if certified else default_params
+    if isinstance(default_params_override, dict):
+        stored_params = dict(stored_params if isinstance(stored_params, dict) else {})
+        stored_params.update(default_params_override)
     with get_db() as conn:
         strategy_id, _display, _base = create_strategy_container(
             conn=conn,

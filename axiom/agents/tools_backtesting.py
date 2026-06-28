@@ -22,21 +22,57 @@ def _get_hypothesis_tf(hypothesis_id: str) -> str | None:
     if not hypothesis_id:
         return None
     try:
-        from axiom.db import get_db
         with get_db() as conn:
             row = conn.execute(
-                "SELECT data FROM hypotheses WHERE id = ?",
+                "SELECT target_timeframes FROM hypotheses WHERE id = ?",
                 (hypothesis_id,),
             ).fetchone()
         if row:
-            import json
             raw = row[0]
-            data = json.loads(raw) if isinstance(raw, str) else (dict(raw) if raw else {})
-            tfs = data.get("target_timeframes", []) if isinstance(data, dict) else []
-            return str(tfs[0]).strip() if tfs else None
+            tfs = json.loads(raw) if isinstance(raw, str) else raw
+            if isinstance(tfs, list):
+                for tf in tfs:
+                    cleaned = str(tf or "").strip().lower()
+                    if cleaned and cleaned != "unspecified":
+                        return cleaned
     except Exception:
         pass
     return None
+
+
+def _with_hypothesis_timeframe(params: object, hypothesis_id: str | None) -> object:
+    """Carry a hypothesis timeframe into custom strategy intake defaults."""
+    if not isinstance(params, dict):
+        return params
+    if str(params.get("_timeframe") or "").strip():
+        return params
+    timeframe = _get_hypothesis_tf(str(hypothesis_id or "").strip())
+    if not timeframe:
+        return params
+    enriched = dict(params)
+    enriched["_timeframe"] = timeframe
+    return enriched
+
+
+def _get_strategy_or_hypothesis_tf(strategy_id: str | None) -> str | None:
+    normalized = str(strategy_id or "").strip()
+    if not normalized:
+        return None
+    try:
+        with get_db() as conn:
+            row = conn.execute(
+                "SELECT timeframe, hypothesis_id FROM strategies WHERE id = ?",
+                (normalized,),
+            ).fetchone()
+        if not row:
+            return None
+        hypothesis_tf = _get_hypothesis_tf(str(row["hypothesis_id"] or "").strip())
+        if hypothesis_tf:
+            return hypothesis_tf
+        strategy_tf = str(row["timeframe"] or "").strip().lower()
+        return strategy_tf or None
+    except Exception:
+        return None
 
 
 def _parse_json_object(raw: object) -> dict:
@@ -550,6 +586,7 @@ def _tool_register_strategy(params: dict) -> str:
                 file_path=filepath,
                 source="agent_register",
                 hypothesis_id=hypothesis_id,
+                default_params_override=_with_hypothesis_timeframe({}, hypothesis_id),
                 origin_task_id=provenance.get("origin_task_id"),
             )
             registered_type_name = str(registration.get("type_name") or module_name).strip()
@@ -623,6 +660,7 @@ def _tool_register_strategy(params: dict) -> str:
             # Write the origin task atomically with the strategy row so a crash
             # between creation and the _persist_strategy_provenance backfill below
             # can't orphan the develop_candidate task from its strategy.
+            default_params_override=_with_hypothesis_timeframe({}, hypothesis_id),
             origin_task_id=provenance.get("origin_task_id"),
         )
         discover()
@@ -776,6 +814,7 @@ def _tool_create_custom_strategy(
             file_path=filepath,
             source="agent_create_custom",
             hypothesis_id=hypothesis_id,
+            default_params_override=_with_hypothesis_timeframe(params, hypothesis_id),
             origin_task_id=str(_current_task_display_id_var.get() or "").strip() or None,
         )
         discover()
@@ -1002,7 +1041,11 @@ def _tool_backtesting(tool_name: str, params: dict) -> str:
                 parameters=params.get("parameters"),
                 fee_bps=params.get("fee_bps", 4.5),
                 slippage_bps=params.get("slippage_bps", 2.0),
-                timeframe=params.get("timeframe") or _get_hypothesis_tf(params.get("hypothesis_id", "")) or "1h",
+                timeframe=(
+                    params.get("timeframe")
+                    or _get_hypothesis_tf(params.get("hypothesis_id", ""))
+                    or _get_strategy_or_hypothesis_tf(params.get("strategy_id"))
+                ),
                 request_source="agent_tool",
                 origin_agent_id=str(_current_agent_id_var.get() or "").strip() or None,
                 origin_task_id=str(_current_task_display_id_var.get() or "").strip() or None,
@@ -1198,4 +1241,3 @@ register_tool(
         "required": ["result_id"],
     },
 )(_make_jbt_handler("AXIOM_get_results"))
-

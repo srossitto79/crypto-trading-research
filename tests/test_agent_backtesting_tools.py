@@ -10,6 +10,7 @@ from axiom.agents.context import _current_strategy_id_var, reset_tool_context, s
 import axiom.agents.tools_backtesting as tools_mod
 from axiom.agents.tools_backtesting import _persist_agent_verdict, _tool_backtesting, _tool_register_strategy, _tool_run_backtest
 from axiom.db import get_db
+from axiom.hypotheses import create_hypothesis
 from axiom.policy import evaluate_promotion
 
 
@@ -18,21 +19,23 @@ def _insert_strategy(
     *,
     stage: str,
     metrics: dict | None = None,
+    timeframe: str = "1h",
+    hypothesis_id: str | None = None,
 ) -> None:
     now = datetime.now(timezone.utc).isoformat()
     with get_db() as conn:
         conn.execute(
             """
             INSERT INTO strategies
-            (id, name, type, symbol, timeframe, params, metrics, status, owner, stage, stage_changed_at, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (id, name, type, symbol, timeframe, params, metrics, status, owner, stage, stage_changed_at, created_at, updated_at, hypothesis_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 strategy_id,
                 strategy_id,
                 "rsi_momentum",
                 "BTC",
-                "1h",
+                timeframe,
                 "{}",
                 json.dumps(metrics or {}),
                 stage,
@@ -41,6 +44,7 @@ def _insert_strategy(
                 now,
                 now,
                 now,
+                hypothesis_id,
             ),
         )
 
@@ -536,6 +540,137 @@ def test_jbt_create_strategy_persists_agent_candidate_provenance_after_strict_cl
         "origin_task_id": "T0101",
         "origin_model": "gpt-5.3",
     }
+
+
+def test_jbt_create_strategy_defaults_timeframe_from_hypothesis(AXIOM_db, monkeypatch):
+    captured: dict[str, object] = {}
+    hypothesis = create_hypothesis(
+        title="Four hour continuation",
+        market_thesis="Four hour regimes can sustain continuation better than hourly noise.",
+        mechanism="Trade momentum only on the target timeframe.",
+        why_now="The operator selected a four hour target.",
+        lane="benchmarking",
+        source_type="test",
+        target_assets=["BTC/USDT"],
+        target_timeframes=["4h"],
+    )
+
+    class FakeClient:
+        def create_strategy(self, **kwargs):
+            captured.update(kwargs)
+            _insert_strategy("S4H01", stage="quick_screen")
+            return {"strategy_id": "S4H01"}
+
+    monkeypatch.setattr(tools_mod, "_check_backtesting_available", lambda: True)
+    monkeypatch.setattr("axiom.backtesting.get_client", lambda: FakeClient())
+
+    result = json.loads(
+        _tool_backtesting(
+            "AXIOM_create_strategy",
+            {
+                "name": "MACD 4h candidate",
+                "hypothesis_id": hypothesis["id"],
+                "strategy_type": "macd",
+                "symbol": "BTC/USDT",
+                "params": {"fast": 5, "slow": 13, "signal": 3},
+            },
+        )
+    )
+
+    assert result["id"] == "S4H01"
+    assert captured["timeframe"] == "4h"
+
+
+def test_jbt_run_backtest_does_not_force_one_hour_when_timeframe_omitted(AXIOM_db, monkeypatch):
+    captured: dict[str, object] = {}
+
+    class FakeClient:
+        def run_backtest(self, **kwargs):
+            captured.update(kwargs)
+            return {"ok": True, "result_id": "bt-4h"}
+
+    monkeypatch.setattr(tools_mod, "_check_backtesting_available", lambda: True)
+    monkeypatch.setattr("axiom.backtesting.get_client", lambda: FakeClient())
+
+    result = json.loads(
+        _tool_backtesting(
+            "AXIOM_run_backtest",
+            {
+                "strategy_id": "S4H01",
+                "dataset_id": "BTC/USDT-4h",
+            },
+        )
+    )
+
+    assert result["result_id"] == "bt-4h"
+    assert captured["timeframe"] is None
+
+
+def test_jbt_run_backtest_uses_stored_strategy_timeframe(AXIOM_db, monkeypatch):
+    captured: dict[str, object] = {}
+    _insert_strategy("S4H02", stage="quick_screen", timeframe="4h")
+
+    class FakeClient:
+        def run_backtest(self, **kwargs):
+            captured.update(kwargs)
+            return {"ok": True, "result_id": "bt-stored-4h"}
+
+    monkeypatch.setattr(tools_mod, "_check_backtesting_available", lambda: True)
+    monkeypatch.setattr("axiom.backtesting.get_client", lambda: FakeClient())
+
+    result = json.loads(
+        _tool_backtesting(
+            "AXIOM_run_backtest",
+            {
+                "strategy_id": "S4H02",
+                "dataset_id": "BTC/USDT-1h",
+            },
+        )
+    )
+
+    assert result["result_id"] == "bt-stored-4h"
+    assert captured["timeframe"] == "4h"
+
+
+def test_jbt_run_backtest_prefers_linked_hypothesis_timeframe_over_stale_strategy_row(AXIOM_db, monkeypatch):
+    captured: dict[str, object] = {}
+    hypothesis = create_hypothesis(
+        title="Stale row timeframe repair",
+        market_thesis="The hypothesis timeframe should drive evaluation.",
+        mechanism="Backtest on the selected timeframe even for stale containers.",
+        why_now="Existing generated containers may have been saved as 1h.",
+        lane="benchmarking",
+        source_type="test",
+        target_assets=["BTC/USDT"],
+        target_timeframes=["4h"],
+    )
+    _insert_strategy(
+        "SSTALE",
+        stage="quick_screen",
+        timeframe="1h",
+        hypothesis_id=str(hypothesis["id"]),
+    )
+
+    class FakeClient:
+        def run_backtest(self, **kwargs):
+            captured.update(kwargs)
+            return {"ok": True, "result_id": "bt-linked-4h"}
+
+    monkeypatch.setattr(tools_mod, "_check_backtesting_available", lambda: True)
+    monkeypatch.setattr("axiom.backtesting.get_client", lambda: FakeClient())
+
+    result = json.loads(
+        _tool_backtesting(
+            "AXIOM_run_backtest",
+            {
+                "strategy_id": "SSTALE",
+                "dataset_id": "BTC/USDT-1h",
+            },
+        )
+    )
+
+    assert result["result_id"] == "bt-linked-4h"
+    assert captured["timeframe"] == "4h"
 
 
 def test_jbt_create_strategy_rejects_mismatched_hypothesis_and_crucible(AXIOM_db, monkeypatch):

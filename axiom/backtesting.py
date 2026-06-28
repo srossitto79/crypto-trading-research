@@ -314,7 +314,7 @@ class BacktestingClient:
         fee_bps: float = 4.5,
         slippage_bps: float = 2.0,
         objective: str = "sharpe_ratio",
-        timeframe: str = "1h",
+        timeframe: str | None = None,
         trade_mode: str | None = None,
         request_source: str | None = None,
         origin_agent_id: str | None = None,
@@ -327,8 +327,9 @@ class BacktestingClient:
             "fee_bps": fee_bps,
             "slippage_bps": slippage_bps,
             "objective": objective,
-            "timeframe": timeframe,
         }
+        if timeframe:
+            payload["timeframe"] = timeframe
         if parameters:
             payload["parameters"] = parameters
         if trade_mode:
