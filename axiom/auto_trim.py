@@ -632,6 +632,15 @@ def compute_data_availability(
         )
         return result
 
+    if missing:
+        result["usable"] = False
+        result["summary"] = (
+            f"Referenced columns missing range data for {slug}: {', '.join(missing)}. "
+            "Backtest window selection is blocked until those columns are available "
+            "or removed from the strategy."
+        )
+        return result
+
     result["data_from"] = _iso(latest_from)
     if earliest_to is not None:
         result["data_to"] = _iso(earliest_to)
@@ -678,10 +687,6 @@ def compute_data_availability(
             "End limited by "
             + ", ".join(f"{c} (data to {result['per_column'][c]['to'][:10]})" for c in end_limiters)
             + "."
-        )
-    if missing:
-        parts.append(
-            "No range data for: " + ", ".join(missing) + " (treated as unconstrained)."
         )
     result["summary"] = " ".join(parts)
     # interval_mismatches is informational context — kept in the structured dict
@@ -758,8 +763,11 @@ def maybe_select_window(
 ) -> tuple[Optional[str], Optional[str], dict]:
     """Resolve a (start, end) window from enrichment availability.
 
-    Explicit caller dates always win. Returns ``(start, end, availability)`` so
-    the backtester can both apply the window and surface the report. When the
+    Caller dates are clamped to the enrichment availability window. This is a
+    safety invariant, not just a convenience: a strategy that references an
+    enrichment column must not be evaluated before that column exists or after it
+    stopped collecting. Returns ``(start, end, availability)`` so the backtester
+    can both apply the window and surface the report. When the
     availability is unusable, the recommended dates are NOT applied (start/end
     fall back to the explicit values / None) and the caller can read
     ``availability['usable']`` to warn.
@@ -772,19 +780,24 @@ def maybe_select_window(
     start = explicit_start
     end = explicit_end
     if avail.get("usable"):
-        if not start and avail.get("start"):
+        if avail.get("start"):
             default_ts = _parse_ts("2024-01-01T00:00:00Z")
-            start_ts = _parse_ts(avail["start"])
-            if default_ts is None or start_ts is None or start_ts > default_ts:
+            avail_start_ts = _parse_ts(avail["start"])
+            explicit_start_ts = _parse_ts(start)
+            if explicit_start_ts is not None and avail_start_ts is not None and explicit_start_ts < avail_start_ts:
                 start = avail["start"]
-        if not end and avail.get("end"):
+            elif not start and (default_ts is None or avail_start_ts is None or avail_start_ts > default_ts):
+                start = avail["start"]
+        if avail.get("end"):
             # Only cap the end when data genuinely stopped collecting — i.e., the
             # last known point is meaningfully in the past. Active columns have
             # avail["end"] ≈ now (hours old), which is not a real constraint and
             # would cause load_backtest_candles to return the full parquet history
             # instead of the last N bars.
             end_ts = _parse_ts(avail["end"])
+            explicit_end_ts = _parse_ts(end)
             now = dt.datetime.now(dt.timezone.utc)
             if end_ts is not None and end_ts < now - dt.timedelta(days=3):
-                end = avail["end"]
+                if explicit_end_ts is None or explicit_end_ts > end_ts:
+                    end = avail["end"]
     return start, end, avail

@@ -66,6 +66,7 @@ _RATIO_EPSILON = 1e-6
 _MAX_ABS_RISK_RATIO = 10.0
 
 _MIN_WALK_FORWARD_EVAL_BARS = 20
+_MAX_SINGLE_RUN_BARS = 15_000
 
 # Reliability thresholds for displayed metrics. Values below these are still
 # computed and persisted for internal use, but callers should treat them as
@@ -108,6 +109,33 @@ def _resolve_walk_forward_timeout(n_bars: int) -> int:
     return _scale_isolation_timeout(n_bars, _WALK_FORWARD_TIMEOUT, _WALK_FORWARD_TIMEOUT_MAX)
 
 
+def _cap_single_run_bars(value: int | None, *, minimum: int = 210) -> int:
+    try:
+        bars = int(value) if value is not None else minimum
+    except (TypeError, ValueError):
+        bars = minimum
+    return min(max(bars, minimum), _MAX_SINGLE_RUN_BARS)
+
+
+def _tail_cap_single_run_frame(
+    df: pd.DataFrame,
+    *,
+    label: str,
+    strategy_id: str,
+    max_bars: int = _MAX_SINGLE_RUN_BARS,
+) -> pd.DataFrame:
+    if len(df) <= max_bars:
+        return df
+    log.info(
+        "%s trimming %d bars to %d for %s",
+        label,
+        len(df),
+        max_bars,
+        strategy_id,
+    )
+    return df.tail(max_bars)
+
+
 def _should_use_process_isolation() -> bool:
     override = str(os.getenv("AXIOM_BACKTEST_PROCESS_ISOLATION", "") or "").strip().lower()
     if override in {"0", "false", "no", "off"}:
@@ -115,6 +143,50 @@ def _should_use_process_isolation() -> bool:
     if override in {"1", "true", "yes", "on"}:
         return True
     return "PYTEST_CURRENT_TEST" not in os.environ
+
+
+def _get_backtest_settings() -> dict:
+    try:
+        from axiom.api_core import get_settings
+
+        settings = get_settings()
+        return settings if isinstance(settings, dict) else {}
+    except Exception as exc:
+        log.debug("Backtest settings unavailable; using defaults: %s", exc)
+        return {}
+
+
+def _timeframe_to_minutes_local(timeframe: str | None) -> int:
+    raw = str(timeframe or "").strip().lower()
+    mapping = {
+        "1m": 1,
+        "5m": 5,
+        "15m": 15,
+        "30m": 30,
+        "1h": 60,
+        "2h": 120,
+        "4h": 240,
+        "6h": 360,
+        "8h": 480,
+        "12h": 720,
+        "1d": 1440,
+        "3d": 4320,
+        "1w": 10080,
+    }
+    return mapping.get(raw, 60)
+
+
+def _stage_backtest_duration_days_local(stage_key: str, settings: dict | None = None) -> int:
+    try:
+        from axiom.api_core import stage_backtest_duration_days
+
+        return int(stage_backtest_duration_days(stage_key, settings))
+    except Exception:
+        s = settings if isinstance(settings, dict) else {}
+        try:
+            return max(1, int(s.get("backtest_duration_days", 730) or 730))
+        except (TypeError, ValueError):
+            return 730
 
 
 def _kill_executor_processes(executor):
@@ -3360,8 +3432,7 @@ def backtest_strategy(
         raise ValueError(f"backtest_strategy: bars must be a positive int or None, got {bars!r}")
     if not isinstance(leverage, (int, float)) or isinstance(leverage, bool) or not np.isfinite(leverage) or leverage <= 0:
         raise ValueError(f"backtest_strategy: leverage must be a positive finite number, got {leverage!r}")
-    from axiom.api_core import get_settings
-    settings = get_settings()
+    settings = _get_backtest_settings()
     original_strategy_type = str(strategy_type or "").strip()
 
     # Check if exact strategy type exists in registry - use it directly if so
@@ -3452,7 +3523,7 @@ def backtest_strategy(
             bars = duration_days * 24 * 60
         else:
             bars = duration_days * 24 # Fallback to hourly
-    resolved_bars = max(int(bars), 210)
+    resolved_bars = _cap_single_run_bars(bars)
 
     # Resolve fees/slippage
     resolved_fee_bps = float(fee_bps if fee_bps is not None else settings.get("backtest_fee_bps", 4.5))
@@ -3559,32 +3630,37 @@ def backtest_strategy(
     # never wastes the front of the window on NaN-poisoned bars (e.g. liq columns
     # only exist from Dec 2025) nor the tail on a metric that stopped collecting.
     _data_availability: dict | None = None
-    if not start_date or not end_date:
-        try:
-            from axiom.auto_trim import maybe_select_window
-            _code = _read_strategy_source_for_auto_trim(strategy_cls)
-            _sel_start, _sel_end, _data_availability = maybe_select_window(
-                strategy_type=original_strategy_type,
-                params=params,
-                strategy_code=_code,
-                symbol=asset,
-                timeframe=resolved_timeframe,
-                explicit_start=start_date,
-                explicit_end=end_date,
+    try:
+        from axiom.auto_trim import maybe_select_window
+        _code = _read_strategy_source_for_auto_trim(strategy_cls)
+        _sel_start, _sel_end, _data_availability = maybe_select_window(
+            strategy_type=original_strategy_type,
+            params=params,
+            strategy_code=_code,
+            symbol=asset,
+            timeframe=resolved_timeframe,
+            explicit_start=start_date,
+            explicit_end=end_date,
+        )
+        if _data_availability and not _data_availability.get("usable", True):
+            log.warning(
+                "Data availability warning for %s: %s",
+                strategy_id, _data_availability.get("summary"),
             )
-            if _data_availability and not _data_availability.get("usable", True):
-                log.warning(
-                    "Data availability warning for %s: %s",
-                    strategy_id, _data_availability.get("summary"),
-                )
-            if _sel_start and _sel_start != start_date:
-                log.info("Auto-selected start for %s: %s", strategy_id, _sel_start)
-                start_date = _sel_start
-            if _sel_end and _sel_end != end_date:
-                log.info("Auto-selected end for %s: %s", strategy_id, _sel_end)
-                end_date = _sel_end
-        except Exception as _trim_err:
-            log.debug("Window auto-selection unavailable for %s: %s", strategy_id, _trim_err)
+            return {
+                "error": str(_data_availability.get("summary") or "Referenced enrichment data is unavailable"),
+                "trades": [],
+                "metrics": {},
+                "data_availability": _data_availability,
+            }
+        if _sel_start and _sel_start != start_date:
+            log.info("Auto-selected start for %s: %s", strategy_id, _sel_start)
+            start_date = _sel_start
+        if _sel_end and _sel_end != end_date:
+            log.info("Auto-selected end for %s: %s", strategy_id, _sel_end)
+            end_date = _sel_end
+    except Exception as _trim_err:
+        log.debug("Window auto-selection unavailable for %s: %s", strategy_id, _trim_err)
 
     # Fetch historical data (or use pre-loaded candles from caller)
     if candles_df is not None and not candles_df.empty:
@@ -3597,6 +3673,7 @@ def backtest_strategy(
                 df = df.tail(resolved_bars)
         elif len(df) > resolved_bars:
             df = df.tail(resolved_bars)
+        df = _tail_cap_single_run_frame(df, label="Backtest", strategy_id=strategy_id)
     else:
 
         # Honour an explicit historical window when supplied (manual backtester).
@@ -3605,11 +3682,12 @@ def backtest_strategy(
         # falls back to the most-recent ``bars`` (legacy/autonomous behaviour).
         df = load_backtest_candles(
             asset=asset,
-            bars=bars,
+            bars=resolved_bars,
             timeframe=resolved_timeframe,
             start_date=start_date,
             end_date=end_date,
         )
+        df = _tail_cap_single_run_frame(df, label="Backtest", strategy_id=strategy_id)
 
     # Diagnostics carried up from load_backtest_candles via frame.attrs — a
     # dataset/parquet failure or dropped enrichment otherwise hides behind the
@@ -4404,8 +4482,7 @@ def walk_forward(
         raise ValueError(f"walk_forward: n_splits must be a positive int or None, got {n_splits!r}")
     if not isinstance(leverage, (int, float)) or isinstance(leverage, bool) or not np.isfinite(leverage) or leverage <= 0:
         raise ValueError(f"walk_forward: leverage must be a positive finite number, got {leverage!r}")
-    from axiom.api_core import get_settings
-    settings = get_settings()
+    settings = _get_backtest_settings()
     original_strategy_type = str(strategy_type or "").strip()
     family_strategy_type = resolve_strategy_family(original_strategy_type)
     params, validation_error, risk_parity_warning = _validate_backtest_execution_parity(
@@ -4458,26 +4535,48 @@ def walk_forward(
         # math). The old `days*24` heuristic made "N bars" mean N hours on EVERY
         # timeframe, so 365 days = ~365 calendar days on 1h but ~1460 days on 4h —
         # the WFA and quick_screen gates silently evaluated different windows.
-        from axiom.api_core import _timeframe_to_minutes, stage_backtest_duration_days
         # Walk-forward has its OWN per-stage window knob (walk_forward_duration_days),
         # which falls back to the global Default backtest window when left at 0. Resolved
         # here so every WFA caller (gauntlet run_walk_forward passes no window) honors it.
-        duration_days = stage_backtest_duration_days("walk_forward", settings)
-        minutes_per_bar = max(_timeframe_to_minutes(resolved_timeframe), 1)
+        duration_days = _stage_backtest_duration_days_local("walk_forward", settings)
+        minutes_per_bar = max(_timeframe_to_minutes_local(resolved_timeframe), 1)
         total_bars = (duration_days * 24 * 60) // minutes_per_bar
-    resolved_total_bars = max(int(total_bars), 420)
+    try:
+        resolved_total_bars = max(int(total_bars), 420)
+    except (TypeError, ValueError):
+        resolved_total_bars = 420
 
-    # Cap total bars for walk-forward to prevent excessive computation.
-    # For sub-hourly timeframes on large date ranges, the bar count can
-    # explode (e.g. 5m over 2 years ≈ 210K bars).  The bar-by-bar slow
-    # path is O(n) per split so 50K bars keeps runtime reasonable.
-    _WFA_MAX_BARS = 50_000
-    if resolved_total_bars > _WFA_MAX_BARS:
-        log.warning(
-            "Walk-forward capping bars from %d to %d for %s (%s)",
-            resolved_total_bars, _WFA_MAX_BARS, strategy_id, resolved_timeframe,
+    _data_availability: dict | None = None
+    try:
+        from axiom.auto_trim import maybe_select_window
+
+        _sel_start, _sel_end, _data_availability = maybe_select_window(
+            strategy_type=original_strategy_type,
+            params=params,
+            strategy_code=_read_strategy_source_for_auto_trim(strategy_cls),
+            symbol=asset,
+            timeframe=resolved_timeframe,
+            explicit_start=start_date,
+            explicit_end=end_date,
         )
-        resolved_total_bars = _WFA_MAX_BARS
+        if _data_availability and not _data_availability.get("usable", True):
+            log.warning(
+                "Walk-forward data availability warning for %s: %s",
+                strategy_id,
+                _data_availability.get("summary"),
+            )
+            return {
+                "error": str(_data_availability.get("summary") or "Referenced enrichment data is unavailable"),
+                "data_availability": _data_availability,
+            }
+        if _sel_start and _sel_start != start_date:
+            log.info("Walk-forward auto-selected start for %s: %s", strategy_id, _sel_start)
+            start_date = _sel_start
+        if _sel_end and _sel_end != end_date:
+            log.info("Walk-forward auto-selected end for %s: %s", strategy_id, _sel_end)
+            end_date = _sel_end
+    except Exception as _trim_err:
+        log.debug("Walk-forward window auto-selection unavailable for %s: %s", strategy_id, _trim_err)
 
     # P25-1: WFA knobs from pipeline config (versioned, explicit), with settings fallback.
     try:
@@ -4493,6 +4592,18 @@ def walk_forward(
         n_splits if n_splits is not None
         else settings.get("walkforward_folds", wfa_cfg.get("n_folds", 5))
     )
+    resolved_n_splits = max(resolved_n_splits, 1)
+    _wfa_max_total_bars = _MAX_SINGLE_RUN_BARS * resolved_n_splits
+    if resolved_total_bars > _wfa_max_total_bars:
+        log.warning(
+            "Walk-forward capping bars from %d to %d for %s (%s, %d folds)",
+            resolved_total_bars,
+            _wfa_max_total_bars,
+            strategy_id,
+            resolved_timeframe,
+            resolved_n_splits,
+        )
+        resolved_total_bars = _wfa_max_total_bars
     resolved_fee_bps = float(
         fee_bps if fee_bps is not None
         else settings.get("backtest_fee_bps", wfa_cfg.get("fee_bps", 4.5))
@@ -4548,14 +4659,15 @@ def walk_forward(
         warmup_bars=210,
     )
 
-    # Apply bar cap after loading — when date ranges produce too many bars,
-    # keep the most recent data so the analysis stays relevant.
-    if len(df) > _WFA_MAX_BARS:
-        log.info(
-            "Walk-forward trimming %d bars to %d for %s",
-            len(df), _WFA_MAX_BARS, strategy_id,
-        )
-        df = df.tail(_WFA_MAX_BARS)
+    # Apply a per-fold execution cap after loading because explicit date ranges
+    # can return more rows than the requested bar count. WFA may use more than
+    # 15k total bars as long as each fold/window remains below the single-run cap.
+    df = _tail_cap_single_run_frame(
+        df,
+        label="Walk-forward",
+        strategy_id=strategy_id,
+        max_bars=_wfa_max_total_bars,
+    )
     if len(df) < 420:
         return {"error": f"Insufficient data for walk-forward: {len(df)} bars (need 420+)"}
 
@@ -4647,7 +4759,7 @@ def walk_forward(
     # Aggregate out-of-sample metrics
     agg_oos = compute_metrics(
         all_oos_trades,
-        resolved_total_bars,
+        len(df),
         timeframe=resolved_timeframe,
         trade_mode=resolved_trade_mode,
     )
@@ -4677,6 +4789,8 @@ def walk_forward(
         "start_date": df.index[0].isoformat() if len(df) else start_date,
         "end_date": df.index[-1].isoformat() if len(df) else end_date,
     }
+    if _data_availability:
+        result["data_availability"] = _data_availability
     if risk_parity_warning:
         result["warning"] = risk_parity_warning
     log.info(
