@@ -225,9 +225,22 @@ def to_ccxt(symbol: str) -> str:
 
 
 def to_binance(symbol: str) -> str:
-    """Convert to Binance format (BTCUSDT). Only meaningful for crypto."""
+    """Convert to Binance format (BTCUSDT). Only meaningful for crypto.
+
+    A bare base (e.g. ``BTC``) has no quote currency, which Binance rejects with
+    ``-1121 Invalid symbol``. Default it to the USDT pair so callers that pass a
+    plain coin (scanner, regime detection) still resolve to a valid market.
+    """
     s = str(symbol or "").strip().upper()
-    return s.replace("/", "").replace("-", "").replace("_", "").replace(":", "")
+    s = s.replace("/", "").replace("-", "").replace("_", "").replace(":", "")
+    if not s:
+        return s
+    # Already carries a quote (BTCUSDT, ETHBTC) → leave as-is; otherwise it's a
+    # bare base (BTC, SOL) and needs the default USDT quote appended.
+    has_quote = any(
+        s.endswith(quote) and len(s) > len(quote) for quote in _CRYPTO_QUOTES
+    )
+    return s if has_quote else f"{s}USDT"
 
 
 def _extract_crypto_base(symbol: str) -> str:

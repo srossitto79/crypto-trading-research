@@ -131,6 +131,16 @@ def test_to_binance():
     assert to_binance("BTC-USDT") == "BTCUSDT"
 
 
+def test_to_binance_bare_base_gets_default_quote():
+    # A plain coin (no quote) must resolve to a valid USDT market, not the
+    # bare base which Binance rejects with -1121 Invalid symbol.
+    assert to_binance("BTC") == "BTCUSDT"
+    assert to_binance("SOL") == "SOLUSDT"
+    # A symbol that already carries a quote is left untouched.
+    assert to_binance("ETHBTC") == "ETHBTC"
+    assert to_binance("BTCUSDT") == "BTCUSDT"
+
+
 # -- timeframe_to_polygon -----------------------------------------------------
 
 @pytest.mark.parametrize("tf,expected_mult,expected_span", [
