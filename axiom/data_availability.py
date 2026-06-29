@@ -224,13 +224,22 @@ def render_full_availability(snapshot: Optional[dict] = None) -> str:
             lines.append(f"  {interval}: " + " + ".join(parts))
         lines.append("")
 
-    lines.append(
-        "Enrichment families typically include funding, open interest, long/short "
-        "ratio, taker flow, liquidations, L2 order book, and on-chain/social "
-        "metrics. Consume them via create_custom_strategy; request the exact "
-        "column names/ranges for a chosen symbol+timeframe when you focus a "
-        "hypothesis."
-    )
+    # The actual metric palette (deduplicated across symbols/intervals) so an
+    # ideation agent can ground ideas in real columns — not a hardcoded blurb.
+    all_metrics: set[str] = set()
+    for by_interval in snap.values():
+        for node in by_interval.values():
+            all_metrics.update(node.get("enrichment") or {})
+    if all_metrics:
+        lines.append(
+            "Enrichment metrics in the cache (availability varies by symbol/interval "
+            f"shown above; {_GUARD_HINT}):"
+        )
+        lines.append("  " + ", ".join(sorted(all_metrics)))
+        lines.append(
+            "Consume any of these via create_custom_strategy; when you focus a "
+            "hypothesis you'll get the exact per-symbol/timeframe ranges."
+        )
     return "\n".join(lines).rstrip()
 
 

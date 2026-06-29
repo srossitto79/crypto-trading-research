@@ -41,6 +41,10 @@ def test_render_full_lists_all_pairs_intervals_and_counts():
     assert out.index("1m:") < out.index("1h:")
     assert "2 enrichment cols" in out  # BTC/USDT 1h
     assert "OHLCV 2023-01-30→2026-06-28" in out
+    # The real metric palette is listed by name (not a hardcoded family blurb),
+    # deduplicated across symbols/intervals — so ideation agents can ground ideas.
+    assert "Enrichment metrics in the cache" in out
+    assert "funding_rate" in out and "l2_imbalance_bid" in out and "open_interest" in out
 
 
 def test_render_scoped_filters_and_lists_exact_columns_with_ranges():
