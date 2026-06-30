@@ -46,6 +46,15 @@ services:
       # ~46000 (≈18K headroom for output); for 128K use ~100000.
       # - AXIOM_CONTEXT_INPUT_BUDGET=46000
 
+      # ── Provider timeouts (local LLM support) ─────────────────
+      # Per-HTTP-request read timeout. Local LLMs on consumer hardware can take
+      # well over 120s per generation, especially with tool calls and long
+      # context. Raised to 900s here so requests don't time out mid-generation.
+      # Agent task / brain / reaper timeouts are DERIVED from this value
+      # (3× for agent, 6× for backtest, 30× for the hard cap) so they scale
+      # together — no need to tune multiple knobs.
+      - AXIOM_AI_READ_TIMEOUT_SECONDS=900
+
       # ── LAN metrics enricher ──────────────────────────────────
       - LAN_METRICS_URL=http://192.168.0.210:8001
 

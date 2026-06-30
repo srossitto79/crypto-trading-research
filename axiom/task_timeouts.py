@@ -3,19 +3,39 @@
 from __future__ import annotations
 
 import math
+import os
 from collections.abc import Mapping
 from typing import Any
 
-DEFAULT_AGENT_TASK_TIMEOUT_SECONDS = 900
-DEFAULT_BACKTEST_AGENT_TASK_TIMEOUT_SECONDS = 1800
-# The Brain runs the same agentic loop (up to MAX_TOOL_ROUNDS iterations, each a
-# model call + a tool call that can each take ~120s) as any other agent task, so
-# it gets the same default budget. The previous hardcoded 180s was less than two
-# single-step timeouts combined and killed the Brain mid-work; runaway is already
-# bounded by MAX_TOOL_ROUNDS and the per-step 120s caps, not by this wall clock.
+# ---- Derived defaults -------------------------------------------------------
+# Agent task timeouts are derived from AXIOM_AI_READ_TIMEOUT_SECONDS so that
+# users who configure a slow local LLM (long per-request read timeout) get
+# proportionally longer wall-clock budgets for the full multi-round agent loop.
+#
+# Formula: agent  = read_timeout * MIN_AGENT_ROUNDS  (at least 3 rounds)
+#          brain  = same as agent
+#          backtest = read_timeout * MIN_BACKTEST_ROUNDS  (at least 6)
+#          max    = read_timeout * MAX_TOOL_ROUNDS  (must fit 30 rounds)
+#
+# With default read_timeout=120 the derived values match the original hardcoded
+# 900 / 1800 / 7200.  With read_timeout=900 (local LLM) they become
+# 2700 / 5400 / 27000.
+_MIN_AGENT_ROUNDS = 3
+_MIN_BACKTEST_ROUNDS = 6
+_MAX_TOOL_ROUNDS = 30
+
+
+def _effective_read_timeout() -> int:
+    """Read the per-HTTP-request read timeout from env (same source as ai.py)."""
+    return int(float(os.environ.get("AXIOM_AI_READ_TIMEOUT_SECONDS", "120.0")))
+
+
+_READ_TIMEOUT = _effective_read_timeout()
+DEFAULT_AGENT_TASK_TIMEOUT_SECONDS = max(900, _READ_TIMEOUT * _MIN_AGENT_ROUNDS)
+DEFAULT_BACKTEST_AGENT_TASK_TIMEOUT_SECONDS = max(1800, _READ_TIMEOUT * _MIN_BACKTEST_ROUNDS)
 DEFAULT_BRAIN_TASK_TIMEOUT_SECONDS = DEFAULT_AGENT_TASK_TIMEOUT_SECONDS
 MIN_TASK_TIMEOUT_SECONDS = 60
-MAX_TASK_TIMEOUT_SECONDS = 7200
+MAX_TASK_TIMEOUT_SECONDS = max(7200, _READ_TIMEOUT * _MAX_TOOL_ROUNDS)
 MAX_STALE_RECOVERY_MINUTES = 240
 REAPER_GRACE_MINUTES = 1
 STALE_RECOVERY_GRACE_MINUTES = 5
